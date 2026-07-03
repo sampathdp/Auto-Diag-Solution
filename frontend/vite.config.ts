@@ -15,17 +15,10 @@ export default defineConfig({
     include: [
       "react",
       "react-dom",
-      "react-to-print",
-      "recharts",
       "framer-motion",
       "lucide-react",
       "react-router-dom",
       "@tanstack/react-query",
-      "@fullcalendar/react",
-      "@fullcalendar/core",
-      "@fullcalendar/daygrid",
-      "@fullcalendar/timegrid",
-      "@fullcalendar/interaction"
     ],
   },
   server: {

@@ -16,16 +16,16 @@ export default function SEO({
   description, 
   keywords,
   type = 'website',
-  name = 'SalonFlow',
+  name = 'Storefront',
   url = 'https://salonflow.cloud',
   image = 'https://salonflow.cloud/og-image.jpg',
   schema
 }: SEOProps) {
-  const defaultTitle = "SalonFlow | Premium Salon Management Software";
+  const defaultTitle = "Storefront | Premium Salon Management Software";
   const defaultDescription = "Manage your salon with elegance. The premium salon management software trusted by salons in Colombo, Kandy, Galle, and globally.";
   const defaultKeywords = "salon software, salon management system, best salon software in Sri Lanka, Colombo salon software, Kandy salon software, Galle salon software, global salon software, appointment booking software, spa management";
 
-  const siteTitle = title ? `${title} | SalonFlow` : defaultTitle;
+  const siteTitle = title ? `${title} | Storefront` : defaultTitle;
   const siteDescription = description || defaultDescription;
   const siteKeywords = keywords || defaultKeywords;
 

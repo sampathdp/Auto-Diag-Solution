@@ -8,6 +8,6 @@ export const useAuth = () => {
     isAuthenticated,
     logout,
     setAuth,
-    isAdmin: user?.role === 'super_admin' || user?.role === 'salon_owner'
+    isAdmin: user?.role === 'admin'
   };
 };

@@ -7,7 +7,6 @@ namespace App\Middleware;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\PermissionService;
-use App\Core\Auth\TenantContext;
 
 class PermissionMiddleware
 {
@@ -22,17 +21,12 @@ class PermissionMiddleware
 
     public function handle(Request $request): void
     {
-        // 1. Super Admin Bypass
-        if (TenantContext::isSuperAdmin() || $request->user->role === 'super_admin') {
+        // Admins bypass all permission checks
+        if ($request->user->role === 'admin') {
             return;
         }
 
-        // 2. Salon owners have full access to their own salon's routes
-        if (in_array($request->user->role, ['salon_owner', 'admin'], true)) {
-            return;
-        }
-
-        // 3. Check JWT permissions (set at login from staff_permissions / plan / custom)
+        // Check JWT-embedded permissions
         $userPermissions = $request->user->permissions ?? [];
 
         if (!$this->permissionService->hasPermission($userPermissions, $this->requiredPermission)) {

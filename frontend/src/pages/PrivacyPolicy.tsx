@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Shield, ArrowLeft, Lock, Eye, Database, Users, Mail, RefreshCw, Trash2, Globe } from "lucide-react";
-import logoImg from "@/Assets/Logo.png";
 import SEO from "@/components/SEO";
 
 const sections = [
@@ -11,7 +10,7 @@ const sections = [
     content: [
       {
         heading: "Account & Business Information",
-        text: "When you register for SalonFlow, we collect your salon name, owner name, email address, phone number, and physical address. This information is required to create and manage your account.",
+        text: "When you register for Storefront, we collect your salon name, owner name, email address, phone number, and physical address. This information is required to create and manage your account.",
       },
       {
         heading: "Customer Data",
@@ -34,7 +33,7 @@ const sections = [
     content: [
       {
         heading: "Service Delivery",
-        text: "To provide, maintain, and improve the SalonFlow platform — including appointment scheduling, billing, staff management, inventory tracking, and reporting features.",
+        text: "To provide, maintain, and improve the Storefront platform — including appointment scheduling, billing, staff management, inventory tracking, and reporting features.",
       },
       {
         heading: "Communications",
@@ -76,7 +75,7 @@ const sections = [
     content: [
       {
         heading: "We Do Not Sell Your Data",
-        text: "SalonFlow does not sell, rent, or trade your personal information or your customers' data to any third parties for marketing or advertising purposes.",
+        text: "Storefront does not sell, rent, or trade your personal information or your customers' data to any third parties for marketing or advertising purposes.",
       },
       {
         heading: "Service Providers",
@@ -84,7 +83,7 @@ const sections = [
       },
       {
         heading: "Legal Requirements",
-        text: "We may disclose information if required to do so by law, court order, or a governmental authority, or to protect the rights, property, or safety of SalonFlow or its users.",
+        text: "We may disclose information if required to do so by law, court order, or a governmental authority, or to protect the rights, property, or safety of Storefront or its users.",
       },
     ],
   },
@@ -162,8 +161,8 @@ const PrivacyPolicy = () => {
   return (
     <>
       <SEO
-        title="Privacy Policy — SalonFlow"
-        description="Learn how SalonFlow collects, uses, and protects your personal and business data."
+        title="Privacy Policy — Storefront"
+        description="Learn how Storefront collects, uses, and protects your personal and business data."
       />
       <div
         style={{ fontFamily: "'DM Sans', sans-serif", background: "#F7FAFC" }}
@@ -187,7 +186,7 @@ const PrivacyPolicy = () => {
           style={{ background: "rgba(247,250,252,0.95)", backdropFilter: "blur(12px)", borderColor: "var(--border)" }}
         >
           <Link to="/">
-            <img src={logoImg} alt="SalonFlow" className="h-10 object-contain" />
+            <span className="text-lg font-bold">Storefront</span>
           </Link>
           <Link
             to="/"
@@ -289,7 +288,7 @@ const PrivacyPolicy = () => {
                 Changes to This Policy
               </h3>
               <p className="text-sm leading-relaxed" style={{ color: "var(--ink-light)" }}>
-                We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at the top of this page and, for significant changes, notify you by email. Continued use of SalonFlow after any change constitutes your acceptance of the new terms.
+                We may update this Privacy Policy from time to time. When we do, we will revise the "Last updated" date at the top of this page and, for significant changes, notify you by email. Continued use of Storefront after any change constitutes your acceptance of the new terms.
               </p>
             </div>
           </div>
@@ -298,7 +297,7 @@ const PrivacyPolicy = () => {
         {/* ── FOOTER ──────────────────────────────────────────── */}
         <footer className="py-10 border-t" style={{ background: "var(--sky-2)", borderColor: "var(--border)" }}>
           <div className="max-w-4xl mx-auto px-6 sm:px-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <img src={logoImg} alt="SalonFlow" className="h-12 object-contain" />
+            <span className="text-xl font-bold">Storefront</span>
             <div className="flex items-center gap-6">
               <Link to="/" className="text-xs font-semibold transition-colors hover:text-[var(--blue)]"
                 style={{ color: "var(--ink-muted)" }}>Home</Link>
@@ -308,7 +307,7 @@ const PrivacyPolicy = () => {
                 style={{ color: "var(--ink-muted)" }}>Contact</a>
             </div>
             <p className="text-xs" style={{ color: "var(--ink-muted)" }}>
-              © 2026 SalonFlow. All rights reserved.
+              © 2026 Storefront. All rights reserved.
             </p>
           </div>
         </footer>

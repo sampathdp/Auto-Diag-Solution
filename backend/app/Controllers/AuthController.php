@@ -135,31 +135,6 @@ class AuthController extends BaseController
 
         $this->clearFailedLoginAttempts($email);
 
-        // Auto-activate trial if the salon's trial has not started yet
-        if ($user && isset($user['salon_id']) && $user['salon_id'] !== null) {
-            $sub = DatabaseManager::query(
-                "SELECT id, starts_at FROM subscriptions WHERE salon_id = :salon_id AND status = 'trial' LIMIT 1",
-                ['salon_id' => (int)$user['salon_id']]
-            )->fetch();
-            if ($sub && $sub['starts_at'] === null) {
-                $now = date('Y-m-d H:i:s');
-                $expires = date('Y-m-d H:i:s', strtotime('+14 days'));
-                DatabaseManager::query(
-                    "UPDATE subscriptions SET starts_at = :starts, expires_at = :expires WHERE salon_id = :salon_id AND status = 'trial'",
-                    ['starts' => $now, 'expires' => $expires, 'salon_id' => (int)$user['salon_id']]
-                );
-
-                // Also update the trial_requests table
-                $salon = DatabaseManager::query("SELECT email FROM salons WHERE id = :id LIMIT 1", ['id' => (int)$user['salon_id']])->fetch();
-                if ($salon) {
-                    DatabaseManager::query(
-                        "UPDATE trial_requests SET activation_started_at = :now WHERE email = :email AND activation_started_at IS NULL",
-                        ['now' => $now, 'email' => $salon['email']]
-                    );
-                }
-            }
-        }
-
         $accessToken = $this->jwtService->generateAccessToken($user);
         $refreshToken = $this->jwtService->generateRefreshToken((int)$user['id']);
 
@@ -174,9 +149,6 @@ class AuthController extends BaseController
                 'id' => $user['id'],
                 'name' => $user['name'],
                 'role' => $user['role'],
-                'salon_id' => $user['salon_id'],
-                'salon_slug' => $user['salon_slug'] ?? null,
-                'branch_id' => isset($user['branch_id']) && $user['branch_id'] !== null ? (int)$user['branch_id'] : null,
                 'needs_password_change' => isset($user['needs_password_change']) && (int)$user['needs_password_change'] === 1
             ],
             'permissions' => $decoded->permissions ?? []
@@ -186,18 +158,26 @@ class AuthController extends BaseController
     public function register(Request $request): void
     {
         $data = $request->all();
-        $data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
 
-        $sql = "INSERT INTO users (salon_id, name, email, password, role)
-                VALUES (:salon_id, :name, :email, :password, :role)";
+        if (empty($data['email']) || empty($data['password']) || empty($data['name'])) {
+            $this->error('Name, email, and password are required', null, 400);
+            return;
+        }
 
-        DatabaseManager::query($sql, [
-            'salon_id' => $data['salon_id'],
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => $data['password'],
-            'role' => 'salon_owner'
-        ]);
+        if ($this->userRepo->findByEmail(strtolower(trim($data['email'])))) {
+            $this->error('A user with this email already exists', null, 409);
+            return;
+        }
+
+        DatabaseManager::query(
+            "INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)",
+            [
+                'name' => $data['name'],
+                'email' => strtolower(trim($data['email'])),
+                'password' => password_hash($data['password'], PASSWORD_BCRYPT),
+                'role' => 'customer',
+            ]
+        );
 
         $this->success(null, 'User registered successfully', 201);
     }
@@ -221,16 +201,7 @@ class AuthController extends BaseController
         // Rotate Refresh Token
         $this->jwtService->revokeRefreshToken($token);
 
-        // Join staff table so branch_id is correct for staff users
-        $stmt = DatabaseManager::query(
-            "SELECT u.*, s.slug as salon_slug, COALESCE(u.branch_id, st.branch_id) as branch_id
-             FROM users u
-             LEFT JOIN salons s ON u.salon_id = s.id
-             LEFT JOIN staff st ON st.user_id = u.id
-             WHERE u.id = :id LIMIT 1",
-            ['id' => $storedToken['user_id']]
-        );
-        $user = $stmt->fetch();
+        $user = $this->userRepo->find((int)$storedToken['user_id']);
 
         $newAccessToken = $this->jwtService->generateAccessToken($user);
         $newRefreshToken = $this->jwtService->generateRefreshToken((int)$user['id']);
@@ -244,18 +215,6 @@ class AuthController extends BaseController
     public function me(Request $request): void
     {
         $user = clone $request->user;
-
-        // Fetch current subscription plan
-        if (isset($user->salon_id)) {
-            $sub = \App\Core\Database\DatabaseManager::query(
-                "SELECT sp.name as plan_name
-                 FROM subscriptions sub
-                 LEFT JOIN subscription_plans sp ON sub.plan_id = sp.id
-                 WHERE sub.salon_id = :salon_id LIMIT 1",
-                ['salon_id' => $user->salon_id]
-            )->fetch();
-            $user->plan_name = $sub && $sub['plan_name'] ? strtolower($sub['plan_name']) : 'starter';
-        }
 
         $this->success([
             'user' => $user,
@@ -328,9 +287,6 @@ class AuthController extends BaseController
                 'id' => $updatedUser['id'],
                 'name' => $updatedUser['name'],
                 'role' => $updatedUser['role'],
-                'salon_id' => $updatedUser['salon_id'],
-                'salon_slug' => $updatedUser['salon_slug'] ?? null,
-                'branch_id' => isset($updatedUser['branch_id']) && $updatedUser['branch_id'] !== null ? (int)$updatedUser['branch_id'] : null,
                 'needs_password_change' => false
             ],
             'permissions' => $decoded->permissions ?? []

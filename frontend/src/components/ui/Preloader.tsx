@@ -29,7 +29,7 @@ export const Preloader = () => {
         <div className="text-center space-y-2">
           <h2 className="text-3xl font-black tracking-tight text-white flex items-center justify-center gap-1.5">
             <span className="bg-gradient-to-r from-indigo-400 via-violet-300 to-indigo-400 bg-clip-text text-transparent animate-gradient-shift">
-              SalonFlow
+              Storefront
             </span>
           </h2>
           <p className="text-xs font-bold text-slate-400 tracking-[0.2em] uppercase animate-pulse">

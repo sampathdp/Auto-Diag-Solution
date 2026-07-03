@@ -8,9 +8,6 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const targetSalonId = useAuthStore.getState().targetSalonId;
-  if (targetSalonId) config.headers['X-Target-Salon-Id'] = targetSalonId;
-
   // Let the browser set Content-Type with boundary for multipart uploads
   if (config.data instanceof FormData) {
     delete config.headers['Content-Type'];

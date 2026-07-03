@@ -29,15 +29,12 @@ class JWTService
     public function generateAccessToken(array $user): string
     {
         $permissions = $this->getUserPermissions((int)$user['id'], $user['role']);
-        
+
         $payload = [
             'iss' => $_ENV['APP_URL'] ?? 'localhost',
             'iat' => time(),
             'exp' => time() + $this->accessExpiry,
             'sub' => $user['id'],
-            'salon_id' => $user['salon_id'],
-            'salon_slug' => $user['salon_slug'] ?? null,
-            'branch_id' => isset($user['branch_id']) && $user['branch_id'] !== null ? (int)$user['branch_id'] : null,
             'role' => $user['role'],
             'permissions' => $permissions,
             'needs_password_change' => isset($user['needs_password_change']) && (int)$user['needs_password_change'] === 1,
@@ -47,63 +44,13 @@ class JWTService
         return JWT::encode($payload, $this->secret);
     }
 
+    /**
+     * Resolve a user's permission strings for embedding in the JWT.
+     * Replace with real role/permission-table lookups as the permission model grows.
+     */
     private function getUserPermissions(int $userId, string $role): array
     {
-        // 1. Super Admin always has full access
-        if ($role === 'super_admin') {
-            return ['*'];
-        }
-
-        // 2. For staff role: check for individual permission overrides first
-        if ($role === 'staff') {
-            $staffPerms = DatabaseManager::query(
-                "SELECT staff_permissions FROM users WHERE id = :id LIMIT 1",
-                ['id' => $userId]
-            )->fetchColumn();
-
-            if ($staffPerms !== false && $staffPerms !== null) {
-                $decoded = json_decode($staffPerms, true);
-                if (is_array($decoded)) {
-                    return $decoded;
-                }
-            }
-        }
-
-        // 3. Fetch User's Salon and Active Subscription
-        $sql = "SELECT s.id as salon_id, s.custom_permissions,
-                       sub.status as sub_status, sub.expires_at, sub.plan_id, sp.permissions as plan_permissions
-                FROM users u
-                JOIN salons s ON u.salon_id = s.id
-                LEFT JOIN subscriptions sub ON s.id = sub.salon_id AND sub.status IN ('trial', 'active')
-                LEFT JOIN subscription_plans sp ON sub.plan_id = sp.id
-                WHERE u.id = :user_id
-                ORDER BY sub.created_at DESC LIMIT 1";
-
-        $stmt = DatabaseManager::query($sql, ['user_id' => $userId]);
-        $data = $stmt->fetch();
-
-        if (!$data) return [];
-
-        // 4. PRIORITY: Custom Overrides on Salon level
-        if (!empty($data['custom_permissions'])) {
-            return json_decode($data['custom_permissions'], true);
-        }
-
-        // 5. TRIAL LOGIC (Full access if trial is active)
-        if ($data['sub_status'] === 'trial') {
-            $isExpired = $data['expires_at'] && strtotime($data['expires_at']) < time();
-            if (!$data['expires_at'] || !$isExpired) {
-                return ['*'];
-            }
-        }
-
-        // 6. PLAN LOGIC
-        if ($data['plan_permissions']) {
-            return json_decode($data['plan_permissions'], true);
-        }
-
-        // 7. Fallback: salon_owner gets full access to their own salon
-        if ($role === 'salon_owner') {
+        if ($role === 'admin') {
             return ['*'];
         }
 

@@ -44,10 +44,7 @@ const ChangePassword = () => {
       const { user: updatedUser, permissions } = response.data.data;
 
       setAuth(updatedUser, permissions || []);
-      
-      // Navigate to correct dashboard based on role
-      const target = updatedUser.role === "super_admin" ? "/admin/dashboard" : "/dashboard";
-      navigate(target);
+      navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to update password. Please check your credentials.");
     } finally {
@@ -82,8 +79,8 @@ const ChangePassword = () => {
 
   return (
     <>
-      <SEO 
-        title="Reset Password - SalonFlow"
+      <SEO
+        title="Reset Password"
         description="Change your temporary password to secure your account."
       />
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 relative overflow-hidden font-sans p-4 sm:p-6">

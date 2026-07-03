@@ -7,7 +7,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { useState, FormEvent } from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import Logo from "@/Assets/Logo.png";
 import SEO from "@/components/SEO";
 
 const LoginPage = () => {
@@ -31,8 +30,7 @@ const LoginPage = () => {
     if (user.needs_password_change) {
       navigate('/change-password');
     } else {
-      const target = user.role === 'super_admin' ? '/admin/dashboard' : '/dashboard';
-      navigate(target);
+      navigate('/dashboard');
     }
   };
 
@@ -75,9 +73,9 @@ const LoginPage = () => {
 
   return (
     <>
-      <SEO 
-        title="Login to SalonFlow"
-        description="Access your SalonFlow dashboard to manage appointments, staff, and analytics."
+      <SEO
+        title="Login"
+        description="Access your account dashboard."
       />
       <div className="min-h-screen flex w-full bg-white font-sans">
       {/* Left side: Brand / Visual (Hidden on mobile) */}
@@ -89,36 +87,20 @@ const LoginPage = () => {
         
         <div className="relative z-10 w-full max-w-lg">
           <Link to="/" className="flex justify-center mb-16 hover:opacity-80 transition-opacity">
-            <img src={Logo} alt="SalonFlow" className="h-32 sm:h-48 object-contain" />
+            <span className="text-3xl font-bold text-white">Storefront</span>
           </Link>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight mb-6 tracking-tight">
-              Manage your salon with <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">elegance.</span>
+              Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">your account.</span>
             </h1>
             <p className="text-slate-400 text-lg leading-relaxed mb-12 max-w-md">
-              Streamline appointments, manage staff, and grow your business with our all-in-one platform designed specifically for premium salons.
+              Sign in to manage your account and orders.
             </p>
-            
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-inner">
-                  S
-                </div>
-                <div>
-                  <h4 className="text-white font-medium">Sarah Jenkins</h4>
-                  <p className="text-slate-400 text-sm">Owner, The Luxe Parlor</p>
-                </div>
-              </div>
-              <p className="text-slate-300 italic text-sm leading-relaxed">
-                "SalonFlow completely transformed how we run our daily operations. 
-                The interface is beautiful and my staff learned it in minutes."
-              </p>
-            </div>
           </motion.div>
         </div>
       </div>
@@ -137,7 +119,7 @@ const LoginPage = () => {
           >
             {/* Mobile Header Logo */}
             <div className="lg:hidden flex justify-center mb-10">
-              <img src={Logo} alt="SalonFlow" className="h-24 sm:h-32 object-contain" />
+              <span className="text-2xl font-bold text-slate-900">Storefront</span>
             </div>
 
             <div className="mb-10">
@@ -244,14 +226,6 @@ const LoginPage = () => {
               </form>
             )}
 
-            <div className="mt-10 pt-8 border-t border-slate-100 text-center">
-              <p className="text-slate-500 text-sm">
-                Don't have an account?{' '}
-                <Link to="/start-trial" className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
-                  Start free trial
-                </Link>
-              </p>
-            </div>
           </motion.div>
         </div>
       </div>

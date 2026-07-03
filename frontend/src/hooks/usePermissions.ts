@@ -4,7 +4,7 @@ export const usePermissions = () => {
   const { permissions, user } = useAuthStore();
 
   const can = (permission: string): boolean => {
-    if (user?.role === 'super_admin') return true;
+    if (user?.role === 'admin') return true;
 
     return permissions.some((p) => {
       if (p === permission || p === '*') return true;

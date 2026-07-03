@@ -1,6 +1,6 @@
 {
-    "name": "salon-saas/backend",
-    "description": "Enterprise REST API for Salon Management System",
+    "name": "ecommerce/backend",
+    "description": "REST API backend skeleton",
     "type": "project",
     "license": "MIT",
     "require": {

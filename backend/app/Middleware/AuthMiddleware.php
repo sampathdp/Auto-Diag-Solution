@@ -33,10 +33,7 @@ class AuthMiddleware
 
             $request->user = (object) [
                 'id'                   => $decoded->sub,
-                'salon_id'             => $decoded->salon_id,
-                'salon_slug'           => $decoded->salon_slug ?? null,
                 'role'                 => $decoded->role,
-                'branch_id'            => $decoded->branch_id ?? null,
                 'needs_password_change' => $decoded->needs_password_change ?? false,
                 'permissions'          => (array)($decoded->permissions ?? []),
             ];

@@ -71,7 +71,7 @@ class TwoFactorService
 
         return [
             'secret' => $secret,
-            'otpauth_uri' => TOTP::getUri('SalonFlow', $user['email'] ?? 'account', $secret),
+            'otpauth_uri' => TOTP::getUri($_ENV['APP_NAME'] ?? 'App', $user['email'] ?? 'account', $secret),
         ];
     }
 
