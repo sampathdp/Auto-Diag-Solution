@@ -1,0 +1,25 @@
+{
+  "name": "salon-system-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "E2E & security tests for the Salon SaaS System",
+  "scripts": {
+    "test": "playwright test",
+    "test:security": "playwright test tests/security/",
+    "test:auth": "playwright test tests/security/01-auth-endpoints.spec.ts",
+    "test:unauth": "playwright test tests/security/02-unauthenticated-access.spec.ts",
+    "test:tokens": "playwright test tests/security/03-invalid-tokens.spec.ts",
+    "test:admin": "playwright test tests/security/04-admin-protection.spec.ts",
+    "test:storage": "playwright test tests/security/05-storage-security.spec.ts",
+    "test:tenant": "playwright test tests/security/06-tenant-isolation.spec.ts",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.0",
+    "@types/node": "^26.0.0",
+    "dotenv": "^16.4.5",
+    "typescript": "^5.4.5"
+  }
+}

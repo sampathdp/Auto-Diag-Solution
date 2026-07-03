@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../bootstrap/manual_autoload.php';
+
+use App\Core\Request;
+use App\Core\Response;
+
+// ── CORS & Security Headers ────────────────────────────────────────────────────
+// Allowed frontend origin(s). In production set FRONTEND_URL in .env.
+$allowedOrigins = array_filter([
+    $_ENV['FRONTEND_URL']       ?? null,   // production origin from .env
+    'http://localhost:3000',               // Vite dev server
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',               // alternate Vite port
+]);
+
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+if (in_array($requestOrigin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $requestOrigin);
+    header('Vary: Origin');
+} elseif (($_ENV['APP_ENV'] ?? 'local') === 'local' && $requestOrigin === '') {
+    // Same-origin or non-browser requests (Postman with no Origin) — allow in dev only
+    header('Access-Control-Allow-Origin: *');
+}
+
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Authorization, Content-Type, Accept, X-Target-Salon-Id');
+header('Access-Control-Max-Age: 3600');
+
+// Security hardening headers
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
+// Handle browser CORS preflight — must exit before any auth check
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
+try {
+    /** @var App\Core\Router\Router $router */
+    $router = require_once __DIR__ . '/../bootstrap/app.php';
+
+    $request = new Request();
+    
+    // Resolve the route
+    $router->resolve($request);
+
+} catch (\Throwable $e) {
+    // Global Exception Handler — never expose internals in the API response
+    $debug = ($_ENV['APP_DEBUG'] ?? 'false') === 'true';
+
+    // Always log the full trace server-side
+    $logDir = __DIR__ . '/../scratch';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+    file_put_contents(
+        $logDir . '/errors.log',
+        sprintf(
+            "[%s] %s in %s:%d\n%s\n---\n",
+            date('Y-m-d H:i:s'),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        ),
+        FILE_APPEND
+    );
+
+    Response::error(
+        $debug ? $e->getMessage() : 'An internal error occurred',
+        null,
+        500
+    );
+}

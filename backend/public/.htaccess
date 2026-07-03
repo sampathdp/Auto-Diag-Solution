@@ -1,0 +1,24 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # ── Critical: pass the Authorization header through to PHP ──────────────────
+    # Apache strips Authorization by default. Without this, JWT auth silently
+    # fails and getallheaders() never returns the Authorization header.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Also handle case-variant spellings
+    RewriteCond %{HTTP:authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:authorization}]
+
+    # Route all requests to index.php (skip real files/dirs)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Deny direct access to sensitive directories
+<FilesMatch "\.(env|log|json|lock|md)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

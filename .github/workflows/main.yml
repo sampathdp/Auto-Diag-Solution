@@ -1,0 +1,79 @@
+name: Deploy to Shared Hosting
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  web-deploy:
+    name: 🎉 Build & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: 🏗️ Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: 📂 Prepare deployment directory
+        run: |
+          # Create a temporary deploy folder
+          mkdir -p dist
+          
+          # Copy compiled frontend assets to root of deploy folder
+          cp -r frontend/dist/* dist/
+          
+          # Copy backend code to /backend directory in deploy folder
+          cp -r backend dist/
+          
+          # Clean up unnecessary files to optimize upload size
+          rm -rf dist/backend/scratch
+          rm -f dist/backend/.env
+
+      - name: 📝 Create production .htaccess at root
+        run: |
+          cat << 'EOF' > dist/.htaccess
+          <IfModule mod_rewrite.c>
+              RewriteEngine On
+              
+              # Route API requests to the backend entry point
+              RewriteRule ^api/v1/(.*)$ backend/public/index.php [QSA,L]
+              
+              # Support React Router client-side routing fallback (SPA)
+              RewriteCond %{REQUEST_FILENAME} !-f
+              RewriteCond %{REQUEST_FILENAME} !-d
+              RewriteRule ^ index.html [L]
+          </IfModule>
+          EOF
+
+      - name: 📂 Sync files to FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          # Optional: If you need to deploy inside a specific hosting subdirectory (e.g. public_html)
+          # server-dir: /public_html/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/backend/.env
+            **/backend/scratch/**
+
