@@ -1,8 +1,9 @@
+// Mirrors the backend's standard response envelope: { success, data, error, message }
 export interface ApiResponse<T> {
   success: boolean;
-  message: string;
   data: T;
-  errors: string[] | null;
+  error: string | Record<string, string[]> | null;
+  message: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -13,9 +14,4 @@ export interface PaginatedResponse<T> {
     per_page: number;
     total_pages: number;
   };
-}
-
-export interface ApiError {
-  message: string;
-  errors?: Record<string, string[]>;
 }

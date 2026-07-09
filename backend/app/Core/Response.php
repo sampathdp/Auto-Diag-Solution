@@ -10,7 +10,7 @@ class Response
         bool $success,
         string $message = '',
         mixed $data = null,
-        ?array $errors = null,
+        mixed $error = null,
         int $statusCode = 200
     ): void {
         http_response_code($statusCode);
@@ -18,11 +18,11 @@ class Response
 
         echo json_encode([
             'success' => $success,
-            'message' => $message,
             'data'    => $data,
-            'errors'  => $errors
+            'error'   => $error,
+            'message' => $message,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        
+
         exit;
     }
 
@@ -31,8 +31,8 @@ class Response
         self::json(true, $message, $data, null, $statusCode);
     }
 
-    public static function error(string $message = 'Error', ?array $errors = null, int $statusCode = 400): void
+    public static function error(string $message = 'Error', mixed $error = null, int $statusCode = 400): void
     {
-        self::json(false, $message, null, $errors, $statusCode);
+        self::json(false, $message, null, $error, $statusCode);
     }
 }

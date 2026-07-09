@@ -1,5 +1,5 @@
-import apiClient from '@/api/client';
-import { ApiResponse } from '@/types/api';
+import apiClient from "@/lib/api/client";
+import { ApiResponse } from "@/types/api";
 
 export abstract class BaseService {
   protected static async get<T>(url: string, params?: any): Promise<T> {

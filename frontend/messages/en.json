@@ -1,0 +1,130 @@
+{
+  "nav": {
+    "home": "Home",
+    "shop": "Shop",
+    "categories": "Categories",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Sign In",
+    "logout": "Log out",
+    "dashboard": "Dashboard",
+    "account": "Account",
+    "cart": "Cart",
+    "search": "Search",
+    "menu": "Menu"
+  },
+  "announce": {
+    "message": "Free UAE-wide delivery on orders over <strong>AED 500</strong>"
+  },
+  "home": {
+    "hero": {
+      "eyebrow": "UAE Auto Parts Distributor · Est. 2015",
+      "titleLine1": "Precision Auto Parts.",
+      "titleLine2": "Delivered Across",
+      "titleHighlight": "the UAE.",
+      "subtitle": "Genuine and OEM parts for 500+ vehicle models, sourced globally and stocked in Dubai — so the right part reaches your garage, not just your inbox.",
+      "ctaShop": "Shop Parts",
+      "ctaFinder": "Find Parts for Your Car"
+    },
+    "finder": {
+      "title": "Find Parts For Your Vehicle",
+      "year": "Year",
+      "yearPlaceholder": "Select Year",
+      "make": "Make",
+      "makePlaceholder": "Select Make",
+      "model": "Model",
+      "modelPlaceholder": "Select Model",
+      "submit": "Find Parts"
+    },
+    "stats": {
+      "parts": "Parts in Stock",
+      "models": "Vehicle Models Supported",
+      "dispatchValue": "Same-Day",
+      "dispatch": "Dispatch in Dubai",
+      "genuineValue": "Genuine",
+      "genuine": "& OEM Parts Only"
+    },
+    "about": {
+      "eyebrow": "Who We Are",
+      "title": "Built for the UAE Driver.",
+      "body": "Ferrum sources genuine and OEM-equivalent parts from certified manufacturers across Asia, Europe and the US, then stocks them locally in Dubai — so you're not waiting weeks for a part that should take a day. From daily maintenance to full rebuilds, our catalogue is matched precisely to what's actually on UAE roads.",
+      "link": "Learn More About Ferrum",
+      "imageTag": "Ferrum · Dubai Distribution Centre"
+    },
+    "categories": {
+      "eyebrow": "Shop By Category",
+      "title": "Every system, properly stocked.",
+      "viewAll": "View All Categories",
+      "partsLabel": "Parts",
+      "engine": "Engine Components",
+      "brakes": "Brakes & Suspension",
+      "filters": "Filters & Fluids",
+      "electrical": "Electrical & Lighting",
+      "body": "Body & Exterior",
+      "interior": "Interior & Trim"
+    },
+    "products": {
+      "eyebrow": "Best Sellers",
+      "title": "Parts drivers reorder.",
+      "addToCart": "Add to Cart",
+      "inStock": "In Stock",
+      "lowStock": "Low Stock"
+    },
+    "brands": {
+      "eyebrow": "Trusted Brands",
+      "title": "Authorized to distribute the names you already trust."
+    },
+    "why": {
+      "eyebrow": "Why Ferrum",
+      "title": "The details that matter more than the sale.",
+      "genuineTitle": "Genuine Parts Only",
+      "genuineBody": "Every SKU is sourced directly from the manufacturer or an authorized channel — verified before it reaches our warehouse.",
+      "deliveryTitle": "Fast UAE Delivery",
+      "deliveryBody": "Same-day dispatch within Dubai, next-day across the other Emirates — tracked from our warehouse to your door.",
+      "supportTitle": "WhatsApp Support",
+      "supportBody": "Send us your VIN or old part photo — our team confirms fitment before you order, not after.",
+      "returnsTitle": "Easy Returns",
+      "returnsBody": "Wrong fitment or changed your mind — 30 days to return, no restocking questions asked."
+    },
+    "testimonial": {
+      "quote": "Ordered brake pads for my Land Cruiser on a Tuesday morning — they were at my garage in Al Quoz by 3pm the same day. Genuine Brembo, exactly as described.",
+      "name": "Ahmed Al Falasi",
+      "role": "Dubai, UAE — Toyota Land Cruiser 2019"
+    },
+    "cta": {
+      "title": "Can't find your part? Talk to us on WhatsApp.",
+      "button": "Chat With Us"
+    }
+  },
+  "footer": {
+    "blurb": "Genuine and OEM auto parts, sourced globally and distributed across the UAE from our Dubai facility since 2015.",
+    "shop": "Shop",
+    "shopEngine": "Engine Components",
+    "shopBrakes": "Brakes & Suspension",
+    "shopFilters": "Filters & Fluids",
+    "shopElectrical": "Electrical & Lighting",
+    "company": "Company",
+    "terms": "Terms & Conditions",
+    "refund": "Refund Policy",
+    "privacy": "Privacy Policy",
+    "contact": "Contact",
+    "address": "Warehouse 14, Al Quoz Industrial Area 3, Dubai, UAE",
+    "hours": "Sat–Thu, 8:00–20:00 GST",
+    "copyright": "© 2026 Ferrum Auto Parts LLC. All rights reserved."
+  },
+  "auth": {
+    "login": "Sign In",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign In",
+    "invalidCredentials": "Invalid email or password",
+    "twoFactorTitle": "Two-factor verification",
+    "twoFactorSubtitle": "Enter the 6-digit code from your authenticator app, or a recovery code.",
+    "verificationCode": "Verification code",
+    "verify": "Verify",
+    "backToSignIn": "Back to sign in"
+  },
+  "dashboard": {
+    "welcome": "Welcome back"
+  }
+}

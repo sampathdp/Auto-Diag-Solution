@@ -1,8 +1,0 @@
-User-agent: *
-Disallow: /dashboard/
-Disallow: /admin/
-Disallow: /settings/
-Disallow: /api/
-Allow: /
-
-Sitemap: https://salonflow.cloud/sitemap.xml

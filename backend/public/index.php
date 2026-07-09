@@ -11,9 +11,8 @@ use App\Core\Response;
 // Allowed frontend origin(s). In production set FRONTEND_URL in .env.
 $allowedOrigins = array_filter([
     $_ENV['FRONTEND_URL']       ?? null,   // production origin from .env
-    'http://localhost:3000',               // Vite dev server
+    'http://localhost:3000',               // Next.js dev server
     'http://127.0.0.1:3000',
-    'http://localhost:5173',               // alternate Vite port
 ]);
 
 $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';

@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ============================================================
+       Every color below is one of the five client-specified colors:
+       white (#FFFFFF), light gray (#F5F6F8), charcoal (#1E2530),
+       navy (#16233F), amber accent (#E87722) — or that color at
+       reduced opacity via Tailwind's `/ <alpha-value>` syntax.
+       The only exception is --destructive, a semantic error-state
+       red required for usable form validation, not a brand color.
+       ============================================================ */
+    --background: 0 0% 100%;          /* white */
+    --foreground: 217 23% 15%;        /* charcoal */
+
+    --card: 0 0% 100%;                /* white */
+    --card-foreground: 217 23% 15%;   /* charcoal */
+
+    --popover: 0 0% 100%;             /* white */
+    --popover-foreground: 217 23% 15%;/* charcoal */
+
+    --primary: 26 81% 52%;            /* amber — the one CTA accent color */
+    --primary-foreground: 0 0% 100%;  /* white */
+
+    --navy: 221 48% 17%;              /* navy — dark sections, header-on-scroll, footer */
+    --navy-foreground: 0 0% 100%;     /* white */
+
+    --secondary: 220 18% 97%;         /* light gray */
+    --secondary-foreground: 217 23% 15%; /* charcoal */
+
+    --muted: 220 18% 97%;             /* light gray */
+    --muted-foreground: 217 23% 15%;  /* charcoal, consumed at reduced opacity — see tailwind.config.ts */
+
+    --accent: 220 18% 97%;            /* light gray — subtle hover/active tint (UI convention, not the brand accent) */
+    --accent-foreground: 217 23% 15%; /* charcoal */
+
+    --destructive: 0 72% 51%;         /* semantic error red */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 23% 15%;            /* charcoal, consumed at ~10% opacity */
+    --input: 217 23% 15%;             /* charcoal, consumed at ~14% opacity */
+    --ring: 26 81% 52%;               /* amber */
+
+    --radius: 0.625rem;               /* 10px */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+
+  [dir="rtl"] body {
+    font-family: var(--font-arabic);
+  }
+}
