@@ -1,14 +1,14 @@
 -- ============================================
--- Auto Parts UAE — Database Schema (Phase 1)
--- Generated from the applied migrations in backend/database/migrations/
--- Database: autoparts_uae
+-- Auto Parts UAE — Database Schema
+-- Generated from the live autoparts_uae database via SHOW CREATE TABLE
+-- Regenerate any time with: php console.php (see backend/database/migrations/*)
 -- ============================================
 
 CREATE DATABASE IF NOT EXISTS autoparts_uae CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE autoparts_uae;
 
 -- ============================================
--- USERS (customers + admins, RBAC via `role`)
+-- USERS
 -- ============================================
 
 CREATE TABLE `users` (
@@ -27,11 +27,12 @@ CREATE TABLE `users` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_email` (`email`),
-  KEY `idx_users_role` (`role`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `idx_users_role` (`role`),
+  KEY `idx_users_is_active` (`is_active`)
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- AUTH SUPPORT (JWT refresh tokens, login rate-limiting, 2FA recovery)
+-- REFRESH_TOKENS
 -- ============================================
 
 CREATE TABLE `refresh_tokens` (
@@ -45,7 +46,11 @@ CREATE TABLE `refresh_tokens` (
   UNIQUE KEY `uq_refresh_tokens_token` (`token`),
   KEY `idx_refresh_tokens_user_id` (`user_id`),
   CONSTRAINT `refresh_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- LOGIN_ATTEMPTS
+-- ============================================
 
 CREATE TABLE `login_attempts` (
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -54,6 +59,10 @@ CREATE TABLE `login_attempts` (
   `locked_until` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- TWO_FACTOR_RECOVERY_CODES
+-- ============================================
 
 CREATE TABLE `two_factor_recovery_codes` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -67,7 +76,20 @@ CREATE TABLE `two_factor_recovery_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- CUSTOMER ADDRESSES (saved UAE delivery addresses)
+-- RATE_LIMITS
+-- ============================================
+
+CREATE TABLE `rate_limits` (
+  `action` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `identifier` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `attempts` int NOT NULL DEFAULT '0',
+  `last_attempt_at` timestamp NULL DEFAULT NULL,
+  `locked_until` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`action`,`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- CUSTOMER_ADDRESSES
 -- ============================================
 
 CREATE TABLE `customer_addresses` (
@@ -88,12 +110,12 @@ CREATE TABLE `customer_addresses` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `idx_customer_addresses_user_id` (`user_id`),
+  KEY `idx_customer_addresses_user_default` (`user_id`,`is_default`),
   CONSTRAINT `customer_addresses_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- CATEGORIES (hierarchical, bilingual EN/AR)
+-- CATEGORIES
 -- ============================================
 
 CREATE TABLE `categories` (
@@ -112,14 +134,12 @@ CREATE TABLE `categories` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_categories_slug` (`slug`),
   KEY `idx_categories_parent_id` (`parent_id`),
+  KEY `idx_categories_active_sort` (`is_active`,`sort_order`),
   CONSTRAINT `categories_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- VEHICLES (Year / Make / Model fitment search)
--- The Year -> Make -> Model search drills down left-to-right, so this composite
--- UNIQUE key serves every step (year alone, year+make, year+make+model) as an
--- indexed lookup. Verified live via EXPLAIN: type=ref, not a table scan.
+-- VEHICLES
 -- ============================================
 
 CREATE TABLE `vehicles` (
@@ -133,10 +153,10 @@ CREATE TABLE `vehicles` (
   UNIQUE KEY `uq_vehicles_year_make_model` (`year`,`make`,`model`),
   KEY `idx_vehicles_make` (`make`),
   KEY `idx_vehicles_model` (`model`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- BRANDS (bilingual, e.g. Bosch, Denso — filterable/browsable)
+-- BRANDS
 -- ============================================
 
 CREATE TABLE `brands` (
@@ -155,9 +175,7 @@ CREATE TABLE `brands` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- SUPPLIERS (3PL feed sources)
--- api_key is a placeholder for phase 1 — store a real secret here only if it's
--- encrypted at rest; prefer referencing an env-stored credential by name instead.
+-- SUPPLIERS
 -- ============================================
 
 CREATE TABLE `suppliers` (
@@ -177,9 +195,26 @@ CREATE TABLE `suppliers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- PRODUCTS (bilingual, SKU, price, stock, images, local/3PL source)
--- supplier_id identifies *which* 3PL account a product came from;
--- source_supplier_id is that supplier's own product reference/SKU for the item.
+-- MEDIA
+-- ============================================
+
+CREATE TABLE `media` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `path` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `original_filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `mime_type` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `size_bytes` int unsigned NOT NULL,
+  `alt_text_en` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `alt_text_ar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `uploaded_by` bigint DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_media_uploaded_by` (`uploaded_by`),
+  CONSTRAINT `fk_media_uploaded_by` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PRODUCTS
 -- ============================================
 
 CREATE TABLE `products` (
@@ -195,9 +230,12 @@ CREATE TABLE `products` (
   `short_description_en` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `short_description_ar` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `price` decimal(10,2) NOT NULL DEFAULT '0.00',
+  `vat_inclusive` tinyint(1) NOT NULL DEFAULT '1',
   `compare_at_price` decimal(10,2) DEFAULT NULL,
   `cost_price` decimal(10,2) DEFAULT NULL,
   `stock_quantity` int NOT NULL DEFAULT '0',
+  `low_stock_threshold` int DEFAULT NULL,
+  `track_inventory` tinyint(1) NOT NULL DEFAULT '1',
   `stock_status` enum('in_stock','out_of_stock','backorder') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'in_stock',
   `images` json DEFAULT NULL,
   `weight_kg` decimal(8,3) DEFAULT NULL,
@@ -205,27 +243,47 @@ CREATE TABLE `products` (
   `supplier_id` bigint DEFAULT NULL,
   `source_supplier_id` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `source_synced_at` timestamp NULL DEFAULT NULL,
-  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `status` enum('draft','active','inactive') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'draft',
+  `fits_all_vehicles` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_products_sku` (`sku`),
   UNIQUE KEY `uq_products_slug` (`slug`),
-  KEY `idx_products_category_id` (`category_id`),
   KEY `idx_products_source` (`source`),
   KEY `idx_products_brand_id` (`brand_id`),
   KEY `idx_products_supplier_id` (`supplier_id`),
+  KEY `idx_products_category_status` (`category_id`,`status`),
+  KEY `idx_products_status` (`status`),
+  KEY `idx_products_price` (`price`),
+  KEY `idx_products_stock_status` (`stock_status`),
+  KEY `idx_products_stock_quantity` (`stock_quantity`),
+  FULLTEXT KEY `ft_products_search` (`name_en`,`name_ar`,`short_description_en`,`short_description_ar`),
   CONSTRAINT `fk_products_brand` FOREIGN KEY (`brand_id`) REFERENCES `brands` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_products_supplier` FOREIGN KEY (`supplier_id`) REFERENCES `suppliers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- PRODUCT_SPECIFICATIONS
+-- ============================================
+
+CREATE TABLE `product_specifications` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `product_id` bigint NOT NULL,
+  `key_en` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `key_ar` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value_en` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `value_ar` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `sort_order` int NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_product_specifications_product_sort` (`product_id`,`sort_order`),
+  CONSTRAINT `fk_product_specifications_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- PRODUCT <-> VEHICLE FITMENT MAPPING
--- vehicle_id leads the composite key because the hot path is "customer picked a
--- Year/Make/Model, list every compatible product" (a lookup BY vehicle_id).
--- The secondary index on product_id alone serves the reverse direction (a
--- product's fitment list in the admin panel).
+-- PRODUCT_VEHICLE
 -- ============================================
 
 CREATE TABLE `product_vehicle` (
@@ -241,10 +299,7 @@ CREATE TABLE `product_vehicle` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- CARTS / CART ITEMS
--- user_id is null for a guest cart (identified by session_token instead); once a
--- guest logs in, the app layer should merge their session cart into the user's
--- cart. price_at_add lets the storefront flag "price changed since you added this".
+-- CARTS
 -- ============================================
 
 CREATE TABLE `carts` (
@@ -257,8 +312,13 @@ CREATE TABLE `carts` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_carts_session_token` (`session_token`),
   KEY `idx_carts_user_id` (`user_id`),
+  KEY `idx_carts_status` (`status`),
   CONSTRAINT `carts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- CART_ITEMS
+-- ============================================
 
 CREATE TABLE `cart_items` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -276,7 +336,23 @@ CREATE TABLE `cart_items` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- REVIEWS (moderated — is_approved defaults to false)
+-- WISHLISTS
+-- ============================================
+
+CREATE TABLE `wishlists` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `product_id` bigint NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_wishlists_user_product` (`user_id`,`product_id`),
+  KEY `idx_wishlists_product_id` (`product_id`),
+  CONSTRAINT `fk_wishlists_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_wishlists_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- REVIEWS
 -- ============================================
 
 CREATE TABLE `reviews` (
@@ -294,6 +370,7 @@ CREATE TABLE `reviews` (
   UNIQUE KEY `uq_reviews_product_user` (`product_id`,`user_id`),
   KEY `idx_reviews_user_id` (`user_id`),
   KEY `order_id` (`order_id`),
+  KEY `idx_reviews_product_approved` (`product_id`,`is_approved`),
   CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE,
   CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `reviews_ibfk_3` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE SET NULL,
@@ -302,9 +379,6 @@ CREATE TABLE `reviews` (
 
 -- ============================================
 -- ORDERS
--- vat_rate and shipping_snapshot are captured at checkout time so a later admin
--- edit to the VAT setting, or a customer editing/deleting a saved address, never
--- rewrites the paper trail on a past order.
 -- ============================================
 
 CREATE TABLE `orders` (
@@ -315,6 +389,7 @@ CREATE TABLE `orders` (
   `payment_status` enum('pending','paid','failed','refunded') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
   `payment_method` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'stripe',
   `payment_reference` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `refund_requested_at` timestamp NULL DEFAULT NULL,
   `subtotal` decimal(10,2) NOT NULL DEFAULT '0.00',
   `vat_rate` decimal(5,2) NOT NULL DEFAULT '5.00',
   `vat_amount` decimal(10,2) NOT NULL DEFAULT '0.00',
@@ -325,6 +400,7 @@ CREATE TABLE `orders` (
   `shipping_address_id` bigint DEFAULT NULL,
   `shipping_snapshot` json NOT NULL,
   `notes` text COLLATE utf8mb4_unicode_ci,
+  `cancellation_reason` text COLLATE utf8mb4_unicode_ci,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -332,9 +408,15 @@ CREATE TABLE `orders` (
   KEY `idx_orders_user_id_created_at` (`user_id`,`created_at`),
   KEY `idx_orders_status` (`status`),
   KEY `shipping_address_id` (`shipping_address_id`),
+  KEY `idx_orders_payment_status` (`payment_status`),
+  KEY `idx_orders_created_at` (`created_at`),
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`shipping_address_id`) REFERENCES `customer_addresses` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- ORDER_ITEMS
+-- ============================================
 
 CREATE TABLE `order_items` (
   `id` bigint NOT NULL AUTO_INCREMENT,
@@ -354,6 +436,10 @@ CREATE TABLE `order_items` (
   CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================
+-- ORDER_STATUS_HISTORY
+-- ============================================
+
 CREATE TABLE `order_status_history` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `order_id` bigint NOT NULL,
@@ -369,7 +455,64 @@ CREATE TABLE `order_status_history` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- SETTINGS (key-value: VAT rate, WhatsApp number, GA tracking ID, etc.)
+-- PAYMENT_TRANSACTIONS
+-- ============================================
+
+CREATE TABLE `payment_transactions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `order_id` bigint NOT NULL,
+  `provider` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'stripe',
+  `provider_reference` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `type` enum('payment','refund') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'payment',
+  `status` enum('pending','succeeded','failed','cancelled') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
+  `amount` decimal(10,2) NOT NULL,
+  `currency` varchar(3) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'AED',
+  `raw_payload` json DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_payment_transactions_provider_ref` (`provider`,`provider_reference`),
+  KEY `idx_payment_transactions_order_id` (`order_id`,`created_at`),
+  CONSTRAINT `fk_payment_transactions_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- ADMIN_ACTIVITY_LOGS
+-- ============================================
+
+CREATE TABLE `admin_activity_logs` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `admin_id` bigint DEFAULT NULL,
+  `action` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `entity_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `entity_id` bigint DEFAULT NULL,
+  `changes` json DEFAULT NULL,
+  `ip_address` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_activity_logs_entity` (`entity_type`,`entity_id`),
+  KEY `idx_admin_activity_logs_admin_created` (`admin_id`,`created_at`),
+  CONSTRAINT `fk_admin_activity_logs_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- ADMIN_NOTES
+-- ============================================
+
+CREATE TABLE `admin_notes` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `entity_type` enum('order','customer') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `entity_id` bigint NOT NULL,
+  `admin_id` bigint DEFAULT NULL,
+  `note` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_admin_notes_entity` (`entity_type`,`entity_id`,`created_at`),
+  KEY `fk_admin_notes_admin` (`admin_id`),
+  CONSTRAINT `fk_admin_notes_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- SETTINGS
 -- ============================================
 
 CREATE TABLE `settings` (
@@ -381,11 +524,12 @@ CREATE TABLE `settings` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_settings_key` (`key`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  UNIQUE KEY `uq_settings_key` (`key`),
+  KEY `idx_settings_group` (`group_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- PAGES (dynamic bilingual CMS pages: Terms, Refund Policy, Privacy Policy, ...)
+-- PAGES
 -- ============================================
 
 CREATE TABLE `pages` (
@@ -400,10 +544,10 @@ CREATE TABLE `pages` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_pages_slug` (`slug`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
--- SEO META (per page/category/product/custom-path bilingual SEO overrides)
+-- SEO_META
 -- ============================================
 
 CREATE TABLE `seo_meta` (
@@ -422,3 +566,17 @@ CREATE TABLE `seo_meta` (
   UNIQUE KEY `uq_seo_meta_path` (`path`),
   KEY `idx_seo_meta_type_ref` (`page_type`,`reference_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- MIGRATIONS
+-- ============================================
+
+CREATE TABLE `migrations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `migration` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `batch` int NOT NULL,
+  `run_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_migrations_migration` (`migration`)
+) ENGINE=InnoDB AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

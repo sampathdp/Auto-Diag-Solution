@@ -7,6 +7,15 @@ namespace App\Services;
 class SimpleSmtpMailer
 {
     /**
+     * Remove CR/LF (and anything after them on the same value) to prevent
+     * SMTP command / email header injection via untrusted input.
+     */
+    private static function stripHeaderInjection(string $value): string
+    {
+        return trim(str_replace(["\r", "\n"], '', $value));
+    }
+
+    /**
      * Write data to the socket in chunks to avoid buffer truncation.
      */
     private static function writeChunked($socket, string $data): void
@@ -43,6 +52,14 @@ class SimpleSmtpMailer
         ?string $plainText   = null,
         ?string $icalContent = null
     ): void {
+        // Strip CR/LF from every value that lands in an SMTP command or MIME header —
+        // otherwise a caller passing attacker-controlled $to/$fromAddress/$fromName/$subject
+        // could inject extra SMTP commands or forge additional headers (e.g. Bcc:).
+        $fromAddress = self::stripHeaderInjection($fromAddress);
+        $fromName    = self::stripHeaderInjection($fromName);
+        $to          = self::stripHeaderInjection($to);
+        $subject     = self::stripHeaderInjection($subject);
+
         $timeout = 15;
         $context = stream_context_create([
             'ssl' => [

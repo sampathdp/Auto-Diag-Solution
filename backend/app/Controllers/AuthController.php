@@ -8,7 +8,9 @@ use App\Core\Request;
 use App\Core\Auth\JWTService;
 use App\Core\Database\DatabaseManager;
 use App\Repositories\UserRepository;
+use App\Services\RateLimiter;
 use App\Services\TwoFactorService;
+use App\Services\SimpleSmtpMailer;
 
 class AuthController extends BaseController
 {
@@ -21,99 +23,54 @@ class AuthController extends BaseController
         $this->userRepo = new UserRepository();
     }
 
-    private const MAX_LOGIN_ATTEMPTS = 5;
-    private const LOGIN_LOCKOUT_SECONDS = 900; // 15 minutes
+    // Per-email lockout: tighter, since it only punishes attackers targeting one account.
+    private const LOGIN_EMAIL_MAX_ATTEMPTS = 5;
+    private const LOGIN_EMAIL_LOCKOUT_SECONDS = 900; // 15 minutes
 
-    private static bool $loginAttemptsTableReady = false;
+    // Per-IP lockout: looser (shared NATs/offices have multiple real users), but closes
+    // the gap where an attacker sprays low-and-slow attempts across many different emails.
+    private const LOGIN_IP_MAX_ATTEMPTS = 20;
+    private const LOGIN_IP_LOCKOUT_SECONDS = 900;
 
-    private static function ensureLoginAttemptsTable(): void
+    // Registration is unauthenticated and was previously fully unthrottled — this both
+    // limits automated account creation and caps the email-enumeration signal leaked by
+    // the 409 "already exists" response below.
+    private const REGISTER_IP_MAX_ATTEMPTS = 10;
+    private const REGISTER_IP_LOCKOUT_SECONDS = 3600; // 1 hour
+
+    // Same shape as registration throttling — forgot-password is also unauthenticated
+    // and, like registration, can be used to spam an inbox or enumerate accounts.
+    private const FORGOT_PASSWORD_IP_MAX_ATTEMPTS = 10;
+    private const FORGOT_PASSWORD_IP_LOCKOUT_SECONDS = 3600; // 1 hour
+
+    private const RESET_TOKEN_TTL_SECONDS = 1800; // 30 minutes
+
+    private function lockoutMessage(int $lockedSeconds): string
     {
-        if (self::$loginAttemptsTableReady) {
-            return;
-        }
-
-        try {
-            DatabaseManager::query("
-                CREATE TABLE IF NOT EXISTS login_attempts (
-                    email VARCHAR(255) PRIMARY KEY,
-                    attempts INT NOT NULL DEFAULT 0,
-                    last_attempt_at TIMESTAMP NULL,
-                    locked_until TIMESTAMP NULL
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-            ");
-            self::$loginAttemptsTableReady = true;
-        } catch (\Exception $e) {
-            // Ignore — table likely already exists
-        }
-    }
-
-    private function secondsUntilUnlocked(string $email): int
-    {
-        $row = DatabaseManager::query(
-            "SELECT locked_until FROM login_attempts WHERE email = :email LIMIT 1",
-            ['email' => $email]
-        )->fetch();
-
-        if (!$row || !$row['locked_until']) {
-            return 0;
-        }
-
-        return max(0, strtotime($row['locked_until']) - time());
-    }
-
-    private function recordFailedLoginAttempt(string $email): void
-    {
-        $row = DatabaseManager::query(
-            "SELECT attempts FROM login_attempts WHERE email = :email LIMIT 1",
-            ['email' => $email]
-        )->fetch();
-
-        $attempts = ($row ? (int)$row['attempts'] : 0) + 1;
-        $lockedUntil = $attempts >= self::MAX_LOGIN_ATTEMPTS
-            ? date('Y-m-d H:i:s', time() + self::LOGIN_LOCKOUT_SECONDS)
-            : null;
-
-        DatabaseManager::query(
-            "INSERT INTO login_attempts (email, attempts, last_attempt_at, locked_until)
-             VALUES (:email, :attempts, NOW(), :locked_until)
-             ON DUPLICATE KEY UPDATE attempts = :attempts2, last_attempt_at = NOW(), locked_until = :locked_until2",
-            [
-                'email' => $email,
-                'attempts' => $attempts,
-                'locked_until' => $lockedUntil,
-                'attempts2' => $attempts,
-                'locked_until2' => $lockedUntil,
-            ]
-        );
-    }
-
-    private function clearFailedLoginAttempts(string $email): void
-    {
-        DatabaseManager::query("DELETE FROM login_attempts WHERE email = :email", ['email' => $email]);
+        return 'Too many attempts. Try again in ' . (int)ceil($lockedSeconds / 60) . ' minute(s).';
     }
 
     public function login(Request $request): void
     {
         $email = strtolower(trim((string)$request->input('email')));
         $password = $request->input('password');
+        $ip = $request->getIp();
 
-        self::ensureLoginAttemptsTable();
         TwoFactorService::ensureSchema();
 
-        $lockedSeconds = $this->secondsUntilUnlocked($email);
+        $emailLockSeconds = RateLimiter::secondsUntilUnlocked('login:email', $email);
+        $ipLockSeconds = RateLimiter::secondsUntilUnlocked('login:ip', $ip);
+        $lockedSeconds = max($emailLockSeconds, $ipLockSeconds);
         if ($lockedSeconds > 0) {
-            $this->error(
-                'Too many failed login attempts. Try again in ' . (int)ceil($lockedSeconds / 60) . ' minute(s).',
-                null,
-                429
-            );
+            $this->error($this->lockoutMessage($lockedSeconds), null, 429);
             return;
         }
 
         $user = $this->userRepo->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['password'])) {
-            $this->recordFailedLoginAttempt($email);
+            RateLimiter::hit('login:email', $email, self::LOGIN_EMAIL_MAX_ATTEMPTS, self::LOGIN_EMAIL_LOCKOUT_SECONDS);
+            RateLimiter::hit('login:ip', $ip, self::LOGIN_IP_MAX_ATTEMPTS, self::LOGIN_IP_LOCKOUT_SECONDS);
             $this->error('Invalid credentials', null, 401);
             return;
         }
@@ -127,13 +84,15 @@ class AuthController extends BaseController
             }
 
             if (!TwoFactorService::verifyLoginCode($user, $code)) {
-                $this->recordFailedLoginAttempt($email);
+                RateLimiter::hit('login:email', $email, self::LOGIN_EMAIL_MAX_ATTEMPTS, self::LOGIN_EMAIL_LOCKOUT_SECONDS);
+                RateLimiter::hit('login:ip', $ip, self::LOGIN_IP_MAX_ATTEMPTS, self::LOGIN_IP_LOCKOUT_SECONDS);
                 $this->error('Invalid 2FA code', null, 401);
                 return;
             }
         }
 
-        $this->clearFailedLoginAttempts($email);
+        RateLimiter::clear('login:email', $email);
+        RateLimiter::clear('login:ip', $ip);
 
         $accessToken = $this->jwtService->generateAccessToken($user);
         $refreshToken = $this->jwtService->generateRefreshToken((int)$user['id']);
@@ -157,14 +116,39 @@ class AuthController extends BaseController
 
     public function register(Request $request): void
     {
-        $data = $request->all();
+        $ip = $request->getIp();
 
-        if (empty($data['email']) || empty($data['password']) || empty($data['name'])) {
+        $lockedSeconds = RateLimiter::secondsUntilUnlocked('register:ip', $ip);
+        if ($lockedSeconds > 0) {
+            $this->error($this->lockoutMessage($lockedSeconds), null, 429);
+            return;
+        }
+
+        // Count every attempt (not just failures) — this caps the email-enumeration
+        // signal from the 409 response below just as much as it caps account spam.
+        RateLimiter::hit('register:ip', $ip, self::REGISTER_IP_MAX_ATTEMPTS, self::REGISTER_IP_LOCKOUT_SECONDS);
+
+        $data = $request->all();
+        $email = strtolower(trim((string)($data['email'] ?? '')));
+        $password = (string)($data['password'] ?? '');
+        $name = trim((string)($data['name'] ?? ''));
+
+        if ($email === '' || $password === '' || $name === '') {
             $this->error('Name, email, and password are required', null, 400);
             return;
         }
 
-        if ($this->userRepo->findByEmail(strtolower(trim($data['email'])))) {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->error('A valid email address is required', null, 400);
+            return;
+        }
+
+        if (strlen($password) < 8) {
+            $this->error('Password must be at least 8 characters long', null, 400);
+            return;
+        }
+
+        if ($this->userRepo->findByEmail($email)) {
             $this->error('A user with this email already exists', null, 409);
             return;
         }
@@ -172,14 +156,134 @@ class AuthController extends BaseController
         DatabaseManager::query(
             "INSERT INTO users (name, email, password, role) VALUES (:name, :email, :password, :role)",
             [
-                'name' => $data['name'],
-                'email' => strtolower(trim($data['email'])),
-                'password' => password_hash($data['password'], PASSWORD_BCRYPT),
+                'name' => $name,
+                'email' => $email,
+                'password' => password_hash($password, PASSWORD_BCRYPT),
                 'role' => 'customer',
             ]
         );
 
         $this->success(null, 'User registered successfully', 201);
+    }
+
+    public function forgotPassword(Request $request): void
+    {
+        $ip = $request->getIp();
+
+        $lockedSeconds = RateLimiter::secondsUntilUnlocked('forgot-password:ip', $ip);
+        if ($lockedSeconds > 0) {
+            $this->error($this->lockoutMessage($lockedSeconds), null, 429);
+            return;
+        }
+        RateLimiter::hit('forgot-password:ip', $ip, self::FORGOT_PASSWORD_IP_MAX_ATTEMPTS, self::FORGOT_PASSWORD_IP_LOCKOUT_SECONDS);
+
+        $email = strtolower(trim((string)$request->input('email')));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->error('A valid email address is required', null, 400);
+            return;
+        }
+
+        $genericMessage = 'If an account exists for that address, a password reset link has been sent.';
+
+        $user = $this->userRepo->findByEmail($email);
+        if (!$user) {
+            // Deliberately identical response to the "found" path below (minus the dev-mode
+            // link) so this endpoint can't be used to enumerate registered emails.
+            $this->success(null, $genericMessage);
+            return;
+        }
+
+        $rawToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $rawToken);
+        $expiresAt = date('Y-m-d H:i:s', time() + self::RESET_TOKEN_TTL_SECONDS);
+
+        DatabaseManager::query(
+            "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (:user_id, :token_hash, :expires_at)",
+            ['user_id' => $user['id'], 'token_hash' => $tokenHash, 'expires_at' => $expiresAt]
+        );
+
+        $frontendUrl = rtrim((string)($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000'), '/');
+        $resetUrl = "{$frontendUrl}/en/reset-password?token={$rawToken}";
+
+        $smtpHost = trim((string)($_ENV['SMTP_HOST'] ?? ''));
+
+        if ($smtpHost !== '') {
+            $safeName = htmlspecialchars((string)$user['name'], ENT_QUOTES, 'UTF-8');
+            SimpleSmtpMailer::send(
+                $smtpHost,
+                (int)($_ENV['SMTP_PORT'] ?? 587),
+                $_ENV['SMTP_ENCRYPTION'] ?? 'tls',
+                $_ENV['SMTP_USER'] ?? null,
+                $_ENV['SMTP_PASS'] ?? null,
+                (string)($_ENV['SMTP_FROM_ADDRESS'] ?? 'no-reply@example.com'),
+                (string)($_ENV['SMTP_FROM_NAME'] ?? 'Auto Parts UAE'),
+                $user['email'],
+                'Reset your password',
+                "<p>Hi {$safeName},</p><p>Click the link below to reset your password. This link expires in 30 minutes.</p><p><a href=\"{$resetUrl}\">{$resetUrl}</a></p>"
+            );
+
+            $this->success(null, $genericMessage);
+            return;
+        }
+
+        // Dev-mode fallback: SMTP credentials aren't configured yet, so hand the link back
+        // directly instead of silently discarding it. Once SMTP_HOST is set in .env, this
+        // branch stops being reachable and the email actually gets sent above.
+        $this->success(
+            ['reset_url' => $resetUrl, 'dev_mode' => true],
+            'SMTP is not configured yet — showing the reset link directly instead of emailing it.'
+        );
+    }
+
+    public function resetPassword(Request $request): void
+    {
+        $token = (string)$request->input('token');
+        $newPassword = (string)$request->input('new_password');
+
+        if ($token === '' || $newPassword === '') {
+            $this->error('Token and new password are required', null, 400);
+            return;
+        }
+
+        if (strlen($newPassword) < 8) {
+            $this->error('Password must be at least 8 characters long', null, 400);
+            return;
+        }
+
+        $tokenHash = hash('sha256', $token);
+        $resetRow = DatabaseManager::query(
+            "SELECT * FROM password_reset_tokens WHERE token_hash = :token_hash LIMIT 1",
+            ['token_hash' => $tokenHash]
+        )->fetch();
+
+        if (!$resetRow || $resetRow['used_at'] !== null || strtotime($resetRow['expires_at']) < time()) {
+            $this->error('This reset link is invalid or has expired', null, 400);
+            return;
+        }
+
+        $user = $this->userRepo->find((int)$resetRow['user_id']);
+        if (!$user) {
+            $this->error('This reset link is invalid or has expired', null, 400);
+            return;
+        }
+
+        $this->userRepo->update((int)$user['id'], [
+            'password' => password_hash($newPassword, PASSWORD_BCRYPT),
+        ]);
+
+        DatabaseManager::query(
+            "UPDATE password_reset_tokens SET used_at = NOW() WHERE id = :id",
+            ['id' => $resetRow['id']]
+        );
+
+        // A password reset should invalidate every existing session — otherwise a
+        // previously-stolen refresh token would still work after the "fix".
+        DatabaseManager::query(
+            "DELETE FROM refresh_tokens WHERE user_id = :user_id",
+            ['user_id' => $user['id']]
+        );
+
+        $this->success(null, 'Password reset successfully. You can now sign in with your new password.');
     }
 
     public function refresh(Request $request): void
@@ -258,8 +362,8 @@ class AuthController extends BaseController
             $this->error('Incorrect current password', null, 400);
         }
 
-        if (strlen($newPassword) < 6) {
-            $this->error('New password must be at least 6 characters long', null, 400);
+        if (strlen($newPassword) < 8) {
+            $this->error('New password must be at least 8 characters long', null, 400);
         }
 
         $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);

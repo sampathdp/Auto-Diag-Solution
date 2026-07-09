@@ -64,3 +64,10 @@ function loadDotEnv(string $path): void {
 }
 
 loadDotEnv(__DIR__ . '/../.env');
+
+// Global helper functions (env(), sanitize(), slugify(), ...) — composer.json declares
+// this as an autoload "files" entry, but this app runs on the manual autoloader above,
+// not Composer, so that declaration was never actually honored. Every helper in this
+// file was consequently uncallable (confirmed dormant: nothing in the codebase called
+// env()/dd()/sanitize() until slugify() was added and immediately failed at runtime).
+require_once __DIR__ . '/../app/Helpers/functions.php';

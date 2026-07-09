@@ -9,6 +9,7 @@
     "logout": "تسجيل الخروج",
     "dashboard": "لوحة التحكم",
     "account": "الحساب",
+    "wishlist": "المفضلة",
     "cart": "السلة",
     "search": "بحث",
     "menu": "القائمة"
@@ -24,7 +25,10 @@
       "titleHighlight": "الإمارات.",
       "subtitle": "قطع غيار أصلية ومعادلة للأصلية لأكثر من 500 طراز مركبة، مصدرها عالمي ومخزنة في دبي — لتصل القطعة الصحيحة إلى ورشتك، لا إلى بريدك الإلكتروني فقط.",
       "ctaShop": "تسوق القطع",
-      "ctaFinder": "ابحث عن قطع سيارتك"
+      "ctaFinder": "ابحث عن قطع سيارتك",
+      "credential1": "أكثر من 10,000 قطعة متوفرة",
+      "credential2": "قطع أصلية ومعادلة للأصلية",
+      "credential3": "توصيل في اليوم التالي داخل الإمارات"
     },
     "finder": {
       "title": "ابحث عن القطع حسب مركبتك",
@@ -72,7 +76,9 @@
     },
     "brands": {
       "eyebrow": "علامات تجارية موثوقة",
-      "title": "معتمدون لتوزيع العلامات التي تثق بها بالفعل."
+      "title": "معتمدون لتوزيع العلامات التي تثق بها بالفعل.",
+      "description": "نتعاون مع أفضل مصنعي قطع غيار السيارات العالميين لنقدم لك مكونات أصلية <br></br> وعالية الجودة لكل أنواع وموديلات السيارات.",
+      "link": "عرض كل العلامات التجارية"
     },
     "why": {
       "eyebrow": "لماذا فيروم",
@@ -114,6 +120,7 @@
   },
   "auth": {
     "login": "تسجيل الدخول",
+    "loginSubtitle": "سجّل الدخول لتتبع الطلبات وإدارة مركباتك وإتمام الشراء بشكل أسرع.",
     "email": "البريد الإلكتروني",
     "password": "كلمة المرور",
     "signIn": "تسجيل الدخول",
@@ -122,9 +129,134 @@
     "twoFactorSubtitle": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة، أو رمز الاسترداد.",
     "verificationCode": "رمز التحقق",
     "verify": "تحقق",
-    "backToSignIn": "العودة لتسجيل الدخول"
+    "backToSignIn": "العودة لتسجيل الدخول",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "dontHaveAccount": "ليس لديك حساب؟",
+    "alreadyHaveAccount": "لديك حساب بالفعل؟",
+    "createAccount": "إنشاء حساب",
+    "registerSubtitle": "انضم لحفظ مركباتك وتتبع الطلبات وإتمام الشراء بشكل أسرع.",
+    "registerFailed": "تعذر إنشاء حسابك. يرجى المحاولة مرة أخرى.",
+    "name": "الاسم الكامل",
+    "confirmPassword": "تأكيد كلمة المرور",
+    "forgotPasswordTitle": "نسيت كلمة المرور",
+    "forgotPasswordSubtitle": "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
+    "checkEmailTitle": "تحقق من بريدك الإلكتروني",
+    "checkEmailSubtitle": "إذا كان هناك حساب بهذا البريد الإلكتروني، فقد تم إرسال رابط إعادة تعيين كلمة المرور.",
+    "sendResetLink": "إرسال رابط إعادة التعيين",
+    "devModeNotice": "وضع التطوير — SMTP غير مُهيأ، يتم عرض الرابط مباشرة",
+    "resetPasswordTitle": "إعادة تعيين كلمة المرور",
+    "resetPasswordSubtitle": "اختر كلمة مرور جديدة لحسابك.",
+    "resetPasswordButton": "إعادة تعيين كلمة المرور",
+    "newPassword": "كلمة المرور الجديدة",
+    "resetLinkInvalid": "رابط إعادة التعيين غير صالح أو منتهي الصلاحية.",
+    "requestNewLink": "طلب رابط جديد",
+    "resetSuccess": "تم إعادة تعيين كلمة المرور بنجاح. يرجى تسجيل الدخول.",
+    "orContinueWith": "أو تابع باستخدام",
+    "socialComingSoon": "تسجيل الدخول عبر {provider} غير متاح بعد — قريباً.",
+    "eyebrow": "الحساب",
+    "panelEyebrow": "قطع غيار السيارات الإمارات",
+    "panelTagline": "قطع أصلية. حساب واحد. لكل ورشة.",
+    "panelCredential1": "أكثر من 10,000 قطعة متوفرة",
+    "panelCredential2": "قطع أصلية ومعتمدة من الشركة المصنعة",
+    "panelCredential3": "توصيل في اليوم التالي لكل الإمارات"
   },
-  "dashboard": {
-    "welcome": "مرحبًا بعودتك"
+  "shop": {
+    "hero": {
+      "eyebrow": "المتجر",
+      "description": "اعثر على قطع الغيار المثالية لسيارتك من مجموعتنا الواسعة من الماركات المميزة.",
+      "productsAvailable": "{count} منتج متوفر"
+    },
+    "toolbar": {
+      "showing": "عرض",
+      "parts": "قطعة",
+      "filtersButton": "الفلاتر",
+      "moreFilters": "+{count} أخرى",
+      "sortFeatured": "مميز",
+      "sortPriceAsc": "السعر: من الأقل للأعلى",
+      "sortPriceDesc": "السعر: من الأعلى للأقل",
+      "sortNewest": "الأحدث"
+    },
+    "sidebar": {
+      "searchPlaceholder": "ابحث عن منتج...",
+      "vehicleFitment": "ملاءمة المركبة",
+      "myVehicles": "مركباتي",
+      "showingPartsFor": "عرض القطع الخاصة بـ",
+      "changeVehicle": "تغيير المركبة",
+      "selectYear": "اختر السنة",
+      "selectMake": "اختر الماركة",
+      "selectModel": "اختر الموديل",
+      "findParts": "ابحث عن القطع",
+      "category": "الفئة",
+      "brand": "الماركة",
+      "priceRange": "نطاق السعر (درهم)",
+      "min": "الحد الأدنى",
+      "max": "الحد الأقصى",
+      "availability": "التوفر",
+      "inStockOnly": "متوفر في المخزون فقط",
+      "rating": "التقييم",
+      "andUp": "فأعلى",
+      "clearAllFilters": "مسح كل الفلاتر"
+    },
+    "compareBar": {
+      "title": "مقارنة المنتجات",
+      "selected": "{count} / 3 محدد",
+      "clear": "مسح",
+      "compareNow": "قارن الآن",
+      "addMore": "أضف منتج واحد آخر للمقارنة"
+    },
+    "emptyState": {
+      "title": "لا توجد قطع مطابقة لفلاترك",
+      "description": "لم نتمكن من العثور على أي شيء يطابق معاييرك الحالية. حاول إزالة بعض الفلاتر أو توسيع نطاق البحث.",
+      "clearFilters": "مسح كل الفلاتر"
+    },
+    "recentlyViewed": "شوهد مؤخرًا",
+    "filterChip": {
+      "category": "الفئة",
+      "brand": "الماركة",
+      "vehicle": "المركبة"
+    },
+    "mobileFilters": {
+      "heading": "الفلاتر",
+      "clearAll": "مسح الكل",
+      "showResults": "عرض {count} نتيجة",
+      "infiniteScroll": "التمرير اللانهائي"
+    },
+    "quickView": {
+      "specifications": "المواصفات",
+      "addToCart": "أضف إلى السلة",
+      "outOfStock": "نفدت الكمية",
+      "askWhatsApp": "اسأل عبر واتساب",
+      "confirmedFit": "ملاءمة مؤكدة لـ {vehicle}",
+      "notConfirmedFit": "الملاءمة غير مؤكدة لـ {vehicle}"
+    },
+    "checkFitment": {
+      "title": "هل يناسب هذا مركبتك؟",
+      "prompt": "أضف مركبتك للتأكد من حصولك على القطع المناسبة.",
+      "selectVehicle": "اختر مركبة للتحقق من الملاءمة",
+      "selectSaved": "اختر مركبة محفوظة",
+      "fitsPerfectly": "يناسب تمامًا",
+      "doesNotFit": "لا يناسب",
+      "tryVehicle": "جرّب {vehicle}"
+    },
+    "toasts": {
+      "addedToWishlist": "أُضيف إلى المفضلة",
+      "compareLimitReached": "يمكنك مقارنة 3 منتجات كحد أقصى في نفس الوقت."
+    }
+  },
+  "account": {
+    "back": "رجوع",
+    "confirm": "تأكيد",
+    "cancel": "إلغاء",
+    "nav": {
+      "overview": "نظرة عامة",
+      "orders": "الطلبات",
+      "vehicles": "المركبات",
+      "wishlist": "المفضلة",
+      "profile": "الملف الشخصي",
+      "addresses": "العناوين",
+      "alerts": "التنبيهات",
+      "logout": "تسجيل الخروج",
+      "welcomeBack": "مرحبًا بعودتك،"
+    }
   }
 }

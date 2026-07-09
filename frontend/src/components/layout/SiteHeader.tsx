@@ -3,23 +3,31 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Search, User, ShoppingCart, Menu, X, Settings2 } from "lucide-react";
+import { Search, User, ShoppingCart, Menu, X, Settings2, Heart } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useWishlistStore } from "@/store/useWishlistStore";
+import { useCartStore } from "@/store/useCartStore";
+import { SiteSearch } from "./SiteSearch";
 
 const NAV_ITEMS = [
   { href: "/", key: "home" },
   { href: "/shop", key: "shop" },
-  { href: "/shop", key: "categories" },
-  { href: "/about", key: "about" },
-  { href: "/contact", key: "contact" },
 ] as const;
 
 export function SiteHeader() {
   const t = useTranslations("nav");
+  const shouldReduceMotion = useReducedMotion();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const wishlistCount = useWishlistStore(state => state.items.length);
+  const cartCount = useCartStore(state => state.items.reduce((sum, i) => sum + i.quantity, 0));
+  const cartLastAddedAt = useCartStore(state => state.lastAddedAt);
+
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const onScroll = () => setScrolled(window.scrollY > 40);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -72,28 +80,51 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-5">
-          <button
-            aria-label={t("search")}
-            className={cn(scrolled ? "text-navy-foreground" : "text-foreground")}
-          >
-            <Search className="h-5 w-5" strokeWidth={1.75} />
-          </button>
+          <SiteSearch scrolled={scrolled} />
           <Link
-            href="/dashboard"
+            href="/account/overview"
             aria-label={t("account")}
             className={cn(scrolled ? "text-navy-foreground" : "text-foreground")}
           >
             <User className="h-5 w-5" strokeWidth={1.75} />
           </Link>
           <Link
+            href="/account/wishlist"
+            aria-label={t("wishlist")}
+            className={cn("relative", scrolled ? "text-navy-foreground" : "text-foreground")}
+          >
+            <Heart className="h-5 w-5" strokeWidth={1.75} />
+            {mounted && wishlistCount > 0 && (
+              <span className="absolute -right-1.5 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+          <Link
+            id="header-cart-icon"
             href="/cart"
             aria-label={t("cart")}
             className={cn("relative", scrolled ? "text-navy-foreground" : "text-foreground")}
           >
-            <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
-            <span className="absolute -right-1.5 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-              3
-            </span>
+            <motion.div
+              key={cartLastAddedAt}
+              initial={mounted && cartLastAddedAt && !shouldReduceMotion ? { scale: 1.5, rotate: -12 } : { scale: 1, rotate: 0 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "tween", duration: 0.35, ease: "easeOut" }}
+            >
+              <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
+            </motion.div>
+            {mounted && cartCount > 0 && (
+              <motion.span
+                key={`badge-${cartLastAddedAt}`}
+                initial={shouldReduceMotion ? { scale: 1 } : { scale: 1.6 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "tween", duration: 0.3 }}
+                className="absolute -right-1.5 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground"
+              >
+                {cartCount}
+              </motion.span>
+            )}
           </Link>
           <button
             aria-label={t("menu")}

@@ -13,10 +13,10 @@ export default function HomePage() {
     <main>
       <Hero />
       <StatsStrip />
+      <BrandsStrip />
       <AboutBand />
       <CategoryGrid />
       <ProductCarousel />
-      <BrandsStrip />
       <WhyUs />
       <Testimonial />
       <CtaBand />

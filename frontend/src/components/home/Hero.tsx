@@ -2,37 +2,19 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
 import { VehicleFinder } from "@/components/home/VehicleFinder";
+import { HeroCarouselBg } from "@/components/home/HeroCarouselBg";
 
 export async function Hero() {
   const t = await getTranslations("home.hero");
 
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-navy via-[#1E2530] to-[#141a24] pb-36 pt-24 text-navy-foreground">
-      {/* technical grid texture */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(0 0% 100% / 0.05) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100% / 0.05) 1px, transparent 1px)",
-          backgroundSize: "64px 64px",
-          maskImage: "radial-gradient(1200px 700px at 70% 20%, black, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(1200px 700px at 70% 20%, black, transparent 75%)",
-        }}
-      />
-      {/* precision rotor motif */}
+      <HeroCarouselBg />
       <div
         aria-hidden
-        className="pointer-events-none absolute end-[-180px] top-1/2 h-[820px] w-[820px] -translate-y-1/2 rounded-full opacity-70 motion-safe:animate-[spin_120s_linear_infinite]"
-        style={{
-          backgroundImage:
-            "repeating-conic-gradient(from 0deg, hsl(0 0% 100% / 0.06) 0deg 6deg, transparent 6deg 18deg)",
-          maskImage: "radial-gradient(circle, black 58%, transparent 60%)",
-          WebkitMaskImage: "radial-gradient(circle, black 58%, transparent 60%)",
-        }}
-      >
-        <div className="absolute inset-[16%] rounded-full border border-white/10" />
-        <div className="absolute inset-[36%] rounded-full border border-white/15" />
-      </div>
+        className="absolute inset-y-0 end-0 z-[1] w-[60%] max-w-[720px] opacity-50 blur-3xl"
+        style={{ background: "radial-gradient(closest-side, hsl(var(--primary) / 0.30), transparent 72%)" }}
+      />
 
       <div className="relative z-[2] mx-auto max-w-wrap px-6 md:px-14">
         <div className="max-w-[840px]">
@@ -48,7 +30,14 @@ export async function Hero() {
           <p className="mt-6 max-w-[520px] text-lg leading-relaxed text-navy-soft">
             {t("subtitle")}
           </p>
-          <div className="mt-11 flex flex-wrap gap-4">
+          <div className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold uppercase tracking-[0.14em] text-navy-soft/70">
+            <span>{t("credential1")}</span>
+            <span className="h-1 w-1 rounded-full bg-navy-soft/40" />
+            <span>{t("credential2")}</span>
+            <span className="h-1 w-1 rounded-full bg-navy-soft/40" />
+            <span>{t("credential3")}</span>
+          </div>
+          <div className="mt-8 flex flex-wrap gap-4">
             <Button asChild size="lg">
               <Link href="/shop">{t("ctaShop")}</Link>
             </Button>

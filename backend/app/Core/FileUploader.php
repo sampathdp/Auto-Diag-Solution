@@ -9,6 +9,8 @@ class FileUploader
     private const ALLOWED_MIME_TYPES = [
         'image/jpeg'      => 'jpg',
         'image/png'       => 'png',
+        'image/webp'      => 'webp',
+        'image/gif'       => 'gif',
         'application/pdf' => 'pdf',
     ];
 

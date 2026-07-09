@@ -6,6 +6,7 @@ require_once __DIR__ . '/../bootstrap/manual_autoload.php';
 
 use App\Core\Request;
 use App\Core\Response;
+use App\Exceptions\DomainException;
 
 // ── CORS & Security Headers ────────────────────────────────────────────────────
 // Allowed frontend origin(s). In production set FRONTEND_URL in .env.
@@ -27,7 +28,7 @@ if (in_array($requestOrigin, $allowedOrigins, true)) {
 
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Authorization, Content-Type, Accept, X-Target-Salon-Id');
+header('Access-Control-Allow-Headers: Authorization, Content-Type, Accept');
 header('Access-Control-Max-Age: 3600');
 
 // Security hardening headers
@@ -51,8 +52,15 @@ try {
     // Resolve the route
     $router->resolve($request);
 
+} catch (DomainException $e) {
+    // Known, user-safe failure (e.g. "Product out of stock") — message is intentionally shown as-is.
+    Response::error($e->getMessage(), null, $e->getStatusCode());
 } catch (\Throwable $e) {
-    // Global Exception Handler — never expose internals in the API response
+    // Global Exception Handler — never expose internals in the API response.
+    // Every other module (catalog, cart, payments, 3PL sync, ...) funnels its unexpected
+    // failures through this single handler, so a bug in one feature can surface as a
+    // clean generic error to the user without ever leaking internals — and without
+    // taking any other feature down, since each HTTP request is independently handled.
     $debug = ($_ENV['APP_DEBUG'] ?? 'false') === 'true';
 
     // Always log the full trace server-side

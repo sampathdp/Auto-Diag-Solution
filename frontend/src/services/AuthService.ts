@@ -17,4 +17,8 @@ export class AuthService extends BaseService {
   static async logout() {
     return this.post("/auth/logout", {});
   }
+
+  static async changePassword(payload: { current_password: string; new_password: string }) {
+    return this.post("/auth/change-password", payload);
+  }
 }

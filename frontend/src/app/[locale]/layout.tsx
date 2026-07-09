@@ -43,7 +43,9 @@ export default async function LocaleLayout({
     <html lang={locale} dir={dir} className={`${fontSans.variable} ${fontArabic.variable}`}>
       <body>
         <NextIntlClientProvider messages={messages}>
-          <AppProviders>{children}</AppProviders>
+          <div className="flex min-h-screen flex-col overflow-x-hidden">
+            <AppProviders>{children}</AppProviders>
+          </div>
         </NextIntlClientProvider>
       </body>
     </html>

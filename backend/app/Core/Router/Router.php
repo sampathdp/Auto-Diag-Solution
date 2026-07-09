@@ -10,14 +10,32 @@ use App\Core\Response;
 class Router
 {
     private array $routes = [];
-    private array $middlewares = [];
+    private string $groupPrefix = '';
+    private array $groupMiddlewares = [];
+
+    /**
+     * Group routes under a shared path prefix and/or shared middleware stack
+     * (e.g. every admin-only route wrapped in [AuthMiddleware, RoleMiddleware(['admin'])]
+     * so the access-control check can't be forgotten on an individual route).
+     * Groups can be nested — prefix/middleware accumulate and are restored on exit.
+     */
+    public function group(array $options, callable $callback): void
+    {
+        $previousPrefix = $this->groupPrefix;
+        $previousMiddlewares = $this->groupMiddlewares;
+
+        $this->groupPrefix .= $options['prefix'] ?? '';
+        $this->groupMiddlewares = array_merge($this->groupMiddlewares, $options['middleware'] ?? []);
+
+        $callback($this);
+
+        $this->groupPrefix = $previousPrefix;
+        $this->groupMiddlewares = $previousMiddlewares;
+    }
 
     public function get(string $path, $callback, array $middlewares = []): void
     {
-        $this->routes['GET'][$path] = [
-            'callback' => $callback,
-            'middlewares' => $middlewares
-        ];
+        $this->addRoute('GET', $path, $callback, $middlewares);
     }
 
     public function post(string $path, $callback, array $middlewares = []): void
@@ -37,9 +55,9 @@ class Router
 
     private function addRoute(string $method, string $path, $callback, array $middlewares): void
     {
-        $this->routes[$method][$path] = [
+        $this->routes[$method][$this->groupPrefix . $path] = [
             'callback' => $callback,
-            'middlewares' => $middlewares
+            'middlewares' => array_merge($this->groupMiddlewares, $middlewares)
         ];
     }
 

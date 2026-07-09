@@ -9,6 +9,7 @@
     "logout": "Log out",
     "dashboard": "Dashboard",
     "account": "Account",
+    "wishlist": "Wishlist",
     "cart": "Cart",
     "search": "Search",
     "menu": "Menu"
@@ -24,7 +25,10 @@
       "titleHighlight": "the UAE.",
       "subtitle": "Genuine and OEM parts for 500+ vehicle models, sourced globally and stocked in Dubai — so the right part reaches your garage, not just your inbox.",
       "ctaShop": "Shop Parts",
-      "ctaFinder": "Find Parts for Your Car"
+      "ctaFinder": "Find Parts for Your Car",
+      "credential1": "10,000+ SKUs In Stock",
+      "credential2": "OEM & Genuine Parts",
+      "credential3": "UAE-Wide Next-Day Delivery"
     },
     "finder": {
       "title": "Find Parts For Your Vehicle",
@@ -72,7 +76,9 @@
     },
     "brands": {
       "eyebrow": "Trusted Brands",
-      "title": "Authorized to distribute the names you already trust."
+      "title": "Authorized to distribute the names you already trust.",
+      "description": "We partner with top global auto parts manufacturers to bring you authentic, <br></br> high-quality components for every vehicle make and model.",
+      "link": "See All Brands"
     },
     "why": {
       "eyebrow": "Why Ferrum",
@@ -114,6 +120,7 @@
   },
   "auth": {
     "login": "Sign In",
+    "loginSubtitle": "Sign in to track orders, manage your vehicles, and check out faster.",
     "email": "Email",
     "password": "Password",
     "signIn": "Sign In",
@@ -122,9 +129,134 @@
     "twoFactorSubtitle": "Enter the 6-digit code from your authenticator app, or a recovery code.",
     "verificationCode": "Verification code",
     "verify": "Verify",
-    "backToSignIn": "Back to sign in"
+    "backToSignIn": "Back to sign in",
+    "forgotPassword": "Forgot password?",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "createAccount": "Create Account",
+    "registerSubtitle": "Join to save your vehicles, track orders, and check out faster.",
+    "registerFailed": "Could not create your account. Please try again.",
+    "name": "Full Name",
+    "confirmPassword": "Confirm Password",
+    "forgotPasswordTitle": "Forgot password",
+    "forgotPasswordSubtitle": "Enter your email address and we'll send you a reset link.",
+    "checkEmailTitle": "Check your email",
+    "checkEmailSubtitle": "If an account exists for that address, a password reset link has been sent.",
+    "sendResetLink": "Send Reset Link",
+    "devModeNotice": "Dev mode — SMTP not configured, showing link directly",
+    "resetPasswordTitle": "Reset password",
+    "resetPasswordSubtitle": "Choose a new password for your account.",
+    "resetPasswordButton": "Reset Password",
+    "newPassword": "New Password",
+    "resetLinkInvalid": "This reset link is invalid or has expired.",
+    "requestNewLink": "Request a new link",
+    "resetSuccess": "Password reset successfully. Please sign in.",
+    "orContinueWith": "or continue with",
+    "socialComingSoon": "{provider} sign-in isn't connected yet — coming soon.",
+    "eyebrow": "Account",
+    "panelEyebrow": "Auto Parts UAE",
+    "panelTagline": "Genuine parts. One account. Every garage.",
+    "panelCredential1": "10,000+ SKUs In Stock",
+    "panelCredential2": "OEM & Genuine Parts",
+    "panelCredential3": "UAE-Wide Next-Day Delivery"
   },
-  "dashboard": {
-    "welcome": "Welcome back"
+  "shop": {
+    "hero": {
+      "eyebrow": "Shop",
+      "description": "Find the perfect auto parts for your vehicle from our extensive collection of premium brands.",
+      "productsAvailable": "{count} products available"
+    },
+    "toolbar": {
+      "showing": "Showing",
+      "parts": "parts",
+      "filtersButton": "Filters",
+      "moreFilters": "+{count} more",
+      "sortFeatured": "Featured",
+      "sortPriceAsc": "Price Low→High",
+      "sortPriceDesc": "Price High→Low",
+      "sortNewest": "Newest"
+    },
+    "sidebar": {
+      "searchPlaceholder": "Filter by name...",
+      "vehicleFitment": "Vehicle Fitment",
+      "myVehicles": "My Vehicles",
+      "showingPartsFor": "Showing parts for",
+      "changeVehicle": "Change vehicle",
+      "selectYear": "Select Year",
+      "selectMake": "Select Make",
+      "selectModel": "Select Model",
+      "findParts": "Find Parts",
+      "category": "Category",
+      "brand": "Brand",
+      "priceRange": "Price Range (AED)",
+      "min": "Min",
+      "max": "Max",
+      "availability": "Availability",
+      "inStockOnly": "In Stock Only",
+      "rating": "Rating",
+      "andUp": "& Up",
+      "clearAllFilters": "Clear all filters"
+    },
+    "compareBar": {
+      "title": "Compare Products",
+      "selected": "{count} / 3 selected",
+      "clear": "Clear",
+      "compareNow": "Compare Now",
+      "addMore": "Add 1 more to compare"
+    },
+    "emptyState": {
+      "title": "No parts match your filters",
+      "description": "We couldn't find anything matching your current criteria. Try removing some filters or expanding your search.",
+      "clearFilters": "Clear all filters"
+    },
+    "recentlyViewed": "Recently Viewed",
+    "filterChip": {
+      "category": "Category",
+      "brand": "Brand",
+      "vehicle": "Vehicle"
+    },
+    "mobileFilters": {
+      "heading": "Filters",
+      "clearAll": "Clear all",
+      "showResults": "Show {count} results",
+      "infiniteScroll": "Infinite Scroll"
+    },
+    "quickView": {
+      "specifications": "Specifications",
+      "addToCart": "Add to Cart",
+      "outOfStock": "Out of Stock",
+      "askWhatsApp": "Ask on WhatsApp",
+      "confirmedFit": "Confirmed fit for {vehicle}",
+      "notConfirmedFit": "Fitment not confirmed for {vehicle}"
+    },
+    "checkFitment": {
+      "title": "Will this fit your vehicle?",
+      "prompt": "Add your vehicle to make sure you get the right parts.",
+      "selectVehicle": "Select a vehicle to check fitment",
+      "selectSaved": "Select a saved vehicle",
+      "fitsPerfectly": "Fits perfectly",
+      "doesNotFit": "Does not fit",
+      "tryVehicle": "Try {vehicle}"
+    },
+    "toasts": {
+      "addedToWishlist": "Added to wishlist",
+      "compareLimitReached": "You can only compare up to 3 products at once."
+    }
+  },
+  "account": {
+    "back": "Back",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "nav": {
+      "overview": "Overview",
+      "orders": "Orders",
+      "vehicles": "Vehicles",
+      "wishlist": "Wishlist",
+      "profile": "Profile",
+      "addresses": "Addresses",
+      "alerts": "Alerts",
+      "logout": "Logout",
+      "welcomeBack": "Welcome back,"
+    }
   }
 }

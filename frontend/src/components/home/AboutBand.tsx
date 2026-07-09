@@ -6,7 +6,7 @@ export async function AboutBand() {
   const t = await getTranslations("home.about");
 
   return (
-    <section className="bg-background py-14 md:py-28">
+    <section className="bg-secondary py-14 md:py-28">
       <div className="mx-auto grid max-w-wrap gap-12 px-6 md:grid-cols-2 md:gap-20 md:px-14 md:items-center">
         <div>
           <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
@@ -29,15 +29,11 @@ export async function AboutBand() {
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#223047] via-navy to-[#101a2c]" />
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                "linear-gradient(hsl(0 0% 100% / 0.07) 1px, transparent 1px), linear-gradient(90deg, hsl(0 0% 100% / 0.07) 1px, transparent 1px)",
-              backgroundSize: "40px 40px",
-            }}
+          <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/about-warehouse.png')" }}
           />
+          <div className="absolute inset-0 bg-navy/20 mix-blend-multiply" />
           <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10" />
           <div className="absolute bottom-6 start-6 text-xs font-bold uppercase tracking-wider text-white/75">
             {t("imageTag")}

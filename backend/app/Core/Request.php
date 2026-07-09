@@ -119,4 +119,14 @@ class Request
     {
         return $_FILES;
     }
+
+    /**
+     * Client IP for rate-limiting purposes. Deliberately uses REMOTE_ADDR only —
+     * X-Forwarded-For/X-Real-IP are attacker-controlled unless a trusted proxy strips
+     * and re-sets them, which this app's deployment does not guarantee.
+     */
+    public function getIp(): string
+    {
+        return $this->serverParams['REMOTE_ADDR'] ?? '0.0.0.0';
+    }
 }
