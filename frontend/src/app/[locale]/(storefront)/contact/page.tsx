@@ -13,7 +13,7 @@ export default async function ContactPage() {
   const infoItems = [
     { icon: MapPin, label: t("info.addressLabel"), value: tFooter("address") },
     { icon: Phone, label: t("info.phoneLabel"), value: "+971 4 123 4567", mono: true },
-    { icon: Mail, label: t("info.emailLabel"), value: "parts@ferrum.ae" },
+    { icon: Mail, label: t("info.emailLabel"), value: "parts@asil.ae" },
     { icon: Clock, label: t("info.hoursLabel"), value: tFooter("hours") },
   ];
 

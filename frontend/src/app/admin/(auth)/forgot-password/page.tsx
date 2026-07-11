@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Wrench, MailCheck } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import { Button } from "@/components/admin/ui/Button";
 import { Input } from "@/components/admin/ui/Input";
 import { FormField } from "@/components/admin/ui/FormField";
 import { Card, CardBody } from "@/components/admin/ui/Card";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -34,12 +35,10 @@ export default function AdminForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex items-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10 text-primary">
-            <Wrench className="h-5 w-5" />
-          </span>
+        <div className="mb-6 flex items-center gap-2.5">
+          <BrandLogo variant="icon" className="h-10" />
           <div>
-            <p className="text-label font-bold uppercase tracking-wide text-ink">Auto Parts UAE</p>
+            <p className="text-label font-bold uppercase tracking-wide text-ink">ASIL</p>
             <p className="text-caption text-ink-muted">Admin Dashboard</p>
           </div>
         </div>

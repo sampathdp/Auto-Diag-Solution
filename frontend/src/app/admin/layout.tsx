@@ -6,8 +6,8 @@ import "../globals.css";
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Admin — Auto Parts UAE",
-  description: "Admin dashboard for Auto Parts UAE.",
+  title: "Admin — ASIL Auto Parts Hub",
+  description: "Admin dashboard for ASIL Auto Parts Hub.",
   robots: { index: false, follow: false },
 };
 

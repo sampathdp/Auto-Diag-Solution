@@ -49,7 +49,7 @@ export const useVehicleStore = create<VehicleState>()(
       },
     }),
     {
-      name: 'ferrum-vehicle-context',
+      name: 'asil-vehicle-context',
     }
   )
 );

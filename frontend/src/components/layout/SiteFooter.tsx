@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin, Settings2 } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin } from "lucide-react";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export function SiteFooter() {
   const t = useTranslations("footer");
@@ -10,12 +11,7 @@ export function SiteFooter() {
     <footer className="bg-navy text-navy-soft text-sm">
       <div className="mx-auto grid max-w-wrap grid-cols-1 gap-11 px-6 pb-14 pt-16 md:grid-cols-[1.4fr_1fr_1fr_1.2fr] md:px-14 md:pb-14 md:pt-20">
         <div>
-          <div className="flex items-center gap-2.5 text-xl font-extrabold text-navy-foreground">
-            <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
-              <Settings2 className="h-4 w-4 text-primary-foreground" strokeWidth={2} />
-            </span>
-            FERRUM
-          </div>
+          <BrandLogo variant="header" className="h-12" />
           <p className="mt-4 max-w-[34ch] leading-relaxed">{t("blurb")}</p>
         </div>
 
@@ -59,7 +55,7 @@ export function SiteFooter() {
             </li>
             <li className="flex items-start gap-2.5">
               <Mail className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />
-              <span>parts@ferrum.ae</span>
+              <span>parts@asil.ae</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Clock className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />

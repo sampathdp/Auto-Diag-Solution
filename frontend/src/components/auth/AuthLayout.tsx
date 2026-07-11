@@ -1,9 +1,9 @@
 "use client";
 
 import { Link } from "@/i18n/navigation";
-import { Settings2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Image from "next/image";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export function AuthLayout({
   title,
@@ -33,11 +33,8 @@ export function AuthLayout({
           style={{ background: "radial-gradient(closest-side, hsl(var(--primary) / 0.30), transparent 72%)" }}
         />
 
-        <Link href="/" className="relative z-[2] flex items-center gap-2.5 text-[22px] font-extrabold tracking-tight">
-          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary">
-            <Settings2 className="h-4 w-4 text-primary-foreground" strokeWidth={2} />
-          </span>
-          FERRUM
+        <Link href="/" className="relative z-[2] flex items-center">
+          <BrandLogo variant="header" className="h-12" priority />
         </Link>
 
         <div className="relative z-[2] max-w-md">
@@ -68,14 +65,8 @@ export function AuthLayout({
       {/* Right: form panel */}
       <div className="flex items-center justify-center bg-background px-6 py-16 md:px-14">
         <div className="w-full max-w-sm">
-          <Link
-            href="/"
-            className="mb-8 flex items-center gap-2.5 text-[18px] font-extrabold tracking-tight text-foreground lg:hidden"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground">
-              <Settings2 className="h-3.5 w-3.5 text-background" strokeWidth={2} />
-            </span>
-            FERRUM
+          <Link href="/" className="mb-8 flex items-center lg:hidden">
+            <BrandLogo variant="header" className="h-10" />
           </Link>
 
           <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">

@@ -1,9 +1,10 @@
 "use client";
 
-import { Wrench, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./SidebarContext";
 import { SidebarNav } from "./SidebarNav";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 export function Sidebar() {
   const { collapsed, toggleCollapsed } = useSidebar();
@@ -16,10 +17,8 @@ export function Sidebar() {
       )}
     >
       <div className="flex h-16 items-center gap-2 border-b border-navy-border px-4">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/15 text-primary">
-          <Wrench className="h-4 w-4" />
-        </span>
-        {!collapsed && <span className="text-label font-bold uppercase tracking-wide">Auto Parts UAE</span>}
+        <BrandLogo variant="icon" className="h-8" />
+        {!collapsed && <span className="text-label font-bold uppercase tracking-wide">ASIL</span>}
       </div>
 
       <SidebarNav collapsed={collapsed} />

@@ -5,6 +5,7 @@ import { getMessages } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing, isRtl } from "@/i18n/routing";
 import { AppProviders } from "@/app/providers";
+import { SplashPreloader } from "@/components/ui/SplashPreloader";
 import "../globals.css";
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -15,7 +16,7 @@ const fontArabic = IBM_Plex_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: "Auto Parts UAE",
+  title: "ASIL Auto Parts Hub",
   description: "Genuine auto parts, delivered across the UAE.",
 };
 
@@ -43,6 +44,7 @@ export default async function LocaleLayout({
     <html lang={locale} dir={dir} className={`${fontSans.variable} ${fontArabic.variable}`}>
       <body>
         <NextIntlClientProvider messages={messages}>
+          <SplashPreloader />
           <div className="flex min-h-screen flex-col overflow-x-hidden">
             <AppProviders>{children}</AppProviders>
           </div>

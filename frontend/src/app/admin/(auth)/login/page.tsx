@@ -6,13 +6,14 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Wrench, ShieldCheck, BarChart3, Package } from "lucide-react";
+import { ShieldCheck, BarChart3, Package } from "lucide-react";
 import { Button } from "@/components/admin/ui/Button";
 import { Input } from "@/components/admin/ui/Input";
 import { Checkbox } from "@/components/admin/ui/Checkbox";
 import { FormField } from "@/components/admin/ui/FormField";
 import { showSuccess } from "@/components/admin/ui/toast";
 import { useAuthStore } from "@/store/useAuthStore";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import apiClient from "@/lib/api/client";
 
 const LoginSchema = z.object({
@@ -96,11 +97,9 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen">
       {/* Brand panel */}
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-sidebar px-12 py-12 text-sidebar-foreground lg:flex">
-        <div className="flex items-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/15 text-primary">
-            <Wrench className="h-5 w-5" />
-          </span>
-          <span className="text-label font-bold uppercase tracking-wide">Auto Parts UAE</span>
+        <div className="flex items-center gap-2.5">
+          <BrandLogo variant="icon" className="h-10" />
+          <span className="text-label font-bold uppercase tracking-wide">ASIL</span>
         </div>
 
         <div className="max-w-md">
@@ -121,18 +120,16 @@ export default function AdminLoginPage() {
           </ul>
         </div>
 
-        <p className="text-caption text-sidebar-foreground/50">© {new Date().getFullYear()} Auto Parts UAE</p>
+        <p className="text-caption text-sidebar-foreground/50">© {new Date().getFullYear()} ASIL Auto Parts Hub</p>
       </div>
 
       {/* Form panel */}
       <div className="flex w-full flex-1 items-center justify-center bg-app px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-sm bg-primary/10 text-primary">
-                <Wrench className="h-4 w-4" />
-              </span>
-              <span className="text-label font-bold uppercase tracking-wide text-ink">Auto Parts UAE</span>
+            <div className="flex items-center gap-2.5">
+              <BrandLogo variant="icon" className="h-9" />
+              <span className="text-label font-bold uppercase tracking-wide text-ink">ASIL</span>
             </div>
           </div>
 

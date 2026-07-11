@@ -51,9 +51,9 @@
     "about": {
       "eyebrow": "Who We Are",
       "title": "Built for the UAE Driver.",
-      "body": "Ferrum sources genuine and OEM-equivalent parts from certified manufacturers across Asia, Europe and the US, then stocks them locally in Dubai — so you're not waiting weeks for a part that should take a day. From daily maintenance to full rebuilds, our catalogue is matched precisely to what's actually on UAE roads.",
-      "link": "Learn More About Ferrum",
-      "imageTag": "Ferrum · Dubai Distribution Centre"
+      "body": "ASIL sources genuine and OEM-equivalent parts from certified manufacturers across Asia, Europe and the US, then stocks them locally in Dubai — so you're not waiting weeks for a part that should take a day. From daily maintenance to full rebuilds, our catalogue is matched precisely to what's actually on UAE roads.",
+      "link": "Learn More About ASIL",
+      "imageTag": "ASIL · Dubai Distribution Centre"
     },
     "categories": {
       "eyebrow": "Shop By Category",
@@ -81,7 +81,7 @@
       "link": "See All Brands"
     },
     "why": {
-      "eyebrow": "Why Ferrum",
+      "eyebrow": "Why ASIL",
       "title": "The details that matter more than the sale.",
       "genuineTitle": "Genuine Parts Only",
       "genuineBody": "Every SKU is sourced directly from the manufacturer or an authorized channel — verified before it reaches our warehouse.",
@@ -104,7 +104,7 @@
   },
   "about": {
     "hero": {
-      "eyebrow": "About Ferrum",
+      "eyebrow": "About ASIL",
       "title": "Built for the UAE Driver.",
       "subtitle": "Genuine and OEM auto parts, sourced globally and stocked locally in Dubai since 2015.",
       "crumb": "About"
@@ -112,9 +112,9 @@
     "story": {
       "eyebrow": "Our Story",
       "title": "We started with one frustration: waiting weeks for a part that should take a day.",
-      "body1": "Ferrum was founded in Dubai in 2015 after our own team spent too many afternoons chasing down a single brake caliper that sat in a customs warehouse for three weeks. We built the company we wished existed — one that actually stocks the parts UAE drivers need, in the UAE, ready to move.",
+      "body1": "ASIL was founded in Dubai in 2015 after our own team spent too many afternoons chasing down a single brake caliper that sat in a customs warehouse for three weeks. We built the company we wished existed — one that actually stocks the parts UAE drivers need, in the UAE, ready to move.",
       "body2": "Today that means over 10,000 SKUs held locally across engine, brake, filtration and electrical systems, sourced directly from certified manufacturers and matched precisely to what's on the road here — from daily runabouts to full workshop rebuilds.",
-      "imageTag": "Ferrum · Dubai Distribution Centre"
+      "imageTag": "ASIL · Dubai Distribution Centre"
     },
     "values": {
       "eyebrow": "How We Work",
@@ -132,7 +132,7 @@
       "eyebrow": "Milestones",
       "title": "Nine years of stocking the right part.",
       "y1_year": "2015",
-      "y1_title": "Ferrum Founded",
+      "y1_title": "ASIL Founded",
       "y1_body": "Opened our first parts counter in Al Quoz with a catalogue of under 500 SKUs.",
       "y2_year": "2018",
       "y2_title": "Distribution Centre",
@@ -179,7 +179,7 @@
       "eyebrow": "Come By",
       "title": "Our parts counter is open to walk-ins.",
       "body": "Bring the old part or your VIN — our team will confirm fitment on the spot before you buy.",
-      "imageTag": "Ferrum · Al Quoz Industrial Area 3"
+      "imageTag": "ASIL · Al Quoz Industrial Area 3"
     }
   },
   "footer": {
@@ -196,7 +196,7 @@
     "contact": "Contact",
     "address": "Warehouse 14, Al Quoz Industrial Area 3, Dubai, UAE",
     "hours": "Sat–Thu, 8:00–20:00 GST",
-    "copyright": "© 2026 Ferrum Auto Parts LLC. All rights reserved."
+    "copyright": "© 2026 ASIL Auto Parts LLC. All rights reserved."
   },
   "auth": {
     "login": "Sign In",

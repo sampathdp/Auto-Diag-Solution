@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Wrench, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useSidebar } from "./SidebarContext";
 import { SidebarNav } from "./SidebarNav";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 /**
  * Mobile nav uses a custom overlay (not the generic Drawer primitive) so the
@@ -38,10 +39,8 @@ export function MobileSidebarDrawer() {
         className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground shadow-md animate-in slide-in-from-left duration-200"
       >
         <div className="flex h-16 items-center gap-2 border-b border-navy-border px-4">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/15 text-primary">
-            <Wrench className="h-4 w-4" />
-          </span>
-          <span className="flex-1 text-label font-bold uppercase tracking-wide">Auto Parts UAE</span>
+          <BrandLogo variant="icon" className="h-8" />
+          <span className="flex-1 text-label font-bold uppercase tracking-wide">ASIL</span>
           <button
             type="button"
             onClick={() => setMobileOpen(false)}

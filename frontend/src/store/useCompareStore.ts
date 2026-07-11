@@ -29,7 +29,7 @@ export const useCompareStore = create<CompareState>()(
       hasItem: (id) => get().items.includes(id),
     }),
     {
-      name: 'ferrum-compare',
+      name: 'asil-compare',
     }
   )
 );

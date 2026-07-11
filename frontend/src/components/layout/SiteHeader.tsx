@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Search, User, ShoppingCart, Menu, X, Settings2, Heart } from "lucide-react";
+import { Search, User, ShoppingCart, Menu, X, Heart } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCartStore } from "@/store/useCartStore";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import { SiteSearch } from "./SiteSearch";
 
 const NAV_ITEMS = [
@@ -46,22 +47,8 @@ export function SiteHeader() {
       )}
     >
       <div className="mx-auto flex h-[82px] max-w-wrap items-center justify-between gap-8 px-6 md:px-14">
-        <Link
-          href="/"
-          className={cn(
-            "flex items-center gap-2.5 text-[22px] font-extrabold tracking-tight",
-            scrolled ? "text-navy-foreground" : "text-foreground"
-          )}
-        >
-          <span
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-md",
-              scrolled ? "bg-primary" : "bg-foreground"
-            )}
-          >
-            <Settings2 className="h-4 w-4 text-primary-foreground" strokeWidth={2} />
-          </span>
-          FERRUM
+        <Link href="/" className="flex items-center">
+          <BrandLogo variant="header" className="h-12" priority />
         </Link>
 
         <nav className="hidden items-center gap-9 text-sm font-semibold lg:flex">
@@ -146,7 +133,7 @@ export function SiteHeader() {
         )}
       >
         <div className="flex items-center justify-between">
-          <span className="text-lg font-extrabold">FERRUM</span>
+          <BrandLogo variant="header" className="h-10" />
           <button aria-label="Close menu" onClick={() => setMobileOpen(false)}>
             <X className="h-6 w-6" />
           </button>
