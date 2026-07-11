@@ -14,7 +14,8 @@ spl_autoload_register(function ($class) {
 
     foreach ($prefixes as $prefix => $base_dir) {
         $len = strlen($prefix);
-        if (strncmp($prefix, $class, $len) !== 0) continue;
+        if (strncmp($prefix, $class, $len) !== 0)
+            continue;
 
         $relative_class = substr($class, $len);
         $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
@@ -47,11 +48,14 @@ if (!function_exists('getallheaders')) {
 }
 
 // Simple Dotenv Parser
-function loadDotEnv(string $path): void {
-    if (!file_exists($path)) return;
+function loadDotEnv(string $path): void
+{
+    if (!file_exists($path))
+        return;
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
+        if (strpos(trim($line), '#') === 0)
+            continue;
         list($name, $value) = explode('=', $line, 2);
         $name = trim($name);
         $value = trim($value, " \t\n\r\0\x0B\"'");
@@ -63,7 +67,18 @@ function loadDotEnv(string $path): void {
     }
 }
 
-loadDotEnv(__DIR__ . '/../.env');
+$basePath = dirname(__DIR__);
+$envPaths = [
+    $basePath . '/.env', // Local development path
+    dirname($basePath) . '/../envs/auto-diag.env' // Production cPanel path (/home/zemimycf/envs/auto-diag.env)
+];
+
+foreach ($envPaths as $path) {
+    if (file_exists($path)) {
+        loadDotEnv($path);
+        break;
+    }
+}
 
 // Global helper functions (env(), sanitize(), slugify(), ...) — composer.json declares
 // this as an autoload "files" entry, but this app runs on the manual autoloader above,
