@@ -10,6 +10,8 @@ jobs:
   web-deploy:
     name: 🎉 Build & Deploy
     runs-on: ubuntu-latest
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
     steps:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
@@ -49,10 +51,6 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          port: 21
-          # Attempt to use plain FTP if FTPS (TLS) is causing the control socket to time out
-          protocol: ftp
-          security: loose
           local-dir: ./dist/
           # Optional: If you need to deploy inside a specific hosting subdirectory (e.g. public_html)
           # server-dir: /public_html/
