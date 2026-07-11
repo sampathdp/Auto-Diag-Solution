@@ -33,16 +33,15 @@ jobs:
           cat << 'EOF' > dist/.htaccess
           <IfModule mod_rewrite.c>
               RewriteEngine On
-              
+
               # Route API requests to the backend entry point
               RewriteRule ^api/v1/(.*)$ public/index.php [QSA,L]
           </IfModule>
-          <IfModule mod_headers.c>
-              # Ensure CORS is allowed if frontend is on Vercel
-              Header set Access-Control-Allow-Origin "*"
-              Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-              Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-          </IfModule>
+          # CORS headers are set dynamically per-origin by backend/public/index.php
+          # (required because Access-Control-Allow-Credentials: true forbids a
+          # wildcard Access-Control-Allow-Origin). Do not add static Header set
+          # directives here — mod_headers would apply after PHP and overwrite
+          # the origin-specific header with "*", breaking credentialed requests.
           EOF
 
       - name: 📂 Sync files to FTP
