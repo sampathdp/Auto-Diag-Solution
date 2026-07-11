@@ -11,6 +11,7 @@ import { Input } from "@/components/admin/ui/Input";
 import { FormField } from "@/components/admin/ui/FormField";
 import { Switch } from "@/components/admin/ui/Switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin/ui/Tabs";
+import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { PageRichTextEditor } from "./PageRichTextEditor";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
@@ -18,6 +19,7 @@ import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatDateTime } from "@/lib/admin/utils";
 import { slugify } from "@/lib/admin/utils";
 import { useUnsavedChangesGuard } from "@/lib/admin/hooks/useUnsavedChangesGuard";
+import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import { PageFormSchema, PAGE_FORM_DEFAULTS, type PageFormValues } from "@/lib/admin/schemas/pageSchema";
 import type { Page } from "@/types/page";
 
@@ -49,6 +51,12 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
   });
 
   const { confirmDiscard } = useUnsavedChangesGuard(isDirty);
+  const title = useTranslate();
+
+  const translateTitle = async () => {
+    const translated = await title.translate(watch("title_en"));
+    if (translated) setValue("title_ar", translated, { shouldValidate: true });
+  };
 
   const save = useMutation({
     mutationFn: (payload: PageFormValues) =>
@@ -99,6 +107,7 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
                       {...register("title_en")}
                       onBlur={(e) => {
                         if (!watch("slug")) setValue("slug", slugify(e.target.value));
+                        if (!watch("title_ar")) translateTitle();
                       }}
                     />
                   </FormField>
@@ -114,7 +123,19 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
                 </TabsContent>
 
                 <TabsContent value="ar" className="space-y-4">
-                  <FormField label="العنوان" htmlFor="title_ar" error={errors.title_ar?.message} required>
+                  <FormField
+                    label={
+                      <TranslateLabel
+                        label="العنوان"
+                        required
+                        translating={title.translating}
+                        disabled={!watch("title_en")?.trim()}
+                        onTranslate={translateTitle}
+                      />
+                    }
+                    htmlFor="title_ar"
+                    error={errors.title_ar?.message}
+                  >
                     <Input id="title_ar" dir="rtl" {...register("title_ar")} />
                   </FormField>
                   <FormField label="المحتوى">

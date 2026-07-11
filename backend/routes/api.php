@@ -34,6 +34,9 @@ $router->post("$v1/auth/refresh", [AuthController::class, 'refresh']);
 $router->post("$v1/auth/forgot-password", [AuthController::class, 'forgotPassword']);
 $router->post("$v1/auth/reset-password", [AuthController::class, 'resetPassword']);
 
+// --- Public storefront routes ---
+$router->get("$v1/brands", [BrandController::class, 'active']);
+
 // --- Protected Auth Routes ---
 $router->get("$v1/auth/me", [AuthController::class, 'me'], [AuthMiddleware::class]);
 $router->post("$v1/auth/change-password", [AuthController::class, 'changePassword'], [AuthMiddleware::class]);

@@ -9,11 +9,13 @@ import { FormField } from "@/components/admin/ui/FormField";
 import { Input } from "@/components/admin/ui/Input";
 import { Textarea } from "@/components/admin/ui/Textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin/ui/Tabs";
+import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { MediaLibraryPickerModal } from "@/components/admin/media/MediaLibraryPickerModal";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
+import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import { cn } from "@/lib/utils";
 import type { MediaItem } from "@/mocks/admin/db";
 import type { SeoRow } from "./seo-rows";
@@ -46,6 +48,18 @@ export function SeoDrawerForm({
   const [descAr, setDescAr] = useState("");
   const [ogImage, setOgImage] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const title = useTranslate();
+  const description = useTranslate();
+
+  const translateTitle = async () => {
+    const translated = await title.translate(titleEn);
+    if (translated) setTitleAr(translated);
+  };
+
+  const translateDescription = async () => {
+    const translated = await description.translate(descEn);
+    if (translated) setDescAr(translated);
+  };
 
   useEffect(() => {
     if (row) {
@@ -132,13 +146,33 @@ export function SeoDrawerForm({
               </TabsContent>
 
               <TabsContent value="ar" className="space-y-4">
-                <FormField label="عنوان السيو" htmlFor="seo-title-ar">
+                <FormField
+                  label={
+                    <TranslateLabel
+                      label="عنوان السيو"
+                      translating={title.translating}
+                      disabled={!titleEn.trim()}
+                      onTranslate={translateTitle}
+                    />
+                  }
+                  htmlFor="seo-title-ar"
+                >
                   <Input id="seo-title-ar" dir="rtl" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} />
                   <div className="mt-1 flex justify-end">
                     <CharCounter length={titleAr.length} max={TITLE_MAX} />
                   </div>
                 </FormField>
-                <FormField label="وصف السيو" htmlFor="seo-desc-ar">
+                <FormField
+                  label={
+                    <TranslateLabel
+                      label="وصف السيو"
+                      translating={description.translating}
+                      disabled={!descEn.trim()}
+                      onTranslate={translateDescription}
+                    />
+                  }
+                  htmlFor="seo-desc-ar"
+                >
                   <Textarea id="seo-desc-ar" dir="rtl" rows={3} value={descAr} onChange={(e) => setDescAr(e.target.value)} />
                   <div className="mt-1 flex justify-end">
                     <CharCounter length={descAr.length} max={DESCRIPTION_MAX} />

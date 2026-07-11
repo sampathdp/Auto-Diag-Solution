@@ -11,10 +11,13 @@ import { Input } from "@/components/admin/ui/Input";
 import { Textarea } from "@/components/admin/ui/Textarea";
 import { Select } from "@/components/admin/ui/Select";
 import { Switch } from "@/components/admin/ui/Switch";
+import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
+import { SingleImageUpload } from "@/components/admin/ui/SingleImageUpload";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { slugify } from "@/lib/admin/utils";
+import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import {
   CategoryFormSchema,
   CATEGORY_FORM_DEFAULTS,
@@ -36,6 +39,8 @@ export function CategoryDrawerForm({
 }) {
   const queryClient = useQueryClient();
   const isEdit = !!category;
+  const name = useTranslate();
+  const description = useTranslate();
 
   const {
     register,
@@ -83,6 +88,16 @@ export function CategoryDrawerForm({
     onError: (err) => showError(err instanceof ApiError ? err.message : "Could not save the category."),
   });
 
+  const translateName = async () => {
+    const translated = await name.translate(watch("name_en"));
+    if (translated) setValue("name_ar", translated, { shouldValidate: true });
+  };
+
+  const translateDescription = async () => {
+    const translated = await description.translate(watch("description_en") ?? "");
+    if (translated) setValue("description_ar", translated);
+  };
+
   return (
     <Drawer
       open={open}
@@ -110,11 +125,23 @@ export function CategoryDrawerForm({
             {...register("name_en")}
             onBlur={(e) => {
               if (!watch("slug")) setValue("slug", slugify(e.target.value));
+              if (!isEdit && !watch("name_ar")) translateName();
             }}
           />
         </FormField>
 
-        <FormField label="الاسم (AR)" htmlFor="cat-name-ar" error={errors.name_ar?.message} required>
+        <FormField
+          label={
+            <TranslateLabel
+              label="الاسم (AR)"
+              translating={name.translating}
+              disabled={!watch("name_en").trim()}
+              onTranslate={translateName}
+            />
+          }
+          htmlFor="cat-name-ar"
+          error={errors.name_ar?.message}
+        >
           <Input id="cat-name-ar" dir="rtl" {...register("name_ar")} />
         </FormField>
 
@@ -139,15 +166,25 @@ export function CategoryDrawerForm({
           </Select>
         </FormField>
 
-        <FormField label="Image URL" htmlFor="cat-image" helperText="Optional — paste a media URL.">
-          <Input id="cat-image" value={watch("image") ?? ""} onChange={(e) => setValue("image", e.target.value || null)} />
+        <FormField label="Image">
+          <SingleImageUpload value={watch("image")} onChange={(url) => setValue("image", url, { shouldDirty: true })} />
         </FormField>
 
         <FormField label="Description (EN)" htmlFor="cat-desc-en">
           <Textarea id="cat-desc-en" rows={2} {...register("description_en")} />
         </FormField>
 
-        <FormField label="الوصف (AR)" htmlFor="cat-desc-ar">
+        <FormField
+          label={
+            <TranslateLabel
+              label="الوصف (AR)"
+              translating={description.translating}
+              disabled={!watch("description_en")?.trim()}
+              onTranslate={translateDescription}
+            />
+          }
+          htmlFor="cat-desc-ar"
+        >
           <Textarea id="cat-desc-ar" dir="rtl" rows={2} {...register("description_ar")} />
         </FormField>
 

@@ -8,11 +8,13 @@ import { Button } from "@/components/admin/ui/Button";
 import { FormField } from "@/components/admin/ui/FormField";
 import { Input } from "@/components/admin/ui/Input";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
+import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { showSuccess } from "@/components/admin/ui/toast";
 import { MediaThumbnail } from "./MediaThumbnail";
 import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatDateTime } from "@/lib/admin/utils";
+import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import type { MediaItem } from "@/mocks/admin/db";
 
 export function MediaDetailDrawer({
@@ -26,6 +28,12 @@ export function MediaDetailDrawer({
   const [altEn, setAltEn] = useState("");
   const [altAr, setAltAr] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const altText = useTranslate();
+
+  const translateAltText = async () => {
+    const translated = await altText.translate(altEn);
+    if (translated) setAltAr(translated);
+  };
 
   useEffect(() => {
     if (item) {
@@ -105,7 +113,17 @@ export function MediaDetailDrawer({
                 <FormField label="Alt Text (EN)" htmlFor="alt-en">
                   <Input id="alt-en" value={altEn} onChange={(e) => setAltEn(e.target.value)} />
                 </FormField>
-                <FormField label="نص بديل (AR)" htmlFor="alt-ar">
+                <FormField
+                  label={
+                    <TranslateLabel
+                      label="نص بديل (AR)"
+                      translating={altText.translating}
+                      disabled={!altEn.trim()}
+                      onTranslate={translateAltText}
+                    />
+                  }
+                  htmlFor="alt-ar"
+                >
                   <Input id="alt-ar" dir="rtl" value={altAr} onChange={(e) => setAltAr(e.target.value)} />
                 </FormField>
                 <Button

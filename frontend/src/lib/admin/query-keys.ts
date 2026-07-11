@@ -18,10 +18,11 @@ export const adminQueryKeys = {
   categories: {
     all: ["admin", "categories"] as const,
   },
-  // Added for the product-form brand picker (Phase F5) — no standalone Brands page,
-  // and this key didn't exist in the original mock scaffolding.
   brands: {
+    // Fixed key used by the product-form brand picker (fetches the full list, no filters).
     all: ["admin", "brands"] as const,
+    // Filtered/paginated key used by the standalone Brands admin page.
+    list: (filters: Record<string, unknown> = {}) => ["admin", "brands", "list", filters] as const,
   },
   vehicles: {
     list: (filters: Record<string, unknown> = {}) => ["admin", "vehicles", "list", filters] as const,

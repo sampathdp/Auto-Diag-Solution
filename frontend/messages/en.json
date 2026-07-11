@@ -102,6 +102,86 @@
       "button": "Chat With Us"
     }
   },
+  "about": {
+    "hero": {
+      "eyebrow": "About Ferrum",
+      "title": "Built for the UAE Driver.",
+      "subtitle": "Genuine and OEM auto parts, sourced globally and stocked locally in Dubai since 2015.",
+      "crumb": "About"
+    },
+    "story": {
+      "eyebrow": "Our Story",
+      "title": "We started with one frustration: waiting weeks for a part that should take a day.",
+      "body1": "Ferrum was founded in Dubai in 2015 after our own team spent too many afternoons chasing down a single brake caliper that sat in a customs warehouse for three weeks. We built the company we wished existed — one that actually stocks the parts UAE drivers need, in the UAE, ready to move.",
+      "body2": "Today that means over 10,000 SKUs held locally across engine, brake, filtration and electrical systems, sourced directly from certified manufacturers and matched precisely to what's on the road here — from daily runabouts to full workshop rebuilds.",
+      "imageTag": "Ferrum · Dubai Distribution Centre"
+    },
+    "values": {
+      "eyebrow": "How We Work",
+      "title": "The principles behind every order.",
+      "item1Title": "Verified Sourcing",
+      "item1Body": "Every part is traced to a certified manufacturer or authorized channel before it's allowed into our catalogue — no grey-market substitutes.",
+      "item2Title": "Fitment First",
+      "item2Body": "Our team confirms compatibility against your VIN or vehicle details before you order, so the part that arrives is the part that fits.",
+      "item3Title": "Stocked, Not Ordered-In",
+      "item3Body": "We hold inventory locally in Dubai rather than drop-shipping from overseas — that's what makes same-day dispatch possible.",
+      "item4Title": "Straightforward Support",
+      "item4Body": "One WhatsApp thread from question to delivery — no ticket numbers, no call centres, no chasing."
+    },
+    "timeline": {
+      "eyebrow": "Milestones",
+      "title": "Nine years of stocking the right part.",
+      "y1_year": "2015",
+      "y1_title": "Ferrum Founded",
+      "y1_body": "Opened our first parts counter in Al Quoz with a catalogue of under 500 SKUs.",
+      "y2_year": "2018",
+      "y2_title": "Distribution Centre",
+      "y2_body": "Moved into our current Al Quoz Industrial Area warehouse to hold serious inventory locally.",
+      "y3_year": "2021",
+      "y3_title": "10,000+ SKUs",
+      "y3_body": "Crossed 10,000 stocked parts across engine, brakes, filtration and electrical systems.",
+      "y4_year": "2026",
+      "y4_title": "UAE-Wide Delivery",
+      "y4_body": "Same-day dispatch in Dubai, next-day across every other Emirate."
+    }
+  },
+  "contact": {
+    "hero": {
+      "eyebrow": "Get In Touch",
+      "title": "Talk to a Real Parts Person.",
+      "subtitle": "Questions about fitment, stock, or an order — reach us however's easiest.",
+      "crumb": "Contact"
+    },
+    "form": {
+      "eyebrow": "Send a Message",
+      "title": "We reply within one business day.",
+      "name": "Full Name",
+      "email": "Email",
+      "subject": "Subject",
+      "subjectPlaceholder": "What's this about?",
+      "message": "Message",
+      "messagePlaceholder": "Tell us what you need — a part number, your VIN, or just the question.",
+      "submit": "Send Message",
+      "successTitle": "Message sent.",
+      "successBody": "Thanks for reaching out — our team will get back to you within one business day. For anything urgent, WhatsApp is fastest.",
+      "sendAnother": "Send another message"
+    },
+    "info": {
+      "eyebrow": "Other Ways to Reach Us",
+      "title": "Visit, call, or chat.",
+      "addressLabel": "Warehouse & Counter",
+      "phoneLabel": "Phone",
+      "emailLabel": "Email",
+      "hoursLabel": "Hours",
+      "whatsappCta": "Chat on WhatsApp"
+    },
+    "visit": {
+      "eyebrow": "Come By",
+      "title": "Our parts counter is open to walk-ins.",
+      "body": "Bring the old part or your VIN — our team will confirm fitment on the spot before you buy.",
+      "imageTag": "Ferrum · Al Quoz Industrial Area 3"
+    }
+  },
   "footer": {
     "blurb": "Genuine and OEM auto parts, sourced globally and distributed across the UAE from our Dubai facility since 2015.",
     "shop": "Shop",

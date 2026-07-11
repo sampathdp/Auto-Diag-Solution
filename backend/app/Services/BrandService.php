@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Arr;
 use App\Exceptions\DomainException;
 use App\Repositories\BrandRepository;
 
 class BrandService
 {
+    private const BOOLEAN_FIELDS = ['is_active'];
+
     private BrandRepository $repo;
 
     public function __construct()
@@ -19,7 +22,10 @@ class BrandService
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
         return [
-            'items' => $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage),
+            'items' => Arr::boolifyMany(
+                $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage),
+                self::BOOLEAN_FIELDS
+            ),
             'total' => $this->repo->countFiltered($filters, $search),
         ];
     }
@@ -30,6 +36,7 @@ class BrandService
         if (!$brand) {
             throw new DomainException('Brand not found', 404);
         }
+        $brand = Arr::boolify($brand, self::BOOLEAN_FIELDS);
         $brand['products_count'] = $this->repo->productCount($id);
         return $brand;
     }

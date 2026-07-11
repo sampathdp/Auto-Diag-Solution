@@ -87,27 +87,27 @@ export default function AdminVehiclesPage() {
   // POST/PUT/DELETE /vehicles/{id} exist). This page is a browse view over the
   // catalog plus single-vehicle add; see ARCHITECTURE.md §8.4.
   const yearColumns: ColumnDef<YearRow, any>[] = [
-    { accessorKey: "year", header: "Year" },
-    { accessorKey: "comboCount", header: "Make/Model Combos" },
+    { accessorKey: "year", header: "Model Year" },
+    { accessorKey: "comboCount", header: "Vehicle Models Covered" },
   ];
 
   const makeColumns: ColumnDef<MakeRow, any>[] = [
-    { accessorKey: "make", header: "Make" },
-    { accessorKey: "modelsCount", header: "Models" },
+    { accessorKey: "make", header: "Manufacturer" },
+    { accessorKey: "modelsCount", header: "Models on File" },
   ];
 
   const modelColumns: ColumnDef<ModelRow, any>[] = [
     { accessorKey: "model", header: "Model" },
     { accessorKey: "make", header: "Make" },
-    { accessorKey: "yearRange", header: "Year Range" },
-    { accessorKey: "productsCount", header: "Compatible Products" },
+    { accessorKey: "yearRange", header: "Years Covered" },
+    { accessorKey: "productsCount", header: "Products Tagged to Fit It" },
   ];
 
   return (
     <div>
       <PageHeader
         title="Vehicles"
-        description={`${vehicles.length} year/make/model combinations for fitment search`}
+        description={`${vehicles.length} year/make/model entries in your fitment catalog`}
         actions={
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -116,20 +116,36 @@ export default function AdminVehiclesPage() {
         }
       />
 
+      <div className="mb-6 rounded-lg border border-border bg-surface px-4 py-3 text-body text-ink-muted">
+        This is the reference list of vehicles (year + make + model, e.g. "2022 Toyota Camry") that products
+        can be tagged as fitting. When you add a product, you pick which vehicles here it's compatible with —
+        customers on the storefront then search by their own vehicle to see only matching parts. The three
+        tabs below are the same list, just grouped differently so you can check your coverage.
+      </div>
+
       <Tabs defaultValue="years">
-        <TabsList className="mb-4">
+        <TabsList className="mb-2">
           <TabsTrigger value="years">Years</TabsTrigger>
           <TabsTrigger value="makes">Makes</TabsTrigger>
           <TabsTrigger value="models">Models</TabsTrigger>
         </TabsList>
 
         <TabsContent value="years">
+          <p className="mb-3 text-caption text-ink-muted">
+            For each model year, how many distinct vehicle models (across all makes) have an entry.
+          </p>
           <DataTable columns={yearColumns} data={yearRows} isLoading={vehiclesQuery.isLoading} />
         </TabsContent>
         <TabsContent value="makes">
+          <p className="mb-3 text-caption text-ink-muted">
+            For each manufacturer, how many distinct models are on file (any year).
+          </p>
           <DataTable columns={makeColumns} data={makeRows} isLoading={vehiclesQuery.isLoading} />
         </TabsContent>
         <TabsContent value="models">
+          <p className="mb-3 text-caption text-ink-muted">
+            Every specific model, the year range it spans, and how many of your products are tagged to fit it.
+          </p>
           <DataTable columns={modelColumns} data={modelRows} isLoading={vehiclesQuery.isLoading || productsQuery.isLoading} />
         </TabsContent>
       </Tabs>

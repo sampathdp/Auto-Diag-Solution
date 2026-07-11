@@ -19,7 +19,7 @@ class CategoryController extends BaseController
     public function index(Request $request): void
     {
         $page = max(1, (int)($request->input('page') ?? 1));
-        $perPage = min(100, max(1, (int)($request->input('per_page') ?? 15)));
+        $perPage = min(1000, max(1, (int)($request->input('per_page') ?? 15)));
         $search = trim((string)($request->input('search') ?? ''));
         $sortBy = (string)($request->input('sort_by') ?? 'sort_order');
         $sortDir = (string)($request->input('sort_dir') ?? 'ASC');

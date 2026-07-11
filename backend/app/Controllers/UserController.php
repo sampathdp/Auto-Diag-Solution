@@ -24,7 +24,7 @@ class UserController extends BaseController
     {
         $page = max(1, (int)($request->input('page') ?? 1));
         // Cap per_page so a caller can't force an unbounded full-table scan.
-        $perPage = min(100, max(1, (int)($request->input('per_page') ?? 15)));
+        $perPage = min(1000, max(1, (int)($request->input('per_page') ?? 15)));
 
         $users = $this->userRepo->all([], $page, $perPage);
         foreach ($users as &$user) {

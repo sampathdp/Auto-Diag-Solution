@@ -6,6 +6,8 @@ import { FormField } from "@/components/admin/ui/FormField";
 import { Input } from "@/components/admin/ui/Input";
 import { Textarea } from "@/components/admin/ui/Textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin/ui/Tabs";
+import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
+import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import { RichTextEditor } from "./RichTextEditor";
 import type { ProductFormValues } from "@/lib/admin/schemas/productSchema";
 
@@ -13,8 +15,22 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
   const {
     register,
     control,
+    watch,
+    setValue,
     formState: { errors },
   } = form;
+  const name = useTranslate();
+  const shortDescription = useTranslate();
+
+  const translateName = async () => {
+    const translated = await name.translate(watch("name_en"));
+    if (translated) setValue("name_ar", translated, { shouldValidate: true });
+  };
+
+  const translateShortDescription = async () => {
+    const translated = await shortDescription.translate(watch("short_description_en") ?? "");
+    if (translated) setValue("short_description_ar", translated);
+  };
 
   return (
     <Card>
@@ -30,7 +46,14 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
 
           <TabsContent value="en" className="space-y-4">
             <FormField label="Name" htmlFor="name_en" error={errors.name_en?.message} required>
-              <Input id="name_en" error={!!errors.name_en} {...register("name_en")} />
+              <Input
+                id="name_en"
+                error={!!errors.name_en}
+                {...register("name_en")}
+                onBlur={() => {
+                  if (!watch("name_ar")) translateName();
+                }}
+              />
             </FormField>
             <FormField label="Short Description" htmlFor="short_description_en">
               <Textarea id="short_description_en" rows={2} {...register("short_description_en")} />
@@ -47,10 +70,32 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
           </TabsContent>
 
           <TabsContent value="ar" className="space-y-4">
-            <FormField label="الاسم" htmlFor="name_ar" error={errors.name_ar?.message} required>
+            <FormField
+              label={
+                <TranslateLabel
+                  label="الاسم"
+                  required
+                  translating={name.translating}
+                  disabled={!watch("name_en")?.trim()}
+                  onTranslate={translateName}
+                />
+              }
+              htmlFor="name_ar"
+              error={errors.name_ar?.message}
+            >
               <Input id="name_ar" dir="rtl" error={!!errors.name_ar} {...register("name_ar")} />
             </FormField>
-            <FormField label="وصف قصير" htmlFor="short_description_ar">
+            <FormField
+              label={
+                <TranslateLabel
+                  label="وصف قصير"
+                  translating={shortDescription.translating}
+                  disabled={!watch("short_description_en")?.trim()}
+                  onTranslate={translateShortDescription}
+                />
+              }
+              htmlFor="short_description_ar"
+            >
               <Textarea id="short_description_ar" dir="rtl" rows={2} {...register("short_description_ar")} />
             </FormField>
             <FormField label="الوصف الكامل">

@@ -14,30 +14,10 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: 📦 Install frontend dependencies
-        run: |
-          cd frontend
-          npm install
-
-      - name: 🏗️ Build frontend
-        run: |
-          cd frontend
-          npm run build
-
       - name: 📂 Prepare deployment directory
         run: |
           # Create a temporary deploy folder
           mkdir -p dist
-          
-          # Copy compiled frontend assets to root of deploy folder
-          cp -r frontend/dist/* dist/
           
           # Copy backend code to /backend directory in deploy folder
           cp -r backend dist/
@@ -54,11 +34,12 @@ jobs:
               
               # Route API requests to the backend entry point
               RewriteRule ^api/v1/(.*)$ backend/public/index.php [QSA,L]
-              
-              # Support React Router client-side routing fallback (SPA)
-              RewriteCond %{REQUEST_FILENAME} !-f
-              RewriteCond %{REQUEST_FILENAME} !-d
-              RewriteRule ^ index.html [L]
+          </IfModule>
+          <IfModule mod_headers.c>
+              # Ensure CORS is allowed if frontend is on Vercel
+              Header set Access-Control-Allow-Origin "*"
+              Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+              Header set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
           </IfModule>
           EOF
 

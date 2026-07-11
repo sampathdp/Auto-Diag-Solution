@@ -19,7 +19,7 @@ class BrandController extends BaseController
     public function index(Request $request): void
     {
         $page = max(1, (int)($request->input('page') ?? 1));
-        $perPage = min(100, max(1, (int)($request->input('per_page') ?? 15)));
+        $perPage = min(1000, max(1, (int)($request->input('per_page') ?? 15)));
         $search = trim((string)($request->input('search') ?? ''));
         $sortBy = (string)($request->input('sort_by') ?? 'name_en');
         $sortDir = (string)($request->input('sort_dir') ?? 'ASC');
@@ -45,6 +45,14 @@ class BrandController extends BaseController
     public function show(Request $request): void
     {
         $this->success($this->service->find((int)$request->getParam('id')));
+    }
+
+    // Public storefront listing — active brands only, no pagination/auth. Kept separate
+    // from index() so the admin listing's filters/pagination/search stay admin-only.
+    public function active(Request $request): void
+    {
+        $result = $this->service->list(['is_active' => 1], '', 'name_en', 'ASC', 1, 100);
+        $this->success(['items' => $result['items']]);
     }
 
     public function store(Request $request): void
