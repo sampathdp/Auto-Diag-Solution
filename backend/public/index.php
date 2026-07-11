@@ -10,6 +10,8 @@ use App\Exceptions\DomainException;
 
 // ── CORS & Security Headers ────────────────────────────────────────────────────
 // Allowed frontend origin(s). In production set FRONTEND_URL in .env.
+$isLocal = ($_ENV['APP_ENV'] ?? 'local') === 'local';
+
 $allowedOrigins = array_filter([
     $_ENV['FRONTEND_URL']       ?? null,   // production origin from .env
     'http://localhost:3000',               // Next.js dev server
@@ -18,10 +20,14 @@ $allowedOrigins = array_filter([
 
 $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-if (in_array($requestOrigin, $allowedOrigins, true)) {
+// Next.js picks the next free port (3001, 3002, ...) whenever 3000 is taken,
+// so in local dev accept any localhost/127.0.0.1 port instead of hardcoding one.
+$isLocalOrigin = $isLocal && preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $requestOrigin) === 1;
+
+if (in_array($requestOrigin, $allowedOrigins, true) || $isLocalOrigin) {
     header('Access-Control-Allow-Origin: ' . $requestOrigin);
     header('Vary: Origin');
-} elseif (($_ENV['APP_ENV'] ?? 'local') === 'local' && $requestOrigin === '') {
+} elseif ($isLocal && $requestOrigin === '') {
     // Same-origin or non-browser requests (Postman with no Origin) — allow in dev only
     header('Access-Control-Allow-Origin: *');
 }
