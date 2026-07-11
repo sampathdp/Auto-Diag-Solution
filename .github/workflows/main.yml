@@ -18,10 +18,10 @@ jobs:
         run: |
           # Create a temporary deploy folder
           mkdir -p dist
-          
+
           # Copy backend code to /backend directory in deploy folder
           cp -r backend dist/
-          
+
           # Clean up unnecessary files to optimize upload size
           rm -rf dist/backend/scratch
           rm -f dist/backend/.env
@@ -49,6 +49,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          port: 21
           local-dir: ./dist/
           # Optional: If you need to deploy inside a specific hosting subdirectory (e.g. public_html)
           # server-dir: /public_html/
@@ -57,4 +58,3 @@ jobs:
             **/.git*/**
             **/backend/.env
             **/backend/scratch/**
-
