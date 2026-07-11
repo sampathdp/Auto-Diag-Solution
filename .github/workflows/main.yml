@@ -21,12 +21,12 @@ jobs:
           # Create a temporary deploy folder
           mkdir -p dist
           
-          # Copy backend code to /backend directory in deploy folder
-          cp -r backend dist/
+          # Copy all contents of backend directly into dist folder
+          cp -r backend/. dist/
           
           # Clean up unnecessary files to optimize upload size
-          rm -rf dist/backend/scratch
-          rm -f dist/backend/.env
+          rm -rf dist/scratch
+          rm -f dist/.env
 
       - name: 📝 Create production .htaccess at root
         run: |
@@ -35,7 +35,7 @@ jobs:
               RewriteEngine On
               
               # Route API requests to the backend entry point
-              RewriteRule ^api/v1/(.*)$ backend/public/index.php [QSA,L]
+              RewriteRule ^api/v1/(.*)$ public/index.php [QSA,L]
           </IfModule>
           <IfModule mod_headers.c>
               # Ensure CORS is allowed if frontend is on Vercel
