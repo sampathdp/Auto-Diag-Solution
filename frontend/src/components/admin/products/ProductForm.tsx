@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/admin/ui/Button";
@@ -27,6 +27,24 @@ import { VehicleCompatibilityCard } from "./VehicleCompatibilityCard";
 import { SpecificationsCard } from "./SpecificationsCard";
 import { SeoCard } from "./SeoCard";
 import { PreviewCard } from "./PreviewCard";
+
+/**
+ * react-hook-form's FieldErrors is a tree — array/object fields (specifications,
+ * vehicle_ids, ...) nest their errors instead of putting a `.message` at the top
+ * level, so a naive Object.values(errors)[0]?.message misses most real failures
+ * and silently falls back to a generic toast. Walk the whole tree instead.
+ */
+function findFirstErrorMessage(errors: FieldErrors<ProductFormValues>): string | null {
+  for (const value of Object.values(errors)) {
+    if (!value || typeof value !== "object") continue;
+    if (typeof (value as { message?: unknown }).message === "string") {
+      return (value as { message: string }).message;
+    }
+    const nested = findFirstErrorMessage(value as FieldErrors<ProductFormValues>);
+    if (nested) return nested;
+  }
+  return null;
+}
 
 function productToFormValues(product: Product): ProductFormValues {
   return {
@@ -145,12 +163,8 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
         save.mutate(buildPayload(values, status));
       },
       (errors) => {
-        const firstMessage = Object.values(errors)[0]?.message;
-        showError(
-          typeof firstMessage === "string"
-            ? firstMessage
-            : "Please fix the highlighted fields before continuing."
-        );
+        console.error("Product form validation failed:", errors);
+        showError(findFirstErrorMessage(errors) ?? "Please fix the highlighted fields before continuing.");
       }
     )();
   };
