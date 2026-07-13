@@ -75,11 +75,19 @@ class ProductService
                 if ($path === null) {
                     return null;
                 }
-                // Media rows can point at an external URL (e.g. a stock photo used for
-                // seed/test data) instead of a locally uploaded file — pass those through
-                // as-is rather than mangling them into "{baseUrl}https://...".
-                return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
-                    ? $path
+                // Media rows can point at an external URL instead of a locally uploaded
+                // file — pass those through as-is rather than mangling them into
+                // "{baseUrl}https://...".
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    return $path;
+                }
+                // Local uploads live under public/uploads/{type}/{file} and are served
+                // through StorageController (not linked to directly) — the webroot on
+                // shared hosting is the project root, not public/, so a raw "{baseUrl}
+                // {path}" URL 404s there even though it happens to work against the PHP
+                // built-in dev server (which serves public/ itself as the webroot).
+                return str_starts_with($path, '/uploads/')
+                    ? $baseUrl . '/api/v1/storage' . substr($path, strlen('/uploads'))
                     : $baseUrl . $path;
             },
             $images

@@ -31,8 +31,18 @@ jobs:
       - name: 📝 Create production .htaccess at root
         run: |
           cat << 'EOF' > dist/.htaccess
+          # The deploy's webroot is the project root (this .htaccess's own folder), not
+          # public/ — never let the webserver list or directly serve source/source-adjacent
+          # files; only public/index.php (reached via the rewrite below) should run.
+          Options -Indexes
+
           <IfModule mod_rewrite.c>
               RewriteEngine On
+
+              # Block direct access to source/config directories and files — the only
+              # thing meant to be reachable here is the API entry point below.
+              RewriteRule ^(app|bootstrap|database|routes|scratch)(/|$) - [F,L]
+              RewriteRule ^(composer\.json|composer\.lock|console\.php)$ - [F,L]
 
               # Route API requests to the backend entry point
               RewriteRule ^api/v1/(.*)$ public/index.php [QSA,L]

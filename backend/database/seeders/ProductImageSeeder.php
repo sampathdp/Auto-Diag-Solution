@@ -41,7 +41,9 @@ $categoryToIcon = [
 
 $mediaIdByIcon = [];
 foreach ($icons as $icon) {
-    $path = "/images/parts/{$icon}.svg";
+    // Under public/uploads/parts/ (not a separate scheme) so these are served through
+    // StorageController like any real upload — see ProductService::shapePublic().
+    $path = "/uploads/parts/{$icon}.svg";
     $existing = DatabaseManager::query("SELECT id FROM media WHERE path = :path LIMIT 1", ['path' => $path])->fetch();
     if ($existing) {
         $mediaIdByIcon[$icon] = (int)$existing['id'];

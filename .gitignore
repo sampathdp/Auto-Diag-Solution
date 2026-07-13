@@ -43,6 +43,10 @@ backend/scratch/
 !backend/scratch/.gitkeep
 backend/public/uploads/*
 !backend/public/uploads/.gitkeep
+# Committed placeholder icons (not user uploads) used to seed test products with an
+# image instead of a bare fallback icon — see database/seeders/ProductImageSeeder.php.
+!backend/public/uploads/parts/
+!backend/public/uploads/parts/*
 backend/.env
 .env
 .env.local
