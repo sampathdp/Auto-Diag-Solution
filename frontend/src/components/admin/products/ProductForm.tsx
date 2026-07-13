@@ -12,6 +12,7 @@ import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { ProductFormSchema, PRODUCT_FORM_DEFAULTS, type ProductFormValues } from "@/lib/admin/schemas/productSchema";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
+import { slugify } from "@/lib/admin/utils";
 import type { PaginatedResponse } from "@/types/api";
 import type { Category } from "@/mocks/admin/db";
 import type { Brand } from "@/types/brand";
@@ -126,12 +127,33 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
     status,
   });
 
-  const submitAs = (intent: "draft" | "publish") =>
-    form.handleSubmit((values) => {
-      setPendingIntent(intent);
-      const status = intent === "draft" ? "draft" : values.is_active ? "active" : "inactive";
-      save.mutate(buildPayload(values, status));
-    });
+  // NOTE: submitAs(intent) is invoked at render time (onClick={submitAs("draft")}) to
+  // produce the actual click handler — any side effect must live inside the returned
+  // function, not in submitAs's own body, or it'd re-run on every render.
+  const submitAs = (intent: "draft" | "publish") => () => {
+    // The URL slug lives on the SEO card, below the fold — easy to never scroll to.
+    // Fall back to deriving it from the English name instead of leaving it blank and
+    // failing validation on a field the user never saw.
+    if (!form.getValues("slug")) {
+      form.setValue("slug", slugify(form.getValues("name_en")), { shouldDirty: true });
+    }
+
+    return form.handleSubmit(
+      (values) => {
+        setPendingIntent(intent);
+        const status = intent === "draft" ? "draft" : values.is_active ? "active" : "inactive";
+        save.mutate(buildPayload(values, status));
+      },
+      (errors) => {
+        const firstMessage = Object.values(errors)[0]?.message;
+        showError(
+          typeof firstMessage === "string"
+            ? firstMessage
+            : "Please fix the highlighted fields before continuing."
+        );
+      }
+    )();
+  };
 
   return (
     <form onSubmit={(e) => e.preventDefault()}>
