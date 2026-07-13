@@ -400,11 +400,16 @@ class AuthController extends BaseController
     private function setAuthCookies(string $accessToken, string $refreshToken): void
     {
         $isProduction = ($_ENV['APP_ENV'] ?? 'local') === 'production';
+        // The frontend (Vercel) and this API (shared hosting) are on different
+        // registrable domains — a genuinely cross-site request, not just a different
+        // port like local dev. SameSite=Strict/Lax cookies are never sent on cross-site
+        // fetch/XHR, so the very next request after login would look unauthenticated.
+        // SameSite=None is the only value that works here, and it requires Secure.
         $base = [
             'path'     => '/',
             'httponly' => true,
             'secure'   => $isProduction,
-            'samesite' => $isProduction ? 'Strict' : 'Lax',
+            'samesite' => $isProduction ? 'None' : 'Lax',
         ];
 
         setcookie('access_token', $accessToken, array_merge($base, [
@@ -418,7 +423,14 @@ class AuthController extends BaseController
 
     private function clearAuthCookies(): void
     {
-        $past = ['expires' => 1, 'path' => '/', 'httponly' => true, 'secure' => false, 'samesite' => 'Lax'];
+        $isProduction = ($_ENV['APP_ENV'] ?? 'local') === 'production';
+        $past = [
+            'expires' => 1,
+            'path' => '/',
+            'httponly' => true,
+            'secure' => $isProduction,
+            'samesite' => $isProduction ? 'None' : 'Lax',
+        ];
         setcookie('access_token', '', $past);
         setcookie('refresh_token', '', $past);
     }
