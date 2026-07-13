@@ -42,9 +42,25 @@ export function toMediaItem(row: RawMediaRow): MediaItem {
     width: null,
     height: null,
     color: "#6b7280",
-    url: `${BACKEND_ORIGIN}${row.path}`,
+    url: mediaPathToUrl(row.path),
     alt_text_en: row.alt_text_en ?? "",
     alt_text_ar: row.alt_text_ar ?? "",
     uploaded_at: row.created_at,
   };
+}
+
+/**
+ * `row.path` (e.g. "/uploads/media/xxx.jpg") is only directly servable from
+ * BACKEND_ORIGIN when the webroot is public/ itself — true for the local PHP dev
+ * server, false on shared hosting where the project root is the webroot. Route
+ * through the API's storage endpoint instead, which works regardless of webroot
+ * (mirrors ProductService::shapePublic() on the backend).
+ */
+function mediaPathToUrl(path: string): string {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+  return path.startsWith("/uploads/")
+    ? `${BACKEND_ORIGIN}/api/v1/storage${path.slice("/uploads".length)}`
+    : `${BACKEND_ORIGIN}${path}`;
 }
