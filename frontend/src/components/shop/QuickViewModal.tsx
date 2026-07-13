@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
 import { X, Check, ShoppingCart, MessageCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useShopFilters } from "@/hooks/useShopFilters";
+import { productFitsVehicle } from "@/lib/productFitment";
 import { useRecentlyViewedStore } from "@/store/useRecentlyViewedStore";
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
@@ -55,15 +56,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
 
   if (!mounted) return null;
 
-  const hasVehicleContext = fitsYear || fitsMake || fitsModel;
-  let fitsPerfectly = false;
-  if (hasVehicleContext) {
-    fitsPerfectly = product.compatible_vehicles.some(v => 
-      (!fitsYear || v.year.toString() === fitsYear) &&
-      (!fitsMake || v.make.toLowerCase() === fitsMake.toLowerCase()) &&
-      (!fitsModel || v.model.toLowerCase() === fitsModel.toLowerCase())
-    );
-  }
+  const hasVehicleContext = !!(fitsYear || fitsMake || fitsModel);
+  const fitsPerfectly = hasVehicleContext
+    ? productFitsVehicle(product, { year: fitsYear, make: fitsMake, model: fitsModel })
+    : false;
 
   const isOutOfStock = product.stock === 0;
   const hasDiscount = !!product.compare_at_price;
@@ -112,7 +108,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white shadow-sm flex items-center justify-center p-8">
                 <motion.img
                   layoutId={`product-img-${product.id}`}
-                  src={product.images[activeImage]}
+                  src={product.images[activeImage] || "/placeholder-product.svg"}
                   alt={name}
                   className="h-full w-full object-contain"
                 />
@@ -138,7 +134,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
             {/* Right: Details */}
             <div className="flex w-full flex-col overflow-y-auto p-6 md:w-1/2 md:p-10">
               <div className="mb-2 text-sm font-bold uppercase tracking-widest text-muted-foreground">
-                {product.brand}
+                {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
               </div>
               <h2 className="mb-2 text-2xl font-bold leading-tight text-foreground sm:text-3xl">
                 {name}
@@ -186,9 +182,9 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                   </h3>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                     {product.specifications.map((spec) => (
-                      <div key={spec.key}>
-                        <dt className="text-muted-foreground">{spec.key}</dt>
-                        <dd className="font-medium text-foreground">{spec.value}</dd>
+                      <div key={spec.key_en}>
+                        <dt className="text-muted-foreground">{locale === "ar" ? spec.key_ar : spec.key_en}</dt>
+                        <dd className="font-medium text-foreground">{locale === "ar" ? spec.value_ar : spec.value_en}</dd>
                       </div>
                     ))}
                   </dl>

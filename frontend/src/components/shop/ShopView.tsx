@@ -13,13 +13,13 @@ import { ShopPagination } from "./ShopPagination";
 import { EmptyState } from "./EmptyState";
 import { CompareBar } from "./CompareBar";
 import { RecentlyViewed } from "./RecentlyViewed";
-import { mockCategories } from "@/mocks/storefront/data";
+import { useCategories } from "@/hooks/useCategories";
 import { useLocale, useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion, Variants } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { useEffect } from "react";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
 import { Loader2 } from "lucide-react";
 
 export function ShopView({ initialCategory, hideCategoryFilter = false }: { initialCategory?: string, hideCategoryFilter?: boolean }) {
@@ -59,6 +59,7 @@ export function ShopView({ initialCategory, hideCategoryFilter = false }: { init
   if (initialCategory) activeFilters.category = initialCategory;
 
   const { data, isLoading, isFetching } = useProducts(activeFilters);
+  const { data: categories } = useCategories();
 
   useEffect(() => {
     if (data?.data) {
@@ -96,11 +97,11 @@ export function ShopView({ initialCategory, hideCategoryFilter = false }: { init
   ];
 
   if (activeFilters.category) {
-    const cat = mockCategories.find((c) => c.id === activeFilters.category);
+    const cat = categories?.find((c) => c.slug === activeFilters.category);
     if (cat) {
       categoryName = locale === "ar" ? cat.name_ar : cat.name_en;
       breadcrumbs.push({ label: categoryName, href: `/shop/${cat.slug}` });
-      if (cat.id === "brakes") bgImage = "https://images.unsplash.com/photo-1590518776085-f55ebce3dcad?w=1600&q=80";
+      if (cat.slug === "brakes") bgImage = "https://images.unsplash.com/photo-1590518776085-f55ebce3dcad?w=1600&q=80";
     }
   } else if (activeFilters.q) {
     categoryName = (locale === "ar" ? "بحث: " : "Search: ") + activeFilters.q;

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useVehicleStore } from "@/store/useVehicleStore";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
+import { productFitsVehicle } from "@/lib/productFitment";
 import { CheckCircle2, AlertTriangle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
@@ -57,11 +58,11 @@ export function CheckFitmentWidget({ product }: CheckFitmentWidgetProps) {
     );
   }
 
-  const fitsPerfectly = product.compatible_vehicles.some(v => 
-    v.year.toString() === selectedVehicle.year?.toString() &&
-    v.make.toLowerCase() === selectedVehicle.make?.toLowerCase() &&
-    v.model.toLowerCase() === selectedVehicle.model?.toLowerCase()
-  );
+  const fitsPerfectly = productFitsVehicle(product, {
+    year: selectedVehicle.year,
+    make: selectedVehicle.make,
+    model: selectedVehicle.model,
+  });
 
   return (
     <div className={cn(

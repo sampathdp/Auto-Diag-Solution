@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
 import { useLocale, useTranslations } from "next-intl";
 import { Heart, Eye, CheckCircle2, AlertTriangle, ShoppingCart, Loader2, Check } from "lucide-react";
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
+import { productFitsVehicle } from "@/lib/productFitment";
 import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
@@ -111,19 +112,15 @@ export function ProductListRow({ product }: { product: Product }) {
     }, 400);
   };
 
-  const hasVehicleContext = fitsYear || fitsMake || fitsModel;
-  let fitsPerfectly = false;
-  if (hasVehicleContext) {
-    fitsPerfectly = product.compatible_vehicles.some(v => 
-      (!fitsYear || v.year.toString() === fitsYear) &&
-      (!fitsMake || v.make.toLowerCase() === fitsMake.toLowerCase()) &&
-      (!fitsModel || v.model.toLowerCase() === fitsModel.toLowerCase())
-    );
-  }
+  const hasVehicleContext = !!(fitsYear || fitsMake || fitsModel);
+  const fitsPerfectly = hasVehicleContext
+    ? productFitsVehicle(product, { year: fitsYear, make: fitsMake, model: fitsModel })
+    : false;
 
   const isOutOfStock = product.stock === 0;
   const hasDiscount = !!product.compare_at_price;
   const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price_aed) / product.compare_at_price!) * 100) : 0;
+  const imageSrc = product.images[0] || "/placeholder-product.svg";
 
   return (
     <>
@@ -146,7 +143,7 @@ export function ProductListRow({ product }: { product: Product }) {
             />
             <motion.img
               layoutId={`product-img-${product.id}`}
-              src={product.images[0]}
+              src={imageSrc}
               alt={name}
               variants={shouldReduceMotion ? {} : { hover: { opacity: product.images[1] ? 0 : 1 } }}
               transition={{ duration: 0.3 }}
@@ -189,7 +186,7 @@ export function ProductListRow({ product }: { product: Product }) {
             {/* Middle Info Section */}
             <div className="flex flex-1 flex-col p-5 sm:p-6">
               <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                {product.brand}
+                {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
               </div>
               <h3 className="mb-2 text-lg font-bold leading-snug text-foreground">
                 {name}

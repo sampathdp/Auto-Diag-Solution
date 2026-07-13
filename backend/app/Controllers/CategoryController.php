@@ -53,6 +53,14 @@ class CategoryController extends BaseController
         $this->success($category);
     }
 
+    // Public storefront listing — active categories only, no pagination/auth. Mirrors
+    // BrandController::active().
+    public function active(Request $request): void
+    {
+        $result = $this->service->list(['is_active' => 1], '', 'sort_order', 'ASC', 1, 200);
+        $this->success(['items' => $result['items']]);
+    }
+
     public function store(Request $request): void
     {
         $category = $this->service->create($request->all());

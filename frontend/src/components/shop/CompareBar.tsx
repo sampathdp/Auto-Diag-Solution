@@ -1,7 +1,7 @@
 "use client";
 
 import { useCompareStore } from "@/store/useCompareStore";
-import { mockProducts } from "@/mocks/storefront/data";
+import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -13,14 +13,13 @@ export function CompareBar() {
   const { items, removeItem, clearCompare } = useCompareStore();
   const t = useTranslations("shop.compareBar");
   const [mounted, setMounted] = useState(false);
+  const { data: comparedProducts = [] } = useProductsByIds(items);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
-
-  const comparedProducts = items.map(id => mockProducts.find(p => p.id === id)!).filter(Boolean);
 
   return (
     <AnimatePresence>
@@ -56,7 +55,7 @@ export function CompareBar() {
                       >
                         <X className="h-3 w-3" />
                       </button>
-                      <img src={p.images[0]} alt="" className="h-full w-full object-contain" />
+                      <img src={p.images[0] || "/placeholder-product.svg"} alt="" className="h-full w-full object-contain" />
                     </motion.div>
                   ))}
                   {Array.from({ length: Math.max(0, 3 - comparedProducts.length) }).map((_, i) => (

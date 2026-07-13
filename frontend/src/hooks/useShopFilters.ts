@@ -1,5 +1,5 @@
 import { useQueryState, parseAsString, parseAsInteger, parseAsBoolean, parseAsArrayOf } from "nuqs";
-import { ProductFilters } from "@/mocks/storefront/data";
+import { ProductFilters } from "@/types/storefront";
 
 export function useShopFilters() {
   const [q, setQ] = useQueryState("q", parseAsString.withDefault(""));

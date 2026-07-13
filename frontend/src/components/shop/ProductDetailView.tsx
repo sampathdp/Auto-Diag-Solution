@@ -13,7 +13,8 @@ import {
   Loader2,
   Check,
 } from "lucide-react";
-import { mockProducts, mockCategories } from "@/mocks/storefront/data";
+import { useProduct } from "@/hooks/useProduct";
+import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/Button";
 import { CheckFitmentWidget } from "./CheckFitmentWidget";
 import { ProductCard } from "./ProductCard";
@@ -31,7 +32,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const t = useTranslations("shop.quickView");
   const tToast = useTranslations("shop.toasts");
 
-  const product = mockProducts.find((p) => p.id === productId);
+  const { data: product, isLoading } = useProduct(productId);
 
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -52,7 +53,19 @@ export function ProductDetailView({ productId }: { productId: string }) {
     }
   }, [product]);
 
+  const { data: relatedData } = useProducts(
+    { category: product?.category?.slug, per_page: 5 },
+    { enabled: !!product?.category?.slug }
+  );
+
   if (!product) {
+    if (isLoading) {
+      return (
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
     return (
       <div className="mx-auto flex max-w-wrap flex-col items-center justify-center px-6 py-32 text-center md:px-14">
         <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Product not found</h1>
@@ -65,8 +78,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   }
 
   const name = locale === "ar" ? product.name_ar : product.name_en;
-  const category = mockCategories.find((c) => c.id === product.category_id);
-  const categoryName = category ? (locale === "ar" ? category.name_ar : category.name_en) : null;
+  const categoryName = product.category ? (locale === "ar" ? product.category.name_ar : product.category.name_en) : null;
 
   const isOutOfStock = product.stock === 0;
   const hasDiscount = !!product.compare_at_price;
@@ -76,9 +88,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const idHash = product.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const isNew = idHash % 10 > 6;
 
-  const relatedProducts = mockProducts
-    .filter((p) => p.id !== product.id && p.category_id === product.category_id)
-    .slice(0, 4);
+  const relatedProducts = (relatedData?.data || []).filter((p) => p.id !== product.id).slice(0, 4);
 
   const handleToggleWishlist = () => {
     if (!isWishlisted) toast.success(tToast("addedToWishlist"));
@@ -119,7 +129,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
           {categoryName && (
             <>
               <ChevronRight className="h-3 w-3 rtl:rotate-180" />
-              <Link href={`/shop/${category!.slug}` as any} className="hover:text-foreground transition-colors">{categoryName}</Link>
+              <Link href={`/shop/${product.category!.slug}` as any} className="hover:text-foreground transition-colors">{categoryName}</Link>
             </>
           )}
           <ChevronRight className="h-3 w-3 rtl:rotate-180" />
@@ -137,7 +147,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 className="pointer-events-none absolute start-4 top-4 z-10 h-4 w-4 border-s-2 border-t-2 border-foreground/10"
               />
               <img
-                src={product.images[activeImage]}
+                src={product.images[activeImage] || "/placeholder-product.svg"}
                 alt={name}
                 className={`h-full w-full object-contain p-10 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
               />
@@ -178,7 +188,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
           {/* Details */}
           <div>
             <div className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {product.brand}
+              {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
             </div>
             <h1 className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
               {name}
@@ -295,9 +305,9 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 </h3>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   {product.specifications.map((spec) => (
-                    <div key={spec.key}>
-                      <dt className="text-muted-foreground">{spec.key}</dt>
-                      <dd className="font-medium text-foreground">{spec.value}</dd>
+                    <div key={spec.key_en}>
+                      <dt className="text-muted-foreground">{locale === "ar" ? spec.key_ar : spec.key_en}</dt>
+                      <dd className="font-medium text-foreground">{locale === "ar" ? spec.value_ar : spec.value_en}</dd>
                     </div>
                   ))}
                 </dl>

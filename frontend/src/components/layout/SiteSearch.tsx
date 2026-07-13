@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Search, X, Clock, ArrowRight } from "lucide-react";
-import { mockProducts } from "@/mocks/storefront/data";
+import { useProducts } from "@/hooks/useProducts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "@/i18n/navigation";
 import { useLocale } from "next-intl";
@@ -10,9 +10,15 @@ import { useLocale } from "next-intl";
 export function SiteSearch({ scrolled }: { scrolled: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const locale = useLocale();
+
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(handler);
+  }, [query]);
 
   // Focus on slash or Cmd+K
   useEffect(() => {
@@ -42,13 +48,11 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const results = query
-    ? mockProducts.filter(p => 
-        p.name_en.toLowerCase().includes(query.toLowerCase()) || 
-        p.brand.toLowerCase().includes(query.toLowerCase()) ||
-        p.sku.toLowerCase().includes(query.toLowerCase())
-      ).slice(0, 4)
-    : [];
+  const { data } = useProducts(
+    { q: debouncedQuery, per_page: 4 },
+    { enabled: debouncedQuery.length > 0 }
+  );
+  const results = query ? data?.data || [] : [];
 
   return (
     <div ref={containerRef} className="relative z-[70] flex items-center">
@@ -117,10 +121,12 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
                       className="flex items-center gap-4 rounded-md p-2 hover:bg-secondary"
                     >
                       <div className="h-12 w-12 shrink-0 rounded bg-[#F5F6F8] p-1">
-                        <img src={product.images[0]} alt="" className="h-full w-full object-contain" />
+                        <img src={product.images[0] || "/placeholder-product.svg"} alt="" className="h-full w-full object-contain" />
                       </div>
                       <div className="flex flex-1 flex-col">
-                        <span className="text-[10px] font-bold uppercase text-muted-foreground">{product.brand}</span>
+                        <span className="text-[10px] font-bold uppercase text-muted-foreground">
+                          {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
+                        </span>
                         <span className="line-clamp-1 text-sm font-semibold">{locale === 'ar' ? product.name_ar : product.name_en}</span>
                         <span className="text-xs font-bold text-primary">AED {product.price_aed}</span>
                       </div>

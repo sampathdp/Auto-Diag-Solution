@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Arr;
 use App\Core\Database\DatabaseManager;
 use App\Exceptions\DomainException;
+use App\Repositories\MediaRepository;
 use App\Repositories\ProductRepository;
 
 class ProductService
@@ -17,17 +18,118 @@ class ProductService
     private const BOOLEAN_FIELDS = ['vat_inclusive', 'track_inventory', 'fits_all_vehicles'];
 
     private ProductRepository $repo;
+    private MediaRepository $mediaRepo;
 
     public function __construct()
     {
         $this->repo = new ProductRepository();
+        $this->mediaRepo = new MediaRepository();
+    }
+
+    /**
+     * Public storefront listing — active products only, shaped down to what a shopper
+     * needs (no cost_price/supplier/source internals). Mirrors list() but calls the
+     * repo's public* methods, resolves `images` (media ids) to real URLs, and attaches
+     * fitment as year/make/model triplets instead of raw vehicle ids.
+     */
+    public function publicList(array $filters, string $search, string $sort, int $page, int $perPage): array
+    {
+        $items = $this->repo->publicPaginate($filters, $search, $sort, $page, $perPage);
+        $fitmentByProduct = $this->repo->fitmentForProducts(array_column($items, 'id'));
+
+        $shaped = array_map(function (array $row) use ($fitmentByProduct) {
+            return $this->shapePublic($row, $fitmentByProduct[(int)$row['id']] ?? []);
+        }, $items);
+
+        return [
+            'items' => $shaped,
+            'total' => $this->repo->publicCountFiltered($filters, $search),
+        ];
+    }
+
+    public function publicFind(int $id): array
+    {
+        $product = $this->repo->findActiveById($id);
+        if (!$product) {
+            throw new DomainException('Product not found', 404);
+        }
+        $fitment = $this->repo->fitmentForProducts([$id])[$id] ?? [];
+        $shaped = $this->shapePublic($product, $fitment);
+        $shaped['specifications'] = $this->repo->specifications($id);
+        return $shaped;
+    }
+
+    /**
+     * Storefront-safe shape: drops cost_price/source/supplier_id/track_inventory
+     * internals, resolves `images` (media ids) to public URLs, and renames
+     * price/stock to the field names the storefront UI already expects.
+     */
+    private function shapePublic(array $row, array $fitment): array
+    {
+        $images = json_decode((string)($row['images'] ?? '[]'), true) ?? [];
+        $paths = $this->mediaRepo->pathsForIds($images);
+        $baseUrl = rtrim($_ENV['APP_URL'] ?? 'http://localhost:8000', '/');
+        $imageUrls = array_values(array_filter(array_map(
+            function ($id) use ($paths, $baseUrl) {
+                $path = $paths[$id] ?? null;
+                if ($path === null) {
+                    return null;
+                }
+                // Media rows can point at an external URL (e.g. a stock photo used for
+                // seed/test data) instead of a locally uploaded file — pass those through
+                // as-is rather than mangling them into "{baseUrl}https://...".
+                return str_starts_with($path, 'http://') || str_starts_with($path, 'https://')
+                    ? $path
+                    : $baseUrl . $path;
+            },
+            $images
+        )));
+
+        return [
+            'id' => (int)$row['id'],
+            'sku' => $row['sku'],
+            'slug' => $row['slug'],
+            'name_en' => $row['name_en'],
+            'name_ar' => $row['name_ar'],
+            'short_description_en' => $row['short_description_en'],
+            'short_description_ar' => $row['short_description_ar'],
+            'description_en' => $row['description_en'],
+            'description_ar' => $row['description_ar'],
+            'brand' => $row['brand_name_en'] ? [
+                'name_en' => $row['brand_name_en'],
+                'name_ar' => $row['brand_name_ar'],
+                'slug' => $row['brand_slug'],
+            ] : null,
+            'category' => $row['category_name_en'] ? [
+                'name_en' => $row['category_name_en'],
+                'name_ar' => $row['category_name_ar'],
+                'slug' => $row['category_slug'],
+            ] : null,
+            'price_aed' => (float)$row['price'],
+            'compare_at_price' => $row['compare_at_price'] !== null ? (float)$row['compare_at_price'] : null,
+            'images' => $imageUrls,
+            'stock' => (int)$row['stock_quantity'],
+            'stock_status' => $row['stock_status'],
+            'fits_all_vehicles' => (bool)$row['fits_all_vehicles'],
+            'compatible_vehicles' => $fitment,
+            'rating' => round((float)$row['rating'], 1),
+            'reviews' => (int)$row['review_count'],
+        ];
     }
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
         $items = $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage);
+        $vehicleIdsByProduct = $this->repo->vehicleIdsForProducts(array_column($items, 'id'));
+
+        $shaped = array_map(function (array $row) use ($vehicleIdsByProduct) {
+            $row = $this->shape($row);
+            $row['vehicle_ids'] = $vehicleIdsByProduct[(int)$row['id']] ?? [];
+            return $row;
+        }, $items);
+
         return [
-            'items' => array_map([$this, 'shape'], $items),
+            'items' => $shaped,
             'total' => $this->repo->countFiltered($filters, $search),
         ];
     }

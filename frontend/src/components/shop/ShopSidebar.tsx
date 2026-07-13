@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useShopFilters } from "@/hooks/useShopFilters";
-import { mockCategories, mockBrands } from "@/mocks/storefront/data";
+import { useCategories } from "@/hooks/useCategories";
+import { useBrands } from "@/hooks/useBrands";
+import { useVehicleFilters } from "@/hooks/useVehicleFilters";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, CheckCircle2, Star } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { COMMON_VEHICLE_MAKES } from "@/lib/vehicleData";
 import { Button } from "@/components/ui/Button";
 
 function FilterSection({ 
@@ -215,10 +216,12 @@ export function ShopSidebar({ hideCategory = false, isMobile = false }: { hideCa
   const hasVehicle = fitsYear || fitsMake || fitsModel;
   const hasAnyFilters = category || brand || inStock || minPrice || maxPrice || rating || hasVehicle || q;
 
-  // Mock years and makes for the cascading dropdown
-  const years = ["2024", "2023", "2022", "2021", "2020"];
-  const makes = COMMON_VEHICLE_MAKES;
-  const models = ["Land Cruiser", "Camry", "Hilux", "Patrol", "Altima", "F-150", "Explorer", "Accord", "CR-V", "LX 600"];
+  const { data: categories } = useCategories();
+  const { data: brands } = useBrands();
+  const { data: vehicleOptions } = useVehicleFilters(pendingYear, pendingMake);
+  const years = vehicleOptions?.years || [];
+  const makes = vehicleOptions?.makes || [];
+  const models = vehicleOptions?.models || [];
 
   return (
     <div className={`w-full flex-shrink-0 ${!isMobile ? "lg:w-[280px]" : ""}`}>
@@ -324,11 +327,11 @@ export function ShopSidebar({ hideCategory = false, isMobile = false }: { hideCa
       {!hideCategory && (
         <FilterSection title={t("category")} defaultExpanded={true}>
           <div className="flex flex-wrap gap-2">
-            {mockCategories.map((c) => (
+            {(categories || []).map((c) => (
               <FilterChip
-                key={c.id}
-                active={category === c.id}
-                onClick={() => setCategory(category === c.id ? null : c.id)}
+                key={c.slug}
+                active={category === c.slug}
+                onClick={() => setCategory(category === c.slug ? null : c.slug)}
               >
                 {locale === "ar" ? c.name_ar : c.name_en}
               </FilterChip>
@@ -340,11 +343,11 @@ export function ShopSidebar({ hideCategory = false, isMobile = false }: { hideCa
       {/* Brands */}
       <FilterSection title={t("brand")} count={brand?.length}>
         <div className="flex max-h-[240px] flex-wrap gap-2 overflow-y-auto pr-1">
-          {mockBrands.map((b) => (
+          {(brands || []).map((b) => (
             <FilterChip
-              key={b.id}
-              active={brand?.includes(b.id) || false}
-              onClick={() => toggleBrand(b.id)}
+              key={b.slug}
+              active={brand?.includes(b.slug) || false}
+              onClick={() => toggleBrand(b.slug)}
             >
               {locale === "ar" ? b.name_ar : b.name_en}
             </FilterChip>

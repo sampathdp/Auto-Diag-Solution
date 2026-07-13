@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
 import { useLocale, useTranslations } from "next-intl";
 import { Heart, Eye, Scale, CheckCircle2, AlertTriangle, Loader2, Check } from "lucide-react";
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
+import { productFitsVehicle } from "@/lib/productFitment";
 import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
@@ -118,15 +119,10 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
   const activeMake = fitsMake || globalVehicle?.make;
   const activeModel = fitsModel || globalVehicle?.model;
 
-  const hasVehicleContext = activeYear || activeMake || activeModel;
-  let fitsPerfectly = false;
-  if (hasVehicleContext) {
-    fitsPerfectly = product.compatible_vehicles.some(v => 
-      (!activeYear || v.year.toString() === activeYear.toString()) &&
-      (!activeMake || v.make.toLowerCase() === activeMake.toLowerCase()) &&
-      (!activeModel || v.model.toLowerCase() === activeModel.toLowerCase())
-    );
-  }
+  const hasVehicleContext = !!(activeYear || activeMake || activeModel);
+  const fitsPerfectly = hasVehicleContext
+    ? productFitsVehicle(product, { year: activeYear, make: activeMake, model: activeModel })
+    : false;
 
   const isOutOfStock = product.stock === 0;
   const hasDiscount = !!product.compare_at_price;
@@ -134,6 +130,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
   // Deterministic per-product "NEW" flag (stable across re-renders) instead of re-rolling on every render.
   const idHash = product.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const isNew = idHash % 10 > 6;
+  const imageSrc = product.images[0] || "/placeholder-product.svg";
 
   return (
     <>
@@ -157,7 +154,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
             {/* Main Image with layoutId for QuickView */}
             <motion.img
               layoutId={`product-img-${product.id}`}
-              src={product.images[0]}
+              src={imageSrc}
               alt={name}
               variants={shouldReduceMotion ? {} : { hover: { opacity: product.images[1] ? 0 : 1 } }}
               transition={{ duration: 0.3 }}
@@ -292,7 +289,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
             
             {/* Row 1: Brand */}
             <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              {product.brand}
+              {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
             </div>
             
             {/* Row 2: Title */}

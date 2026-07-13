@@ -36,6 +36,12 @@ $router->post("$v1/auth/reset-password", [AuthController::class, 'resetPassword'
 
 // --- Public storefront routes ---
 $router->get("$v1/brands", [BrandController::class, 'active']);
+$router->get("$v1/categories", [CategoryController::class, 'active']);
+$router->get("$v1/vehicles/filters", [VehicleController::class, 'filters']);
+// /products/{id} is registered after /products so a literal path never gets swallowed
+// by the {id} wildcard (mirrors the /vehicles/filters-before-{id} ordering below).
+$router->get("$v1/products", [ProductController::class, 'publicIndex']);
+$router->get("$v1/products/{id}", [ProductController::class, 'publicShow']);
 
 // --- Protected Auth Routes ---
 $router->get("$v1/auth/me", [AuthController::class, 'me'], [AuthMiddleware::class]);

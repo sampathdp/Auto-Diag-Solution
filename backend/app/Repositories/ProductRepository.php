@@ -10,6 +10,13 @@ class ProductRepository extends BaseRepository
 {
     private const SORTABLE_COLUMNS = ['id', 'name_en', 'price', 'stock_quantity', 'created_at'];
 
+    private const PUBLIC_SORT_COLUMNS = [
+        'price_asc' => ['p.price', 'ASC'],
+        'price_desc' => ['p.price', 'DESC'],
+        'name_asc' => ['p.name_en', 'ASC'],
+        'newest' => ['p.created_at', 'DESC'],
+    ];
+
     public function __construct()
     {
         parent::__construct('products');
@@ -59,6 +66,29 @@ class ProductRepository extends BaseRepository
             "SELECT vehicle_id FROM product_vehicle WHERE product_id = :id",
             ['id' => $productId]
         )->fetchAll(\PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Vehicle fitment for a batch of products in one query — used by list()
+     * so the admin table doesn't pay an N+1 for `vehicle_ids`. Returns
+     * product_id => vehicle_id[], omitting products with no fitment rows.
+     */
+    public function vehicleIdsForProducts(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $rows = DatabaseManager::query(
+            "SELECT product_id, vehicle_id FROM product_vehicle WHERE product_id IN ($placeholders)",
+            array_values($productIds)
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['product_id']][] = (int)$row['vehicle_id'];
+        }
+        return $map;
     }
 
     /** Replaces the full specification set for a product (delete-then-insert). */
@@ -113,6 +143,176 @@ class ProductRepository extends BaseRepository
         $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
         $stmt = DatabaseManager::query("SELECT COUNT(*) AS c FROM vehicles WHERE id IN ($placeholders)", array_values($vehicleIds));
         return (int) $stmt->fetch()['c'];
+    }
+
+    /**
+     * Public storefront listing — active products only, joined with category/brand
+     * display data and an approved-reviews rating aggregate. Kept separate from
+     * paginate() so the admin listing's status filter/internal fields stay admin-only.
+     */
+    public function publicPaginate(array $filters, string $search, string $sort, int $page, int $perPage): array
+    {
+        [$whereSql, $params] = $this->buildPublicWhere($filters, $search);
+        [$sortSql, $sortDir] = self::PUBLIC_SORT_COLUMNS[$sort] ?? ['p.created_at', 'DESC'];
+        $offset = ($page - 1) * $perPage;
+
+        $sql = "SELECT p.*, c.name_en AS category_name_en, c.name_ar AS category_name_ar, c.slug AS category_slug,
+                       b.name_en AS brand_name_en, b.name_ar AS brand_name_ar, b.slug AS brand_slug,
+                       COALESCE(rv.avg_rating, 0) AS rating, COALESCE(rv.review_count, 0) AS review_count
+                FROM products p
+                LEFT JOIN categories c ON c.id = p.category_id
+                LEFT JOIN brands b ON b.id = p.brand_id
+                LEFT JOIN (
+                    SELECT product_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+                    FROM reviews WHERE is_approved = 1 GROUP BY product_id
+                ) rv ON rv.product_id = p.id
+                {$whereSql}
+                ORDER BY {$sortSql} {$sortDir}
+                LIMIT {$perPage} OFFSET {$offset}";
+
+        return DatabaseManager::query($sql, $params)->fetchAll();
+    }
+
+    public function publicCountFiltered(array $filters, string $search): int
+    {
+        [$whereSql, $params] = $this->buildPublicWhere($filters, $search);
+        $sql = "SELECT COUNT(*) AS c
+                FROM products p
+                LEFT JOIN categories c ON c.id = p.category_id
+                LEFT JOIN brands b ON b.id = p.brand_id
+                LEFT JOIN (
+                    SELECT product_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+                    FROM reviews WHERE is_approved = 1 GROUP BY product_id
+                ) rv ON rv.product_id = p.id
+                {$whereSql}";
+        return (int) DatabaseManager::query($sql, $params)->fetch()['c'];
+    }
+
+    public function findActiveById(int $id): ?array
+    {
+        $row = DatabaseManager::query(
+            "SELECT p.*, c.name_en AS category_name_en, c.name_ar AS category_name_ar, c.slug AS category_slug,
+                    b.name_en AS brand_name_en, b.name_ar AS brand_name_ar, b.slug AS brand_slug,
+                    COALESCE(rv.avg_rating, 0) AS rating, COALESCE(rv.review_count, 0) AS review_count
+             FROM products p
+             LEFT JOIN categories c ON c.id = p.category_id
+             LEFT JOIN brands b ON b.id = p.brand_id
+             LEFT JOIN (
+                 SELECT product_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+                 FROM reviews WHERE is_approved = 1 GROUP BY product_id
+             ) rv ON rv.product_id = p.id
+             WHERE p.id = :id AND p.status = 'active'
+             LIMIT 1",
+            ['id' => $id]
+        )->fetch();
+
+        return $row ?: null;
+    }
+
+    /**
+     * Vehicle fitment for a batch of products, resolved to year/make/model (not just
+     * ids) — the storefront fitment check compares against a shopper's selected vehicle,
+     * which it only knows as year/make/model.
+     */
+    public function fitmentForProducts(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $rows = DatabaseManager::query(
+            "SELECT pv.product_id, v.year, v.make, v.model
+             FROM product_vehicle pv
+             JOIN vehicles v ON v.id = pv.vehicle_id
+             WHERE pv.product_id IN ($placeholders)",
+            array_values($productIds)
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['product_id']][] = [
+                'year' => (int)$row['year'],
+                'make' => $row['make'],
+                'model' => $row['model'],
+            ];
+        }
+        return $map;
+    }
+
+    private function buildPublicWhere(array $filters, string $search): array
+    {
+        $conditions = ["p.status = 'active'"];
+        $params = [];
+
+        if (!empty($filters['category'])) {
+            $conditions[] = 'c.slug = :category_slug';
+            $params['category_slug'] = $filters['category'];
+        }
+
+        if (!empty($filters['brands']) && is_array($filters['brands'])) {
+            $names = [];
+            foreach (array_values($filters['brands']) as $i => $slug) {
+                $key = "brand_slug{$i}";
+                $names[] = ":{$key}";
+                $params[$key] = $slug;
+            }
+            $conditions[] = 'b.slug IN (' . implode(',', $names) . ')';
+        }
+
+        if (isset($filters['min_price'])) {
+            $conditions[] = 'p.price >= :min_price';
+            $params['min_price'] = $filters['min_price'];
+        }
+        if (isset($filters['max_price'])) {
+            $conditions[] = 'p.price <= :max_price';
+            $params['max_price'] = $filters['max_price'];
+        }
+
+        if (!empty($filters['in_stock'])) {
+            $conditions[] = "p.stock_status != 'out_of_stock'";
+        }
+
+        if (!empty($filters['fits_year']) || !empty($filters['fits_make']) || !empty($filters['fits_model'])) {
+            $fitConditions = ['pv.product_id = p.id'];
+            if (!empty($filters['fits_year'])) {
+                $fitConditions[] = 'v.year = :fits_year';
+                $params['fits_year'] = (int)$filters['fits_year'];
+            }
+            if (!empty($filters['fits_make'])) {
+                $fitConditions[] = 'LOWER(v.make) = LOWER(:fits_make)';
+                $params['fits_make'] = $filters['fits_make'];
+            }
+            if (!empty($filters['fits_model'])) {
+                $fitConditions[] = 'LOWER(v.model) = LOWER(:fits_model)';
+                $params['fits_model'] = $filters['fits_model'];
+            }
+            $fitWhere = implode(' AND ', $fitConditions);
+            $conditions[] = "(p.fits_all_vehicles = 1 OR EXISTS (
+                SELECT 1 FROM product_vehicle pv JOIN vehicles v ON v.id = pv.vehicle_id WHERE {$fitWhere}
+            ))";
+        }
+
+        if (isset($filters['rating'])) {
+            $conditions[] = 'COALESCE(rv.avg_rating, 0) >= :min_rating';
+            $params['min_rating'] = $filters['rating'];
+        }
+
+        if (!empty($filters['ids']) && is_array($filters['ids'])) {
+            $names = [];
+            foreach (array_values($filters['ids']) as $i => $id) {
+                $key = "id{$i}";
+                $names[] = ":{$key}";
+                $params[$key] = (int)$id;
+            }
+            $conditions[] = 'p.id IN (' . implode(',', $names) . ')';
+        }
+
+        if ($search !== '') {
+            $conditions[] = 'MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search IN NATURAL LANGUAGE MODE)';
+            $params['search'] = $search;
+        }
+
+        return ['WHERE ' . implode(' AND ', $conditions), $params];
     }
 
     private function buildWhere(array $filters, string $search): array

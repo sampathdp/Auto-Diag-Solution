@@ -7,7 +7,7 @@ import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductCardSkeleton } from "@/components/shop/ProductCardSkeleton";
 import { Heart, Loader2, ShoppingCart, Trash2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/account/ConfirmDialog";
-import { Product } from "@/mocks/storefront/types";
+import { Product } from "@/types/storefront";
 import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/Button";
 import { Link } from "@/i18n/navigation";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRecentlyViewedStore } from "@/store/useRecentlyViewedStore";
-import { mockProducts } from "@/mocks/storefront/data";
+import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { ProductCard } from "./ProductCard";
 import { motion, useInView } from "framer-motion";
 import { useRef, useEffect, useState } from "react";
@@ -13,16 +13,13 @@ export function RecentlyViewed() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [mounted, setMounted] = useState(false);
+  const { data: products = [] } = useProductsByIds(items);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted || items.length === 0) return null;
-
-  const products = items.map(id => mockProducts.find(p => p.id === id)!).filter(Boolean);
-
-  if (products.length === 0) return null;
+  if (!mounted || items.length === 0 || products.length === 0) return null;
 
   return (
     <section ref={ref} className="mt-20 border-t pt-16">
