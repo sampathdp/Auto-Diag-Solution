@@ -15,6 +15,7 @@ import { showSuccess } from "@/components/admin/ui/toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import apiClient from "@/lib/api/client";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 
 const LoginSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -173,7 +174,7 @@ export default function AdminLoginPage() {
               </button>
             </form>
           ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+            <form onSubmit={handleSubmit(onSubmit, onFormInvalid)} className="mt-6 space-y-4">
               <FormField label="Email" htmlFor="email" error={errors.email?.message}>
                 <Input id="email" type="email" error={!!errors.email} {...register("email")} />
               </FormField>

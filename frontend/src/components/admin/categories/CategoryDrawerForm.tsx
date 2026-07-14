@@ -23,6 +23,7 @@ import {
   CATEGORY_FORM_DEFAULTS,
   type CategoryFormValues,
 } from "@/lib/admin/schemas/categorySchema";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 import type { Category } from "@/mocks/admin/db";
 
 export function CategoryDrawerForm({
@@ -116,7 +117,7 @@ export function CategoryDrawerForm({
     >
       <form
         id="category-form"
-        onSubmit={handleSubmit((values) => save.mutate(values))}
+        onSubmit={handleSubmit((values) => save.mutate(values), onFormInvalid)}
         className="space-y-4"
       >
         <FormField label="Name (EN)" htmlFor="cat-name-en" error={errors.name_en?.message} required>

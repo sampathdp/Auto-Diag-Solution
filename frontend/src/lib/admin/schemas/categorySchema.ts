@@ -4,7 +4,9 @@ export const CategoryFormSchema = z.object({
   name_en: z.string().min(1, "English name is required."),
   name_ar: z.string().min(1, "Arabic name is required."),
   slug: z.string().min(1, "URL slug is required."),
-  parent_id: z.number().nullable(),
+  // .coerce: the live backend's PDO driver returns numeric columns as JSON strings
+  // ("8", not 8) — see productSchema.ts's images/vehicle_ids for the same fix.
+  parent_id: z.coerce.number().nullable(),
   image: z.string().nullable(),
   // Nullable, not just optional — the real backend returns `null` (not `undefined`)
   // for an unset optional text column, and a plain .optional() zod string schema

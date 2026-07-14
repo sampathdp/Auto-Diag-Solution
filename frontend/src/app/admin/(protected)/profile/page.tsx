@@ -14,6 +14,7 @@ import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { useAdminMe } from "@/lib/admin/hooks/useAdminAuth";
 import { AuthService } from "@/services/AuthService";
 import { ChangePasswordSchema, type ChangePasswordValues } from "@/lib/admin/schemas/profileSchema";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 
 export default function AdminProfilePage() {
   const meQuery = useAdminMe();
@@ -78,7 +79,7 @@ export default function AdminProfilePage() {
                 changePassword.mutate({
                   current_password: values.current_password,
                   new_password: values.new_password,
-                })
+                }), onFormInvalid
               )}
               className="space-y-4"
             >

@@ -18,6 +18,7 @@ import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { slugify } from "@/lib/admin/utils";
 import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import { BrandFormSchema, BRAND_FORM_DEFAULTS, type BrandFormValues } from "@/lib/admin/schemas/brandSchema";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 import type { Brand } from "@/types/brand";
 
 export function BrandDrawerForm({
@@ -102,7 +103,7 @@ export function BrandDrawerForm({
         </>
       }
     >
-      <form id="brand-form" onSubmit={handleSubmit((values) => save.mutate(values))} className="space-y-4">
+      <form id="brand-form" onSubmit={handleSubmit((values) => save.mutate(values), onFormInvalid)} className="space-y-4">
         <FormField label="Name (EN)" htmlFor="brand-name-en" error={errors.name_en?.message} required>
           <Input
             id="brand-name-en"

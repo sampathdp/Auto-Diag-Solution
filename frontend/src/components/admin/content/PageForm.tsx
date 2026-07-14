@@ -21,6 +21,7 @@ import { slugify } from "@/lib/admin/utils";
 import { useUnsavedChangesGuard } from "@/lib/admin/hooks/useUnsavedChangesGuard";
 import { useTranslate } from "@/lib/admin/hooks/useTranslate";
 import { PageFormSchema, PAGE_FORM_DEFAULTS, type PageFormValues } from "@/lib/admin/schemas/pageSchema";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 import type { Page } from "@/types/page";
 
 function pageToFormValues(page: Page): PageFormValues {
@@ -71,7 +72,7 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
     onError: (err) => showError(err instanceof ApiError ? err.message : "Could not save the page."),
   });
 
-  const onSubmit = handleSubmit((values) => save.mutate(values));
+  const onSubmit = handleSubmit((values) => save.mutate(values), onFormInvalid);
 
   const cancel = () => {
     if (confirmDiscard()) router.push("/admin/content/pages");

@@ -11,6 +11,7 @@ import { Input } from "@/components/admin/ui/Input";
 import { FormField } from "@/components/admin/ui/FormField";
 import { Card, CardBody } from "@/components/admin/ui/Card";
 import { BrandLogo } from "@/components/ui/BrandLogo";
+import { onFormInvalid } from "@/lib/admin/formErrors";
 
 const ForgotPasswordSchema = z.object({
   email: z.string().email("Enter a valid email address."),
@@ -61,7 +62,7 @@ export default function AdminForgotPasswordPage() {
                 <p className="mt-1 text-body text-ink-muted">
                   Enter your email address and we&apos;ll send you a reset link.
                 </p>
-                <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
+                <form onSubmit={handleSubmit(onSubmit, onFormInvalid)} className="mt-6 space-y-4">
                   <FormField label="Email" htmlFor="email" error={errors.email?.message}>
                     <Input id="email" type="email" error={!!errors.email} {...register("email")} />
                   </FormField>

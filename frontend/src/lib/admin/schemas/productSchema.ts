@@ -13,7 +13,7 @@ export const ProductFormSchema = z
     // Nullable, not required — the real backend's brand_id is an optional FK (not
     // every part has a well-known brand), unlike the mock's required free-text
     // brand_name.
-    brand_id: z.coerce.number().int().positive().nullable(),
+    brand_id: z.coerce.number({ invalid_type_error: "Select a brand." }).int().positive("Select a brand.").nullable(),
     category_id: z.coerce.number({ invalid_type_error: "Select a category." }).min(1, "Select a category."),
     is_active: z.boolean(),
 
@@ -29,19 +29,37 @@ export const ProductFormSchema = z
     description_ar: z.string().nullable().optional(),
 
     price: z.coerce.number({ invalid_type_error: "Enter a price." }).positive("Price must be greater than 0."),
-    compare_at_price: z.coerce.number().nonnegative().nullable().optional(),
+    compare_at_price: z.coerce
+      .number({ invalid_type_error: "Enter a valid compare-at price." })
+      .nonnegative("Compare-at price can't be negative.")
+      .nullable()
+      .optional(),
     // Renamed from the mock's `cost` to match the real backend's `cost_price` column.
-    cost_price: z.coerce.number().nonnegative().nullable().optional(),
+    cost_price: z.coerce
+      .number({ invalid_type_error: "Enter a valid cost price." })
+      .nonnegative("Cost price can't be negative.")
+      .nullable()
+      .optional(),
     vat_inclusive: z.boolean(),
 
-    stock_quantity: z.coerce.number().int().nonnegative("Stock can't be negative."),
-    low_stock_threshold: z.coerce.number().int().nonnegative("Threshold can't be negative."),
+    stock_quantity: z.coerce
+      .number({ invalid_type_error: "Enter a stock quantity." })
+      .int()
+      .nonnegative("Stock can't be negative."),
+    low_stock_threshold: z.coerce
+      .number({ invalid_type_error: "Enter a low-stock threshold." })
+      .int()
+      .nonnegative("Threshold can't be negative."),
     track_inventory: z.boolean(),
 
-    images: z.array(z.number()),
+    // .coerce: the live backend's PDO driver returns every numeric column as a JSON
+    // string ("8", not 8) — a shared-hosting/local-dev PHP driver difference, not a
+    // per-field quirk. Every id-shaped field needs this, not just scalars like
+    // category_id/brand_id above.
+    images: z.array(z.coerce.number()),
 
     fits_all_vehicles: z.boolean(),
-    vehicle_ids: z.array(z.number()),
+    vehicle_ids: z.array(z.coerce.number()),
 
     specifications: z.array(ProductSpecificationSchema),
 
