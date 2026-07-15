@@ -60,35 +60,84 @@ class ProductRepository extends BaseRepository
         )->fetchAll();
     }
 
-    public function vehicleIds(int $productId): array
+    /** Fitment rows for a single product, ordered as entered. */
+    public function fitmentRowsForProduct(int $productId): array
     {
         return DatabaseManager::query(
-            "SELECT vehicle_id FROM product_vehicle WHERE product_id = :id",
+            "SELECT id, make, model, year_from, year_to, vin_note
+             FROM product_fitments WHERE product_id = :id ORDER BY id ASC",
             ['id' => $productId]
-        )->fetchAll(\PDO::FETCH_COLUMN);
+        )->fetchAll();
     }
 
     /**
-     * Vehicle fitment for a batch of products in one query — used by list()
-     * so the admin table doesn't pay an N+1 for `vehicle_ids`. Returns
-     * product_id => vehicle_id[], omitting products with no fitment rows.
+     * Fitment rows for a batch of products in one query — used by list()
+     * so the admin table doesn't pay an N+1 for `fitments`. Returns
+     * product_id => row[], omitting products with no fitment rows.
      */
-    public function vehicleIdsForProducts(array $productIds): array
+    public function fitmentRowsForProducts(array $productIds): array
     {
         if (empty($productIds)) {
             return [];
         }
         $placeholders = implode(',', array_fill(0, count($productIds), '?'));
         $rows = DatabaseManager::query(
-            "SELECT product_id, vehicle_id FROM product_vehicle WHERE product_id IN ($placeholders)",
+            "SELECT id, product_id, make, model, year_from, year_to, vin_note
+             FROM product_fitments WHERE product_id IN ($placeholders) ORDER BY id ASC",
             array_values($productIds)
         )->fetchAll();
 
         $map = [];
         foreach ($rows as $row) {
-            $map[(int)$row['product_id']][] = (int)$row['vehicle_id'];
+            $productId = (int)$row['product_id'];
+            unset($row['product_id']);
+            $map[$productId][] = $row;
         }
         return $map;
+    }
+
+    /** Cross-reference numbers for a single product, ordered as entered. */
+    public function crossReferences(int $productId): array
+    {
+        return DatabaseManager::query(
+            "SELECT cross_number FROM product_cross_references WHERE product_id = :id ORDER BY id ASC",
+            ['id' => $productId]
+        )->fetchAll(\PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Cross-reference numbers for a batch of products in one query — used by list()
+     * so the admin table doesn't pay an N+1. Returns product_id => cross_number[].
+     */
+    public function crossReferencesForProducts(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+        $rows = DatabaseManager::query(
+            "SELECT product_id, cross_number FROM product_cross_references
+             WHERE product_id IN ($placeholders) ORDER BY id ASC",
+            array_values($productIds)
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['product_id']][] = $row['cross_number'];
+        }
+        return $map;
+    }
+
+    /** Replaces the full cross-reference set for a product (delete-then-insert). */
+    public function replaceCrossReferences(int $productId, array $crossNumbers): void
+    {
+        DatabaseManager::query("DELETE FROM product_cross_references WHERE product_id = :id", ['id' => $productId]);
+        foreach ($crossNumbers as $crossNumber) {
+            DatabaseManager::query(
+                "INSERT INTO product_cross_references (product_id, cross_number) VALUES (:product_id, :cross_number)",
+                ['product_id' => $productId, 'cross_number' => $crossNumber]
+            );
+        }
     }
 
     /** Replaces the full specification set for a product (delete-then-insert). */
@@ -111,14 +160,22 @@ class ProductRepository extends BaseRepository
         }
     }
 
-    /** Replaces the full vehicle-fitment set for a product (delete-then-insert). */
-    public function replaceFitment(int $productId, array $vehicleIds): void
+    /** Replaces the full fitment set for a product (delete-then-insert). */
+    public function replaceFitments(int $productId, array $rows): void
     {
-        DatabaseManager::query("DELETE FROM product_vehicle WHERE product_id = :id", ['id' => $productId]);
-        foreach ($vehicleIds as $vehicleId) {
+        DatabaseManager::query("DELETE FROM product_fitments WHERE product_id = :id", ['id' => $productId]);
+        foreach ($rows as $row) {
             DatabaseManager::query(
-                "INSERT INTO product_vehicle (product_id, vehicle_id) VALUES (:product_id, :vehicle_id)",
-                ['product_id' => $productId, 'vehicle_id' => $vehicleId]
+                "INSERT INTO product_fitments (product_id, make, model, year_from, year_to, vin_note)
+                 VALUES (:product_id, :make, :model, :year_from, :year_to, :vin_note)",
+                [
+                    'product_id' => $productId,
+                    'make' => $row['make'],
+                    'model' => $row['model'],
+                    'year_from' => $row['year_from'],
+                    'year_to' => $row['year_to'],
+                    'vin_note' => $row['vin_note'],
+                ]
             );
         }
     }
@@ -131,17 +188,6 @@ class ProductRepository extends BaseRepository
         }
         $placeholders = implode(',', array_fill(0, count($mediaIds), '?'));
         $stmt = DatabaseManager::query("SELECT COUNT(*) AS c FROM media WHERE id IN ($placeholders)", array_values($mediaIds));
-        return (int) $stmt->fetch()['c'];
-    }
-
-    /** Count of the given vehicle IDs that actually exist — used to validate `vehicle_ids` in one query. */
-    public function existingVehicleCount(array $vehicleIds): int
-    {
-        if (empty($vehicleIds)) {
-            return 0;
-        }
-        $placeholders = implode(',', array_fill(0, count($vehicleIds), '?'));
-        $stmt = DatabaseManager::query("SELECT COUNT(*) AS c FROM vehicles WHERE id IN ($placeholders)", array_values($vehicleIds));
         return (int) $stmt->fetch()['c'];
     }
 
@@ -209,36 +255,6 @@ class ProductRepository extends BaseRepository
         return $row ?: null;
     }
 
-    /**
-     * Vehicle fitment for a batch of products, resolved to year/make/model (not just
-     * ids) — the storefront fitment check compares against a shopper's selected vehicle,
-     * which it only knows as year/make/model.
-     */
-    public function fitmentForProducts(array $productIds): array
-    {
-        if (empty($productIds)) {
-            return [];
-        }
-        $placeholders = implode(',', array_fill(0, count($productIds), '?'));
-        $rows = DatabaseManager::query(
-            "SELECT pv.product_id, v.year, v.make, v.model
-             FROM product_vehicle pv
-             JOIN vehicles v ON v.id = pv.vehicle_id
-             WHERE pv.product_id IN ($placeholders)",
-            array_values($productIds)
-        )->fetchAll();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[(int)$row['product_id']][] = [
-                'year' => (int)$row['year'],
-                'make' => $row['make'],
-                'model' => $row['model'],
-            ];
-        }
-        return $map;
-    }
-
     private function buildPublicWhere(array $filters, string $search): array
     {
         $conditions = ["p.status = 'active'"];
@@ -273,22 +289,25 @@ class ProductRepository extends BaseRepository
         }
 
         if (!empty($filters['fits_year']) || !empty($filters['fits_make']) || !empty($filters['fits_model'])) {
-            $fitConditions = ['pv.product_id = p.id'];
+            $fitConditions = ['pf.product_id = p.id'];
             if (!empty($filters['fits_year'])) {
-                $fitConditions[] = 'v.year = :fits_year';
-                $params['fits_year'] = (int)$filters['fits_year'];
+                // Two distinct placeholders bound to the same value — MySQL's native
+                // prepares (unlike emulated ones) reject reusing one named placeholder twice.
+                $fitConditions[] = 'pf.year_from <= :fits_year_max AND pf.year_to >= :fits_year_min';
+                $params['fits_year_max'] = (int)$filters['fits_year'];
+                $params['fits_year_min'] = (int)$filters['fits_year'];
             }
             if (!empty($filters['fits_make'])) {
-                $fitConditions[] = 'LOWER(v.make) = LOWER(:fits_make)';
+                $fitConditions[] = 'LOWER(pf.make) = LOWER(:fits_make)';
                 $params['fits_make'] = $filters['fits_make'];
             }
             if (!empty($filters['fits_model'])) {
-                $fitConditions[] = 'LOWER(v.model) = LOWER(:fits_model)';
+                $fitConditions[] = 'LOWER(pf.model) = LOWER(:fits_model)';
                 $params['fits_model'] = $filters['fits_model'];
             }
             $fitWhere = implode(' AND ', $fitConditions);
             $conditions[] = "(p.fits_all_vehicles = 1 OR EXISTS (
-                SELECT 1 FROM product_vehicle pv JOIN vehicles v ON v.id = pv.vehicle_id WHERE {$fitWhere}
+                SELECT 1 FROM product_fitments pf WHERE {$fitWhere}
             ))";
         }
 

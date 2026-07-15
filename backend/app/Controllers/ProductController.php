@@ -142,7 +142,7 @@ class ProductController extends BaseController
     {
         $product = $this->service->updateFitment(
             (int)$request->getParam('id'),
-            $request->input('vehicle_ids')
+            $request->input('fitments')
         );
         $this->success($product, 'Vehicle fitment updated successfully');
     }

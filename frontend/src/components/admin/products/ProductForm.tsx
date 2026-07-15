@@ -26,6 +26,7 @@ import { InventoryCard } from "./InventoryCard";
 import { ImagesCard } from "./ImagesCard";
 import { VehicleCompatibilityCard } from "./VehicleCompatibilityCard";
 import { SpecificationsCard } from "./SpecificationsCard";
+import { CrossReferenceCard } from "./CrossReferenceCard";
 import { SeoCard } from "./SeoCard";
 import { PreviewCard } from "./PreviewCard";
 
@@ -50,8 +51,9 @@ function productToFormValues(product: Product): ProductFormValues {
     track_inventory: product.track_inventory,
     images: product.images,
     fits_all_vehicles: product.fits_all_vehicles,
-    vehicle_ids: product.vehicle_ids,
+    fitments: product.fitments,
     specifications: product.specifications,
+    cross_reference_numbers: product.cross_reference_numbers.map((value) => ({ value })),
     slug: product.slug,
   };
 }
@@ -122,8 +124,9 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
     track_inventory: values.track_inventory,
     images: values.images,
     fits_all_vehicles: values.fits_all_vehicles,
-    vehicle_ids: values.vehicle_ids,
+    fitments: values.fitments.filter((f) => f.make || f.model),
     specifications: values.specifications.filter((s) => s.key_en || s.value_en || s.key_ar || s.value_ar),
+    cross_reference_numbers: values.cross_reference_numbers.map((r) => r.value).filter(Boolean),
     slug: values.slug,
     status,
   });
@@ -156,6 +159,7 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
           <InventoryCard form={form} />
           <ImagesCard form={form} mediaById={mediaById} />
           <VehicleCompatibilityCard form={form} />
+          <CrossReferenceCard form={form} />
           <SpecificationsCard form={form} />
           <SeoCard form={form} />
         </div>

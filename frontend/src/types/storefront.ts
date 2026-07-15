@@ -1,7 +1,9 @@
 export type VehicleFitment = {
-  year: number;
+  year_from: number;
+  year_to: number;
   make: string;
   model: string;
+  vin_note: string | null;
 };
 
 export type Category = {

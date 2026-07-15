@@ -13,6 +13,15 @@ export interface ProductSpecification {
   value_ar: string;
 }
 
+export interface ProductFitment {
+  id?: number;
+  make: string;
+  model: string;
+  year_from: number;
+  year_to: number;
+  vin_note: string | null;
+}
+
 export interface Product {
   id: number;
   category_id: number | null;
@@ -44,7 +53,8 @@ export interface Product {
   created_at: string;
   updated_at: string;
   specifications: ProductSpecification[];
-  vehicle_ids: number[];
+  fitments: ProductFitment[];
+  cross_reference_numbers: string[];
   /** Only present on list rows (LEFT JOINed), not on a single GET /products/{id}. */
   category_name_en?: string | null;
   brand_name_en?: string | null;

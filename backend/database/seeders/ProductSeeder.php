@@ -9,9 +9,9 @@ use App\Core\Database\DatabaseManager;
 echo "Seeding products...\n";
 
 // category_id/brand_id are resolved by slug at runtime (not hardcoded) so this seeder
-// stays valid if ids ever shift. fitment: array of [make, model] pairs — every model
-// year on file for that make/model gets a product_vehicle row. fits_all_vehicles
-// products (oils, brake fluid) carry no fitment rows by design.
+// stays valid if ids ever shift. fitment: array of [make, model] pairs — each pair
+// collapses every model year on file into one year_from/year_to product_fitments row.
+// fits_all_vehicles products (oils, brake fluid) carry no fitment rows by design.
 $products = [
     [
         'category' => 'engine-parts', 'brand' => 'ngk', 'sku' => 'APU-ENG-0001',
@@ -300,6 +300,49 @@ function slugify(string $sku): string
     return strtolower(str_replace(['_', ' '], '-', $sku));
 }
 
+/**
+ * Inserts one product_fitments range row per [make, model] pair (collapsing every
+ * model year on file into year_from/year_to). No-op if the product already has
+ * fitment rows, so it's safe to call for both newly-created and pre-existing products.
+ */
+function backfillFitments(int $productId, array $fitmentPairs): void
+{
+    if (empty($fitmentPairs)) {
+        return;
+    }
+
+    $already = DatabaseManager::query(
+        "SELECT COUNT(*) AS c FROM product_fitments WHERE product_id = :id",
+        ['id' => $productId]
+    )->fetch()['c'];
+    if ((int)$already > 0) {
+        return;
+    }
+
+    foreach ($fitmentPairs as [$make, $model]) {
+        $years = DatabaseManager::query(
+            "SELECT year FROM vehicles WHERE make = :make AND model = :model",
+            ['make' => $make, 'model' => $model]
+        )->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($years)) {
+            continue;
+        }
+
+        DatabaseManager::query(
+            "INSERT INTO product_fitments (product_id, make, model, year_from, year_to, vin_note)
+             VALUES (:product_id, :make, :model, :year_from, :year_to, NULL)",
+            [
+                'product_id' => $productId,
+                'make' => $make,
+                'model' => $model,
+                'year_from' => min($years),
+                'year_to' => max($years),
+            ]
+        );
+    }
+}
+
 $categoryIds = DatabaseManager::query("SELECT slug, id FROM categories")->fetchAll(PDO::FETCH_KEY_PAIR);
 $brandIds = DatabaseManager::query("SELECT slug, id FROM brands")->fetchAll(PDO::FETCH_KEY_PAIR);
 
@@ -315,6 +358,7 @@ foreach ($products as $p) {
     if ($existing) {
         echo "Skipped (already exists): {$p['sku']} {$p['name_en']}\n";
         $skipped++;
+        backfillFitments((int)$existing['id'], $p['fitment']);
         continue;
     }
 
@@ -361,19 +405,7 @@ foreach ($products as $p) {
 
     $productId = (int) DatabaseManager::query("SELECT LAST_INSERT_ID() AS id")->fetch()['id'];
 
-    foreach ($p['fitment'] as [$make, $model]) {
-        $vehicleIds = DatabaseManager::query(
-            "SELECT id FROM vehicles WHERE make = :make AND model = :model",
-            ['make' => $make, 'model' => $model]
-        )->fetchAll(PDO::FETCH_COLUMN);
-
-        foreach ($vehicleIds as $vehicleId) {
-            DatabaseManager::query(
-                "INSERT INTO product_vehicle (product_id, vehicle_id) VALUES (:product_id, :vehicle_id)",
-                ['product_id' => $productId, 'vehicle_id' => $vehicleId]
-            );
-        }
-    }
+    backfillFitments($productId, $p['fitment']);
 
     foreach ($p['specs'] as $i => [$keyEn, $keyAr, $valEn, $valAr]) {
         DatabaseManager::query(

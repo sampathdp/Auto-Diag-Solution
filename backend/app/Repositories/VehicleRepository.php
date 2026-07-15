@@ -16,8 +16,10 @@ class VehicleRepository extends BaseRepository
     }
 
     /**
-     * Paginated list with a live products_count via LEFT JOIN + GROUP BY
-     * (same reasoning as CategoryRepository::paginate — avoids N+1).
+     * Paginated list with a live products_count — a correlated subquery (not a JOIN +
+     * GROUP BY) because fitment is now freeform (product_fitments has no vehicle_id;
+     * a product "counts" for a catalog row when its make/model match and the row's
+     * year falls inside the product's year_from/year_to range).
      */
     public function paginate(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
@@ -26,11 +28,13 @@ class VehicleRepository extends BaseRepository
         $sortDir = strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC';
         $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT v.*, COUNT(pv.id) AS products_count
+        $sql = "SELECT v.*, (
+                    SELECT COUNT(*) FROM product_fitments pf
+                    WHERE LOWER(pf.make) = LOWER(v.make) AND LOWER(pf.model) = LOWER(v.model)
+                      AND pf.year_from <= v.year AND pf.year_to >= v.year
+                ) AS products_count
                 FROM vehicles v
-                LEFT JOIN product_vehicle pv ON pv.vehicle_id = v.id
                 {$whereSql}
-                GROUP BY v.id
                 ORDER BY v.{$sortBy} {$sortDir}
                 LIMIT {$perPage} OFFSET {$offset}";
 
@@ -46,7 +50,13 @@ class VehicleRepository extends BaseRepository
 
     public function productCount(int $id): int
     {
-        $stmt = DatabaseManager::query("SELECT COUNT(*) AS c FROM product_vehicle WHERE vehicle_id = :id", ['id' => $id]);
+        $stmt = DatabaseManager::query(
+            "SELECT COUNT(*) AS c FROM product_fitments pf
+             JOIN vehicles v ON LOWER(pf.make) = LOWER(v.make) AND LOWER(pf.model) = LOWER(v.model)
+                AND pf.year_from <= v.year AND pf.year_to >= v.year
+             WHERE v.id = :id",
+            ['id' => $id]
+        );
         return (int) $stmt->fetch()['c'];
     }
 

@@ -16,6 +16,7 @@ class ProductService
     private const VALID_STOCK_STATUS = ['in_stock', 'out_of_stock', 'backorder'];
     private const VALID_SOURCE = ['local', '3pl'];
     private const BOOLEAN_FIELDS = ['vat_inclusive', 'track_inventory', 'fits_all_vehicles'];
+    private const MIN_FITMENT_YEAR = 1980;
 
     private ProductRepository $repo;
     private MediaRepository $mediaRepo;
@@ -35,7 +36,7 @@ class ProductService
     public function publicList(array $filters, string $search, string $sort, int $page, int $perPage): array
     {
         $items = $this->repo->publicPaginate($filters, $search, $sort, $page, $perPage);
-        $fitmentByProduct = $this->repo->fitmentForProducts(array_column($items, 'id'));
+        $fitmentByProduct = $this->repo->fitmentRowsForProducts(array_column($items, 'id'));
 
         $shaped = array_map(function (array $row) use ($fitmentByProduct) {
             return $this->shapePublic($row, $fitmentByProduct[(int)$row['id']] ?? []);
@@ -53,7 +54,7 @@ class ProductService
         if (!$product) {
             throw new DomainException('Product not found', 404);
         }
-        $fitment = $this->repo->fitmentForProducts([$id])[$id] ?? [];
+        $fitment = $this->repo->fitmentRowsForProducts([$id])[$id] ?? [];
         $shaped = $this->shapePublic($product, $fitment);
         $shaped['specifications'] = $this->repo->specifications($id);
         return $shaped;
@@ -119,7 +120,13 @@ class ProductService
             'stock' => (int)$row['stock_quantity'],
             'stock_status' => $row['stock_status'],
             'fits_all_vehicles' => (bool)$row['fits_all_vehicles'],
-            'compatible_vehicles' => $fitment,
+            'compatible_vehicles' => array_map(fn (array $f) => [
+                'make' => $f['make'],
+                'model' => $f['model'],
+                'year_from' => (int)$f['year_from'],
+                'year_to' => (int)$f['year_to'],
+                'vin_note' => $f['vin_note'],
+            ], $fitment),
             'rating' => round((float)$row['rating'], 1),
             'reviews' => (int)$row['review_count'],
         ];
@@ -128,11 +135,14 @@ class ProductService
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
         $items = $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage);
-        $vehicleIdsByProduct = $this->repo->vehicleIdsForProducts(array_column($items, 'id'));
+        $fitmentsByProduct = $this->repo->fitmentRowsForProducts(array_column($items, 'id'));
 
-        $shaped = array_map(function (array $row) use ($vehicleIdsByProduct) {
+        $crossRefsByProduct = $this->repo->crossReferencesForProducts(array_column($items, 'id'));
+
+        $shaped = array_map(function (array $row) use ($fitmentsByProduct, $crossRefsByProduct) {
             $row = $this->shape($row);
-            $row['vehicle_ids'] = $vehicleIdsByProduct[(int)$row['id']] ?? [];
+            $row['fitments'] = $fitmentsByProduct[(int)$row['id']] ?? [];
+            $row['cross_reference_numbers'] = $crossRefsByProduct[(int)$row['id']] ?? [];
             return $row;
         }, $items);
 
@@ -150,7 +160,8 @@ class ProductService
         }
         $product = $this->shape($product);
         $product['specifications'] = $this->repo->specifications($id);
-        $product['vehicle_ids'] = array_map('intval', $this->repo->vehicleIds($id));
+        $product['fitments'] = $this->repo->fitmentRowsForProduct($id);
+        $product['cross_reference_numbers'] = $this->repo->crossReferences($id);
         return $product;
     }
 
@@ -176,7 +187,8 @@ class ProductService
     {
         $data = $this->validate($input, null);
         $specs = $this->validateSpecifications($input['specifications'] ?? null);
-        $vehicleIds = $this->validateVehicleIds($input['vehicle_ids'] ?? null);
+        $fitments = $this->validateFitments($input['fitments'] ?? null);
+        $crossRefs = $this->validateCrossReferences($input['cross_reference_numbers'] ?? null);
 
         DatabaseManager::beginTransaction();
         try {
@@ -184,8 +196,11 @@ class ProductService
             if ($specs !== null) {
                 $this->repo->replaceSpecifications($id, $specs);
             }
-            if ($vehicleIds !== null && empty($data['fits_all_vehicles'])) {
-                $this->repo->replaceFitment($id, $vehicleIds);
+            if ($fitments !== null && empty($data['fits_all_vehicles'])) {
+                $this->repo->replaceFitments($id, $fitments);
+            }
+            if ($crossRefs !== null) {
+                $this->repo->replaceCrossReferences($id, $crossRefs);
             }
             DatabaseManager::commit();
         } catch (\Throwable $e) {
@@ -204,7 +219,8 @@ class ProductService
 
         $data = $this->validate($input, $id);
         $specs = $this->validateSpecifications($input['specifications'] ?? null);
-        $vehicleIds = $this->validateVehicleIds($input['vehicle_ids'] ?? null);
+        $fitments = $this->validateFitments($input['fitments'] ?? null);
+        $crossRefs = $this->validateCrossReferences($input['cross_reference_numbers'] ?? null);
 
         DatabaseManager::beginTransaction();
         try {
@@ -214,13 +230,16 @@ class ProductService
             if ($specs !== null) {
                 $this->repo->replaceSpecifications($id, $specs);
             }
-            if ($vehicleIds !== null) {
+            if ($fitments !== null) {
                 $fitsAll = array_key_exists('fits_all_vehicles', $data)
                     ? (bool)$data['fits_all_vehicles']
                     : (bool)$this->repo->find($id)['fits_all_vehicles'];
                 if (!$fitsAll) {
-                    $this->repo->replaceFitment($id, $vehicleIds);
+                    $this->repo->replaceFitments($id, $fitments);
                 }
+            }
+            if ($crossRefs !== null) {
+                $this->repo->replaceCrossReferences($id, $crossRefs);
             }
             DatabaseManager::commit();
         } catch (\Throwable $e) {
@@ -243,7 +262,7 @@ class ProductService
     }
 
     /** Dedicated endpoint for an admin UI's "Fitment" tab, independent of the main product form. */
-    public function updateFitment(int $id, mixed $rawVehicleIds): array
+    public function updateFitment(int $id, mixed $rawFitments): array
     {
         $product = $this->repo->find($id);
         if (!$product) {
@@ -255,8 +274,8 @@ class ProductService
                 422
             );
         }
-        $vehicleIds = $this->validateVehicleIds($rawVehicleIds) ?? [];
-        $this->repo->replaceFitment($id, $vehicleIds);
+        $fitments = $this->validateFitments($rawFitments) ?? [];
+        $this->repo->replaceFitments($id, $fitments);
         return $this->find($id);
     }
 
@@ -265,8 +284,9 @@ class ProductService
         if (!$this->repo->find($id)) {
             throw new DomainException('Product not found', 404);
         }
-        // product_specifications/product_vehicle/cart_items/wishlists CASCADE; order_items
-        // SET NULL (order history keeps its sku/name/price snapshot) — schema already
+        // product_specifications/product_fitments/product_cross_references/cart_items/
+        // wishlists CASCADE; order_items SET NULL (order history keeps its sku/name/price
+        // snapshot) — schema already
         // handles cleanup, no extra guard needed here.
         $this->repo->delete($id);
     }
@@ -454,21 +474,71 @@ class ProductService
         return $specs;
     }
 
-    /** @return array|null null means "not provided, leave existing fitment untouched" */
-    private function validateVehicleIds(mixed $raw): ?array
+    /** @return array|null null means "not provided, leave existing cross-references untouched" */
+    private function validateCrossReferences(mixed $raw): ?array
     {
         if ($raw === null) {
             return null;
         }
         if (!is_array($raw)) {
-            throw new DomainException('vehicle_ids must be a list', 422);
+            throw new DomainException('cross_reference_numbers must be a list', 422);
         }
 
-        $ids = array_values(array_unique(array_map('intval', $raw)));
-        if (!empty($ids) && $this->repo->existingVehicleCount($ids) !== count($ids)) {
-            throw new DomainException('One or more vehicle_ids do not exist', 422);
+        $numbers = [];
+        foreach ($raw as $number) {
+            $trimmed = trim((string)$number);
+            if ($trimmed !== '') {
+                $numbers[] = $trimmed;
+            }
         }
 
-        return $ids;
+        return array_values(array_unique($numbers));
+    }
+
+    /** @return array|null null means "not provided, leave existing fitment untouched" */
+    private function validateFitments(mixed $raw): ?array
+    {
+        if ($raw === null) {
+            return null;
+        }
+        if (!is_array($raw)) {
+            throw new DomainException('fitments must be a list', 422);
+        }
+
+        $minYear = self::MIN_FITMENT_YEAR;
+        $maxYear = (int)date('Y') + 2;
+
+        $rows = [];
+        foreach ($raw as $fitment) {
+            if (!is_array($fitment)) {
+                throw new DomainException('Each fitment must be an object', 422);
+            }
+            $make = trim((string)($fitment['make'] ?? ''));
+            $model = trim((string)($fitment['model'] ?? ''));
+            if ($make === '' || $model === '') {
+                throw new DomainException('Each fitment needs a make and model', 422);
+            }
+
+            $yearFrom = (int)($fitment['year_from'] ?? 0);
+            $yearTo = (int)($fitment['year_to'] ?? 0);
+            if ($yearFrom < $minYear || $yearFrom > $maxYear || $yearTo < $minYear || $yearTo > $maxYear) {
+                throw new DomainException("Fitment years must be between {$minYear} and {$maxYear}", 422);
+            }
+            if ($yearTo < $yearFrom) {
+                throw new DomainException('Fitment "year to" cannot be before the start year', 422);
+            }
+
+            $vinNote = trim((string)($fitment['vin_note'] ?? ''));
+
+            $rows[] = [
+                'make' => $make,
+                'model' => $model,
+                'year_from' => $yearFrom,
+                'year_to' => $yearTo,
+                'vin_note' => $vinNote !== '' ? $vinNote : null,
+            ];
+        }
+
+        return $rows;
     }
 }

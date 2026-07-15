@@ -80,8 +80,9 @@ class VehicleService
         if (!$this->repo->find($id)) {
             throw new DomainException('Vehicle not found', 404);
         }
-        // product_vehicle rows CASCADE on vehicle delete — that's a deliberate fitment
-        // mapping cleanup, not data loss, so no blocking guard here (unlike categories/brands).
+        // Product fitment no longer links to this catalog by id (see product_fitments,
+        // which stores make/model/year range freeform) — deleting a vehicle row here has
+        // no cascading effect on products, so no blocking guard is needed.
         $this->repo->delete($id);
     }
 

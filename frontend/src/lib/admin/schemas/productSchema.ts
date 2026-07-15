@@ -7,6 +7,31 @@ export const ProductSpecificationSchema = z.object({
   value_ar: z.string(),
 });
 
+const CURRENT_YEAR_PLUS_TWO = new Date().getFullYear() + 2;
+
+// .coerce on year_from/year_to for the same reason as images/vehicle_ids above — the
+// live backend's PDO driver returns numeric columns as JSON strings.
+export const ProductFitmentSchema = z
+  .object({
+    make: z.string().min(1, "Make is required."),
+    model: z.string().min(1, "Model is required."),
+    year_from: z.coerce
+      .number({ invalid_type_error: "Enter a start year." })
+      .int()
+      .min(1980, "Year must be 1980 or later.")
+      .max(CURRENT_YEAR_PLUS_TWO, `Year can't be later than ${CURRENT_YEAR_PLUS_TWO}.`),
+    year_to: z.coerce
+      .number({ invalid_type_error: "Enter an end year." })
+      .int()
+      .min(1980, "Year must be 1980 or later.")
+      .max(CURRENT_YEAR_PLUS_TWO, `Year can't be later than ${CURRENT_YEAR_PLUS_TWO}.`),
+    vin_note: z.string().nullable().optional(),
+  })
+  .refine((data) => data.year_to >= data.year_from, {
+    message: "Year to can't be before the start year.",
+    path: ["year_to"],
+  });
+
 export const ProductFormSchema = z
   .object({
     sku: z.string().min(1, "SKU is required."),
@@ -59,9 +84,13 @@ export const ProductFormSchema = z
     images: z.array(z.coerce.number()),
 
     fits_all_vehicles: z.boolean(),
-    vehicle_ids: z.array(z.coerce.number()),
+    fitments: z.array(ProductFitmentSchema),
 
     specifications: z.array(ProductSpecificationSchema),
+    // useFieldArray needs an object per row (for its internal id), so a single
+    // "cross number" field is still wrapped as { value } — unwrapped to string[] on
+    // submit and re-wrapped from the server's string[] when loading an existing product.
+    cross_reference_numbers: z.array(z.object({ value: z.string().min(1, "Cross number is required.") })),
 
     slug: z.string().min(1, "URL slug is required."),
     // seo_title_en/ar and seo_description_en/ar removed — the backend has no
@@ -96,7 +125,8 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   track_inventory: true,
   images: [],
   fits_all_vehicles: false,
-  vehicle_ids: [],
+  fitments: [],
   specifications: [],
+  cross_reference_numbers: [],
   slug: "",
 };

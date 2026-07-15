@@ -12,9 +12,10 @@ export function productFitsVehicle(
   vehicle: VehicleLike
 ): boolean {
   if (product.fits_all_vehicles) return true;
+  const year = vehicle.year != null ? Number(vehicle.year) : null;
   return product.compatible_vehicles.some(
     (v) =>
-      (!vehicle.year || v.year.toString() === vehicle.year.toString()) &&
+      (!year || (year >= v.year_from && year <= v.year_to)) &&
       (!vehicle.make || v.make.toLowerCase() === vehicle.make.toLowerCase()) &&
       (!vehicle.model || v.model.toLowerCase() === vehicle.model.toLowerCase())
   );
