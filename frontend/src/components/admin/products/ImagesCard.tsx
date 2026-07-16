@@ -99,7 +99,10 @@ export function ImagesCard({
       return adminApi.post<MediaItem>("/media", formData);
     },
     onSuccess: (item) => {
-      setValue("images", [...watch("images"), item.id], { shouldDirty: true });
+      // Number(): the live host's PDO returns the new row's id as a string — pushing
+      // it raw into `images` breaks the numeric-keyed mediaById lookups (placeholder
+      // icon instead of the thumbnail) until the next full reload.
+      setValue("images", [...watch("images"), Number(item.id)], { shouldDirty: true });
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.media.list() });
     },
     onError: () => showError("Upload failed"),

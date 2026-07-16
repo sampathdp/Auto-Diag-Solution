@@ -23,8 +23,8 @@ import { cn } from "@/lib/utils";
 import { MediaLibraryPickerModal } from "@/components/admin/media/MediaLibraryPickerModal";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
+import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import type { PaginatedResponse } from "@/types/api";
-import type { MediaItem } from "@/mocks/admin/db";
 
 interface PageRichTextEditorProps {
   value: string;
@@ -35,12 +35,15 @@ interface PageRichTextEditorProps {
 /** Full-featured Tiptap editor for CMS pages: headings, lists, links, images from the media library, blockquote, code. */
 export function PageRichTextEditor({ value, onChange, dir = "ltr" }: PageRichTextEditorProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const mediaQuery = useAdminQuery<PaginatedResponse<MediaItem>>(
+  // toMediaItem: the API returns raw media rows (path, not url; string ids on the
+  // live host) — the adapter normalizes both so the id lookup below matches the
+  // picker's returned ids and item.url is actually populated.
+  const mediaQuery = useAdminQuery<PaginatedResponse<RawMediaRow>>(
     adminQueryKeys.media.list({ per_page: 200 }),
     "/media",
     { per_page: 200 }
   );
-  const mediaById = new Map((mediaQuery.data?.items ?? []).map((m) => [m.id, m]));
+  const mediaById = new Map((mediaQuery.data?.items ?? []).map(toMediaItem).map((m) => [m.id, m]));
 
   const editor = useEditor({
     extensions: [

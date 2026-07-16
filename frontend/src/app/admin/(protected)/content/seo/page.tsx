@@ -14,7 +14,8 @@ import { buildSeoRows, type SeoRow } from "@/components/admin/content/seo-rows";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import type { PaginatedResponse } from "@/types/api";
-import type { Category, MediaItem } from "@/mocks/admin/db";
+import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
+import type { Category } from "@/mocks/admin/db";
 import type { Product } from "@/types/product";
 import type { Page } from "@/types/page";
 import type { SeoMeta } from "@/types/seo";
@@ -49,7 +50,9 @@ export default function AdminSeoPage() {
   const pagesQuery = useAdminQuery<PaginatedResponse<Page>>(adminQueryKeys.pages.all, "/pages", {
     per_page: 100,
   });
-  const mediaQuery = useAdminQuery<PaginatedResponse<MediaItem>>(
+  // toMediaItem: the API returns raw media rows (path, not url; string ids on the
+  // live host) — the adapter normalizes both so lookups by numeric id work.
+  const mediaQuery = useAdminQuery<PaginatedResponse<RawMediaRow>>(
     adminQueryKeys.media.list({ per_page: 200 }),
     "/media",
     { per_page: 200 }
@@ -58,7 +61,7 @@ export default function AdminSeoPage() {
   const isLoading = seoQuery.isLoading || categoriesQuery.isLoading || productsQuery.isLoading || pagesQuery.isLoading;
 
   const mediaById = useMemo(
-    () => new Map((mediaQuery.data?.items ?? []).map((m) => [m.id, m])),
+    () => new Map((mediaQuery.data?.items ?? []).map(toMediaItem).map((m) => [m.id, m])),
     [mediaQuery.data]
   );
 

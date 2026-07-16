@@ -26,7 +26,8 @@ import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatAED, formatDateTime } from "@/lib/admin/utils";
 import type { PaginatedResponse } from "@/types/api";
-import type { MediaItem, Order, OrderItem, OrderStatus, Product } from "@/mocks/admin/db";
+import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
+import type { Order, OrderItem, OrderStatus, Product } from "@/mocks/admin/db";
 
 const STATUS_OPTIONS: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"];
 
@@ -48,7 +49,9 @@ export default function AdminOrderDetailPage() {
     "/products",
     { per_page: 200 }
   );
-  const mediaQuery = useAdminQuery<PaginatedResponse<MediaItem>>(
+  // toMediaItem: the API returns raw media rows (path, not url; string ids on the
+  // live host) — the adapter normalizes both so image lookups by numeric id work.
+  const mediaQuery = useAdminQuery<PaginatedResponse<RawMediaRow>>(
     adminQueryKeys.media.list({ per_page: 200 }),
     "/media",
     { per_page: 200 }
@@ -58,7 +61,7 @@ export default function AdminOrderDetailPage() {
     [productsQuery.data]
   );
   const mediaById = useMemo(
-    () => new Map((mediaQuery.data?.items ?? []).map((m) => [m.id, m])),
+    () => new Map((mediaQuery.data?.items ?? []).map(toMediaItem).map((m) => [m.id, m])),
     [mediaQuery.data]
   );
 

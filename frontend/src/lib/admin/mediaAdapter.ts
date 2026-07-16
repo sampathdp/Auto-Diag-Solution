@@ -31,11 +31,17 @@ const BACKEND_ORIGIN = (() => {
 
 export function toMediaItem(row: RawMediaRow): MediaItem {
   return {
-    id: row.id,
+    // Number() cast: the live host's PDO driver returns numeric columns as JSON
+    // strings ("8", not 8). Consumers key Maps by this id and look them up with
+    // zod-coerced numbers (e.g. a product's `images`), so a string id here makes
+    // every mediaById.get(n) miss silently — thumbnails render as placeholder icons
+    // in the product form/list even though the Media page (which never looks up by
+    // id) displays fine.
+    id: Number(row.id),
     filename: row.original_filename,
     type: row.mime_type.startsWith("image/") ? "image" : "document",
     mime: row.mime_type,
-    size_kb: Math.round(row.size_bytes / 1024),
+    size_kb: Math.round(Number(row.size_bytes) / 1024),
     // Not tracked by the real backend — MediaThumbnail renders the actual image for
     // type "image" instead of relying on these, and falls back to a neutral swatch
     // (below) only for documents or a failed image load.
