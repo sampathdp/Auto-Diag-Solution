@@ -12,6 +12,10 @@ import {
   Star,
   Loader2,
   Check,
+  CheckCircle2,
+  Truck,
+  ShieldCheck,
+  RotateCcw,
 } from "lucide-react";
 import { useProduct } from "@/hooks/useProduct";
 import { useProducts } from "@/hooks/useProducts";
@@ -37,6 +41,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [cartState, setCartState] = useState<"idle" | "loading" | "success">("idle");
+  const [activeTab, setActiveTab] = useState<"description" | "compatibility" | "shipping" | "reviews">("description");
 
   const isWishlisted = useWishlistStore((state) => (product ? state.hasItem(product.id) : false));
   const toggleWishlist = useWishlistStore((state) => state.toggleItem);
@@ -89,6 +94,36 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const isNew = idHash % 10 > 6;
 
   const relatedProducts = (relatedData?.data || []).filter((p) => p.id !== product.id).slice(0, 4);
+
+  const specRows = [
+    ...(product.brand ? [{ label: t("specBrand"), value: locale === "ar" ? product.brand.name_ar : product.brand.name_en }] : []),
+    { label: t("specSku"), value: product.sku },
+    ...(product.specifications || []).map((s) => ({
+      label: locale === "ar" ? s.key_ar : s.key_en,
+      value: locale === "ar" ? s.value_ar : s.value_en,
+    })),
+    {
+      label: t("specCompatibility"),
+      value: product.fits_all_vehicles ? t("universalFit") : t("seeFitment", { count: product.compatible_vehicles.length }),
+    },
+  ];
+
+  const trustItems = [
+    { icon: Truck, title: t("fastDelivery"), note: t("fastDeliveryNote") },
+    { icon: ShieldCheck, title: t("securePayment"), note: t("securePaymentNote") },
+    { icon: RotateCcw, title: t("easyReturns"), note: t("easyReturnsNote") },
+  ];
+
+  const tabs = [
+    { key: "description" as const, label: t("tabDescription") },
+    { key: "compatibility" as const, label: t("tabCompatibility") },
+    { key: "shipping" as const, label: t("tabShipping") },
+    { key: "reviews" as const, label: `${t("tabReviews")} (${product.reviews})` },
+  ];
+
+  const description =
+    (locale === "ar" ? product.description_ar : product.description_en) ||
+    (locale === "ar" ? product.short_description_ar : product.short_description_en);
 
   const handleToggleWishlist = () => {
     if (!isWishlisted) toast.success(tToast("addedToWishlist"));
@@ -206,6 +241,14 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </div>
               <span className="h-1 w-1 rounded-full bg-border" />
               <span className="font-mono text-sm text-muted-foreground">SKU: {product.sku}</span>
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
+                  isOutOfStock ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
+                }`}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                {isOutOfStock ? t("outOfStock") : t("inStock")}
+              </span>
             </div>
 
             <div className="mb-6 flex items-baseline gap-4">
@@ -226,6 +269,15 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 <span className="text-[11px] font-bold uppercase tracking-wider text-warning">Only {product.stock} left</span>
               </div>
             )}
+
+            <dl className="mb-6 divide-y divide-border rounded-lg border">
+              {specRows.map((row) => (
+                <div key={row.label} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                  <dt className="text-muted-foreground">{row.label}</dt>
+                  <dd className="text-end font-semibold text-foreground">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
 
             <div className="mb-6">
               <CheckFitmentWidget product={product} />
@@ -297,24 +349,119 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </a>
             </div>
 
-            {/* Specifications */}
-            {product.specifications && product.specifications.length > 0 && (
-              <div className="border-t pt-6">
-                <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  {t("specifications")}
-                </h3>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  {product.specifications.map((spec) => (
-                    <div key={spec.key_en}>
-                      <dt className="text-muted-foreground">{locale === "ar" ? spec.key_ar : spec.key_en}</dt>
-                      <dd className="font-medium text-foreground">{locale === "ar" ? spec.value_ar : spec.value_en}</dd>
-                    </div>
-                  ))}
-                </dl>
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 divide-x divide-border rounded-lg border text-center rtl:divide-x-reverse">
+              {trustItems.map(({ icon: Icon, title, note }) => (
+                <div key={title} className="flex flex-col items-center gap-1.5 px-2 py-4">
+                  <Icon className="h-5 w-5 text-primary" strokeWidth={1.75} />
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-foreground">{title}</span>
+                  <span className="text-[11px] text-muted-foreground">{note}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Info Tabs */}
+        <section className="mt-16 border-t pt-2">
+          <div className="flex gap-8 overflow-x-auto border-b">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`shrink-0 border-b-2 py-4 text-sm font-bold transition-colors ${
+                  activeTab === tab.key
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="py-8">
+            {activeTab === "description" && (
+              <div className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                {description ? (
+                  <div
+                    className="[&_p]:mb-3 last:[&_p]:mb-0 [&_ul]:mb-3 [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:mb-3 [&_ol]:list-decimal [&_ol]:ps-5 [&_li]:mb-1 [&_strong]:font-bold [&_strong]:text-foreground"
+                    dangerouslySetInnerHTML={{ __html: description }}
+                  />
+                ) : (
+                  <p>{t("noDescription")}</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === "compatibility" && (
+              <div className="max-w-2xl">
+                {product.fits_all_vehicles ? (
+                  <div className="flex items-start gap-3 rounded-lg border border-success/20 bg-success/5 p-4">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+                    <p className="text-sm font-medium text-foreground">{t("universalFit")}</p>
+                  </div>
+                ) : product.compatible_vehicles.length > 0 ? (
+                  <div className="divide-y divide-border rounded-lg border">
+                    {product.compatible_vehicles.map((v, idx) => (
+                      <div key={idx} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                        <span className="font-semibold text-foreground">
+                          {v.make} {v.model}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {v.year_from === v.year_to ? v.year_from : `${v.year_from}–${v.year_to}`}
+                          {v.vin_note ? ` · ${v.vin_note}` : ""}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("noCompatibilityData")}</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === "shipping" && (
+              <div className="grid max-w-2xl gap-6 sm:grid-cols-2">
+                <div className="flex gap-3">
+                  <Truck className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} />
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">{t("shippingInfoTitle")}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">{t("shippingInfoBody")}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <RotateCcw className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} />
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">{t("returnsInfoTitle")}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">{t("returnsInfoBody")}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <ShieldCheck className="h-5 w-5 shrink-0 text-primary" strokeWidth={1.75} />
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">{t("paymentInfoTitle")}</h4>
+                    <p className="mt-1 text-sm text-muted-foreground">{t("paymentInfoBody")}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "reviews" && (
+              <div className="flex items-center gap-6">
+                <div className="text-center">
+                  <div className="text-4xl font-extrabold text-foreground">{product.rating.toFixed(1)}</div>
+                  <div className="mt-1 flex items-center justify-center gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-4 w-4 ${i < Math.round(product.rating) ? "fill-warning text-warning" : "text-muted"}`} />
+                    ))}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{t("reviewsCount", { count: product.reviews })}</div>
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
