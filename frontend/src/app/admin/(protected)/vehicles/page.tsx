@@ -11,7 +11,8 @@ import { VehicleGroupDrawerForm } from "@/components/admin/vehicles/VehicleGroup
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import type { PaginatedResponse } from "@/types/api";
-import type { Product, Vehicle } from "@/mocks/admin/db";
+import type { Vehicle } from "@/mocks/admin/db";
+import type { Product } from "@/types/product";
 
 interface YearRow {
   year: number;
@@ -64,19 +65,30 @@ export default function AdminVehiclesPage() {
   }, [vehicles]);
 
   const modelRows: ModelRow[] = useMemo(() => {
-    const map = new Map<string, { make: string; model: string; years: number[]; vehicleIds: number[] }>();
+    const map = new Map<string, { make: string; model: string; years: number[] }>();
     for (const v of vehicles) {
       const key = `${v.make}|${v.model}`;
-      if (!map.has(key)) map.set(key, { make: v.make, model: v.model, years: [], vehicleIds: [] });
-      const entry = map.get(key)!;
-      entry.years.push(v.year);
-      entry.vehicleIds.push(v.id);
+      if (!map.has(key)) map.set(key, { make: v.make, model: v.model, years: [] });
+      map.get(key)!.years.push(v.year);
     }
     return [...map.values()]
-      .map(({ make, model, years, vehicleIds }) => {
+      .map(({ make, model, years }) => {
         const min = Math.min(...years);
         const max = Math.max(...years);
-        const productsCount = products.filter((p) => p.vehicle_ids.some((id) => vehicleIds.includes(id))).length;
+        // Fitment is freeform ranges now (make/model text + year_from/year_to), not
+        // links to catalog vehicle ids — a product "fits" this model row when any of
+        // its fitment rows matches the make/model and overlaps the row's year span.
+        // (?? [] guards products served by the legacy mock handlers, which predate
+        // the fitments field.)
+        const productsCount = products.filter((p) =>
+          (p.fitments ?? []).some(
+            (f) =>
+              f.make.toLowerCase() === make.toLowerCase() &&
+              f.model.toLowerCase() === model.toLowerCase() &&
+              f.year_from <= max &&
+              f.year_to >= min
+          )
+        ).length;
         return { make, model, yearRange: min === max ? String(min) : `${min}–${max}`, productsCount };
       })
       .sort((a, b) => a.make.localeCompare(b.make) || a.model.localeCompare(b.model));
@@ -117,9 +129,9 @@ export default function AdminVehiclesPage() {
       />
 
       <div className="mb-6 rounded-lg border border-border bg-surface px-4 py-3 text-body text-ink-muted">
-        This is the reference list of vehicles (year + make + model, e.g. "2022 Toyota Camry") that products
-        can be tagged as fitting. When you add a product, you pick which vehicles here it's compatible with —
-        customers on the storefront then search by their own vehicle to see only matching parts. The three
+        This is the reference catalog of vehicles (year + make + model, e.g. "2022 Toyota Camry"). It powers
+        the Make/Model suggestions on the product form's fitment table and the Year/Make/Model search
+        customers use on the storefront — keep it complete so shoppers can find their vehicle. The three
         tabs below are the same list, just grouped differently so you can check your coverage.
       </div>
 
