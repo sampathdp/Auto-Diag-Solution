@@ -8,34 +8,48 @@ import { FormField } from "@/components/admin/ui/FormField";
 import { Input } from "@/components/admin/ui/Input";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
-import { adminQueryKeys } from "@/lib/admin/query-keys";
+import type { Vehicle } from "@/mocks/admin/db";
 
 /**
- * Adds a single year/make/model combination — the only vehicle-catalog write the
- * real backend supports (POST /vehicles, one row). The mock's group-level
- * edit-year/edit-make/edit-model modes mapped to a bulk-rename endpoint that has
- * no backend equivalent and were removed rather than half-wired; see
- * ARCHITECTURE.md §8.4.
+ * Adds or edits a single year/make/model combination — the granularity the real
+ * backend supports (POST/PUT /vehicles(/{id}), one row). The mock's old group-level
+ * edit-year/edit-make/edit-model modes mapped to a bulk-rename endpoint that has no
+ * backend equivalent and were removed rather than half-wired; see ARCHITECTURE.md §8.4.
  */
-export function VehicleGroupDrawerForm({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function VehicleDrawerForm({
+  open,
+  onClose,
+  vehicle,
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Present = editing; absent = creating. */
+  vehicle?: Vehicle | null;
+}) {
   const queryClient = useQueryClient();
+  const isEdit = !!vehicle;
   const [year, setYear] = useState("");
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
+  const [chassisCode, setChassisCode] = useState("");
 
   useEffect(() => {
     if (open) {
-      setYear("");
-      setMake("");
-      setModel("");
+      setYear(vehicle ? String(vehicle.year) : "");
+      setMake(vehicle?.make ?? "");
+      setModel(vehicle?.model ?? "");
+      setChassisCode(vehicle?.chassis_code ?? "");
     }
-  }, [open]);
+  }, [open, vehicle]);
 
   const save = useMutation({
-    mutationFn: () => adminApi.post("/vehicles", { year: Number(year), make, model }),
+    mutationFn: () => {
+      const payload = { year: Number(year), make, model, chassis_code: chassisCode || null };
+      return isEdit && vehicle ? adminApi.put(`/vehicles/${vehicle.id}`, payload) : adminApi.post("/vehicles", payload);
+    },
     onSuccess: () => {
-      showSuccess("Vehicle added");
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.vehicles.list() });
+      showSuccess(isEdit ? "Vehicle updated" : "Vehicle added");
+      queryClient.invalidateQueries({ queryKey: ["admin", "vehicles", "list"] });
       onClose();
     },
     onError: (err) => showError(err instanceof ApiError ? err.message : "Could not save."),
@@ -45,7 +59,7 @@ export function VehicleGroupDrawerForm({ open, onClose }: { open: boolean; onClo
     <Drawer
       open={open}
       onClose={onClose}
-      title="Add Vehicle"
+      title={isEdit ? "Edit Vehicle" : "Add Vehicle"}
       footer={
         <>
           <Button type="button" variant="ghost" onClick={onClose}>
@@ -66,6 +80,14 @@ export function VehicleGroupDrawerForm({ open, onClose }: { open: boolean; onClo
         </FormField>
         <FormField label="Model" htmlFor="v-model" required>
           <Input id="v-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Camry" />
+        </FormField>
+        <FormField label="Chassis / Generation" htmlFor="v-chassis">
+          <Input
+            id="v-chassis"
+            value={chassisCode}
+            onChange={(e) => setChassisCode(e.target.value)}
+            placeholder="e.g. L32 — leave blank if the model has no distinct generations"
+          />
         </FormField>
       </div>
     </Drawer>

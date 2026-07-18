@@ -14,6 +14,7 @@ import { actionsColumn } from "@/components/admin/columns";
 import { defaultRowActions } from "@/components/admin/ActionsMenu";
 import { showSuccess, showError } from "@/components/admin/ui/toast";
 import { BrandDrawerForm } from "@/components/admin/brands/BrandDrawerForm";
+import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { useDataTable } from "@/lib/admin/hooks/useDataTable";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
@@ -63,6 +64,17 @@ function AdminBrandsPageContent() {
   });
 
   const columns: ColumnDef<Brand, any>[] = [
+    {
+      id: "logo",
+      header: "",
+      enableSorting: false,
+      cell: ({ row }) =>
+        row.original.logo ? (
+          <MediaThumbnail item={{ type: "image", color: "#94a3b8", url: row.original.logo }} size="sm" />
+        ) : (
+          <MediaThumbnail item={null} size="sm" />
+        ),
+    },
     {
       accessorKey: "name_en",
       header: "Brand",

@@ -390,6 +390,7 @@ export const handlers = [
           year: row.year,
           make: row.make,
           model: row.model,
+          chassis_code: null,
           products_count: 0,
         });
         imported++;
@@ -408,10 +409,42 @@ export const handlers = [
       year: body.year,
       make: body.make,
       model: body.model,
+      chassis_code: null,
       products_count: 0,
     };
     vehicles.push(vehicle);
     return ok(vehicle, "Vehicle added");
+  }),
+
+  http.get(`${BASE}/vehicles/:id`, ({ request, params }) => {
+    if (!authenticate(request)) return fail("Unauthenticated", 401);
+    const vehicle = vehicles.find((v) => v.id === Number(params.id));
+    if (!vehicle) return fail("Vehicle not found", 404);
+    return ok(vehicle);
+  }),
+
+  http.put(`${BASE}/vehicles/:id`, async ({ request, params }) => {
+    if (!authenticate(request)) return fail("Unauthenticated", 401);
+    const vehicle = vehicles.find((v) => v.id === Number(params.id));
+    if (!vehicle) return fail("Vehicle not found", 404);
+    const body = (await request.json()) as { year?: number; make?: string; model?: string };
+    const nextYear = body.year ?? vehicle.year;
+    const nextMake = body.make ?? vehicle.make;
+    const nextModel = body.model ?? vehicle.model;
+    const duplicate = vehicles.some(
+      (v) => v.id !== vehicle.id && v.year === nextYear && v.make === nextMake && v.model === nextModel
+    );
+    if (duplicate) return fail("This year/make/model combination already exists", 409);
+    Object.assign(vehicle, { year: nextYear, make: nextMake, model: nextModel });
+    return ok(vehicle, "Vehicle updated");
+  }),
+
+  http.delete(`${BASE}/vehicles/:id`, ({ request, params }) => {
+    if (!authenticate(request)) return fail("Unauthenticated", 401);
+    const idx = vehicles.findIndex((v) => v.id === Number(params.id));
+    if (idx === -1) return fail("Vehicle not found", 404);
+    vehicles.splice(idx, 1);
+    return ok(null, "Vehicle deleted");
   }),
 
   // Tabs group vehicle rows by year/make/model — these two endpoints act on

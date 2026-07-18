@@ -44,6 +44,7 @@ export const NAV_ITEMS: NavEntry[] = [
     label: "Content",
     icon: FileText,
     children: [
+      { label: "About Us Page", href: "/admin/content/about", icon: FileText },
       { label: "Pages", href: "/admin/content/pages", icon: FileText },
       { label: "SEO", href: "/admin/content/seo", icon: Search },
     ],

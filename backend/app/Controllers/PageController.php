@@ -47,6 +47,13 @@ class PageController extends BaseController
         $this->success($this->service->find((int)$request->getParam('id')));
     }
 
+    // Public storefront lookup — no auth, published pages only. Mirrors
+    // BrandController::active() / ProductController::publicShow().
+    public function publicShow(Request $request): void
+    {
+        $this->success($this->service->findPublishedBySlug((string)$request->getParam('slug')));
+    }
+
     public function store(Request $request): void
     {
         $page = $this->service->create($request->all());

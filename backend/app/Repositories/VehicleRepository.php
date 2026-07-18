@@ -60,10 +60,15 @@ class VehicleRepository extends BaseRepository
         return (int) $stmt->fetch()['c'];
     }
 
-    public function existsCombo(int $year, string $make, string $model, ?int $excludeId = null): bool
+    /**
+     * `chassis_code <=> :chassis_code` is MySQL's NULL-safe equals — two "no chassis"
+     * rows (both NULL) count as the same combo, unlike the raw UNIQUE KEY (which treats
+     * every NULL as distinct and would silently allow duplicate no-chassis rows).
+     */
+    public function existsCombo(int $year, string $make, string $model, ?string $chassisCode, ?int $excludeId = null): bool
     {
-        $sql = "SELECT id FROM vehicles WHERE year = :year AND make = :make AND model = :model";
-        $params = ['year' => $year, 'make' => $make, 'model' => $model];
+        $sql = "SELECT id FROM vehicles WHERE year = :year AND make = :make AND model = :model AND chassis_code <=> :chassis_code";
+        $params = ['year' => $year, 'make' => $make, 'model' => $model, 'chassis_code' => $chassisCode];
         if ($excludeId !== null) {
             $sql .= " AND id != :excludeId";
             $params['excludeId'] = $excludeId;

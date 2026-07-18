@@ -15,6 +15,9 @@ export const ProductFitmentSchema = z
   .object({
     make: z.string().min(1, "Make is required."),
     model: z.string().min(1, "Model is required."),
+    // Nullable — most parts fit every generation of a model, so leaving this blank
+    // (matching by year range alone) is the common case, not the exception.
+    chassis_code: z.string().nullable().optional(),
     year_from: z.coerce
       .number({ invalid_type_error: "Enter a start year." })
       .int()
@@ -83,6 +86,13 @@ export const ProductFormSchema = z
     // category_id/brand_id above.
     images: z.array(z.coerce.number()),
 
+    // Nullable — a part's Genuine/Aftermarket/OEM classification isn't always known
+    // up front, unlike category/brand which the catalog requires.
+    part_type: z.enum(["genuine", "aftermarket", "oem"]).nullable(),
+    oem_part_number: z.string().nullable().optional(),
+    material: z.string().nullable().optional(),
+    country_of_origin: z.string().nullable().optional(),
+
     fits_all_vehicles: z.boolean(),
     fitments: z.array(ProductFitmentSchema),
 
@@ -124,6 +134,10 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   low_stock_threshold: 5,
   track_inventory: true,
   images: [],
+  part_type: null,
+  oem_part_number: "",
+  material: "",
+  country_of_origin: "",
   fits_all_vehicles: false,
   fitments: [],
   specifications: [],

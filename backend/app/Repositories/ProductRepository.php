@@ -64,7 +64,7 @@ class ProductRepository extends BaseRepository
     public function fitmentRowsForProduct(int $productId): array
     {
         return DatabaseManager::query(
-            "SELECT id, make, model, year_from, year_to, vin_note
+            "SELECT id, make, model, chassis_code, year_from, year_to, vin_note
              FROM product_fitments WHERE product_id = :id ORDER BY id ASC",
             ['id' => $productId]
         )->fetchAll();
@@ -82,7 +82,7 @@ class ProductRepository extends BaseRepository
         }
         $placeholders = implode(',', array_fill(0, count($productIds), '?'));
         $rows = DatabaseManager::query(
-            "SELECT id, product_id, make, model, year_from, year_to, vin_note
+            "SELECT id, product_id, make, model, chassis_code, year_from, year_to, vin_note
              FROM product_fitments WHERE product_id IN ($placeholders) ORDER BY id ASC",
             array_values($productIds)
         )->fetchAll();
@@ -166,12 +166,13 @@ class ProductRepository extends BaseRepository
         DatabaseManager::query("DELETE FROM product_fitments WHERE product_id = :id", ['id' => $productId]);
         foreach ($rows as $row) {
             DatabaseManager::query(
-                "INSERT INTO product_fitments (product_id, make, model, year_from, year_to, vin_note)
-                 VALUES (:product_id, :make, :model, :year_from, :year_to, :vin_note)",
+                "INSERT INTO product_fitments (product_id, make, model, chassis_code, year_from, year_to, vin_note)
+                 VALUES (:product_id, :make, :model, :chassis_code, :year_from, :year_to, :vin_note)",
                 [
                     'product_id' => $productId,
                     'make' => $row['make'],
                     'model' => $row['model'],
+                    'chassis_code' => $row['chassis_code'],
                     'year_from' => $row['year_from'],
                     'year_to' => $row['year_to'],
                     'vin_note' => $row['vin_note'],

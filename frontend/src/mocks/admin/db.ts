@@ -77,6 +77,7 @@ export interface Vehicle {
   year: number;
   make: string;
   model: string;
+  chassis_code: string | null;
   products_count: number;
 }
 
@@ -480,7 +481,7 @@ export const vehicles: Vehicle[] = (() => {
     for (const model of models) {
       const years = pickN([2018, 2019, 2020, 2021, 2022, 2023, 2024], int(2, 4)).sort();
       for (const year of years) {
-        list.push({ id: id++, year, make, model, products_count: 0 });
+        list.push({ id: id++, year, make, model, chassis_code: null, products_count: 0 });
       }
     }
   }

@@ -15,6 +15,7 @@ class ProductService
     private const VALID_STATUS = ['draft', 'active', 'inactive'];
     private const VALID_STOCK_STATUS = ['in_stock', 'out_of_stock', 'backorder'];
     private const VALID_SOURCE = ['local', '3pl'];
+    private const VALID_PART_TYPE = ['genuine', 'aftermarket', 'oem'];
     private const BOOLEAN_FIELDS = ['vat_inclusive', 'track_inventory', 'fits_all_vehicles'];
     private const MIN_FITMENT_YEAR = 1980;
 
@@ -114,6 +115,10 @@ class ProductService
                 'name_ar' => $row['category_name_ar'],
                 'slug' => $row['category_slug'],
             ] : null,
+            'part_type' => $row['part_type'] ?? null,
+            'oem_part_number' => $row['oem_part_number'] ?? null,
+            'material' => $row['material'] ?? null,
+            'country_of_origin' => $row['country_of_origin'] ?? null,
             'price_aed' => (float)$row['price'],
             'compare_at_price' => $row['compare_at_price'] !== null ? (float)$row['compare_at_price'] : null,
             'images' => $imageUrls,
@@ -123,6 +128,7 @@ class ProductService
             'compatible_vehicles' => array_map(fn (array $f) => [
                 'make' => $f['make'],
                 'model' => $f['model'],
+                'chassis_code' => $f['chassis_code'] ?? null,
                 'year_from' => (int)$f['year_from'],
                 'year_to' => (int)$f['year_to'],
                 'vin_note' => $f['vin_note'],
@@ -391,6 +397,24 @@ class ProductService
             }
         }
 
+        if (array_key_exists('part_type', $input)) {
+            $partType = $input['part_type'];
+            if ($partType === null || $partType === '') {
+                $data['part_type'] = null;
+            } elseif (!in_array($partType, self::VALID_PART_TYPE, true)) {
+                throw new DomainException('Invalid part type', 422);
+            } else {
+                $data['part_type'] = $partType;
+            }
+        }
+
+        foreach (['oem_part_number', 'material', 'country_of_origin'] as $field) {
+            if (array_key_exists($field, $input)) {
+                $trimmed = trim((string)($input[$field] ?? ''));
+                $data[$field] = $trimmed !== '' ? $trimmed : null;
+            }
+        }
+
         if (array_key_exists('category_id', $input)) {
             $data['category_id'] = $this->resolveForeignKey($input['category_id'], 'categories', 'Category');
         }
@@ -529,10 +553,12 @@ class ProductService
             }
 
             $vinNote = trim((string)($fitment['vin_note'] ?? ''));
+            $chassisCode = trim((string)($fitment['chassis_code'] ?? ''));
 
             $rows[] = [
                 'make' => $make,
                 'model' => $model,
+                'chassis_code' => $chassisCode !== '' ? $chassisCode : null,
                 'year_from' => $yearFrom,
                 'year_to' => $yearTo,
                 'vin_note' => $vinNote !== '' ? $vinNote : null,

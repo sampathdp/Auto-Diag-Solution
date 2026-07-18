@@ -84,6 +84,41 @@ export function BasicInfoCard({
             onChange={(e) => setValue("is_active", e.target.checked, { shouldDirty: true })}
           />
         </FormField>
+
+        <FormField label="Part Type" htmlFor="part_type" error={errors.part_type?.message}>
+          <Select
+            id="part_type"
+            error={!!errors.part_type}
+            value={watch("part_type") ?? ""}
+            onChange={(e) =>
+              setValue("part_type", e.target.value ? (e.target.value as "genuine" | "aftermarket" | "oem") : null, {
+                shouldDirty: true,
+              })
+            }
+          >
+            <option value="">Not set</option>
+            <option value="genuine">Genuine</option>
+            <option value="aftermarket">Aftermarket</option>
+            <option value="oem">OEM</option>
+          </Select>
+        </FormField>
+
+        <FormField label="OEM/Part Number" htmlFor="oem_part_number" error={errors.oem_part_number?.message}>
+          <Input
+            id="oem_part_number"
+            placeholder="53200-64P01"
+            className="font-mono"
+            {...register("oem_part_number")}
+          />
+        </FormField>
+
+        <FormField label="Material" htmlFor="material" error={errors.material?.message}>
+          <Input id="material" placeholder="Ceramic, Semi-Metallic" {...register("material")} />
+        </FormField>
+
+        <FormField label="Country of Origin" htmlFor="country_of_origin" error={errors.country_of_origin?.message}>
+          <Input id="country_of_origin" placeholder="Japan, Thailand" {...register("country_of_origin")} />
+        </FormField>
       </CardBody>
     </Card>
   );

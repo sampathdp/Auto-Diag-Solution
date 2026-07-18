@@ -39,6 +39,17 @@ class PageService
         return Arr::boolify($page, self::BOOLEAN_FIELDS);
     }
 
+    // Public storefront lookup — published pages only, by slug. Kept separate from
+    // find() so an unpublished/draft page never leaks to anonymous visitors.
+    public function findPublishedBySlug(string $slug): array
+    {
+        $page = $this->repo->findBy('slug', $slug);
+        if (!$page || !(bool)$page['is_published']) {
+            throw new DomainException('Page not found', 404);
+        }
+        return Arr::boolify($page, self::BOOLEAN_FIELDS);
+    }
+
     public function create(array $input): array
     {
         $data = $this->validate($input, null);

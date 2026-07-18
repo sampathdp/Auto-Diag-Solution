@@ -64,6 +64,17 @@ class VehicleController extends BaseController
         $this->success($vehicle, 'Vehicle created successfully', 201);
     }
 
+    /** Bulk/Range add — one make+model+chassis + a year span expands into one row per year. */
+    public function bulkStore(Request $request): void
+    {
+        $result = $this->service->bulkCreate($request->all());
+        $createdCount = count($result['created']);
+        $skippedCount = count($result['skipped']);
+        $message = "{$createdCount} vehicle" . ($createdCount === 1 ? '' : 's') . ' added'
+            . ($skippedCount > 0 ? ", {$skippedCount} already existed and were skipped" : '');
+        $this->success($result, $message, 201);
+    }
+
     public function update(Request $request): void
     {
         $vehicle = $this->service->update((int)$request->getParam('id'), $request->all());

@@ -17,6 +17,7 @@ export interface ProductFitment {
   id?: number;
   make: string;
   model: string;
+  chassis_code: string | null;
   year_from: number;
   year_to: number;
   vin_note: string | null;
@@ -45,6 +46,10 @@ export interface Product {
   stock_status: "in_stock" | "out_of_stock" | "backorder";
   images: number[];
   weight_kg: number | null;
+  part_type: "genuine" | "aftermarket" | "oem" | null;
+  oem_part_number: string | null;
+  material: string | null;
+  country_of_origin: string | null;
   source: "local" | "3pl";
   source_supplier_id: string | null;
   source_synced_at: string | null;

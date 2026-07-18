@@ -13,6 +13,7 @@ use App\Controllers\MediaController;
 use App\Controllers\ProductController;
 use App\Controllers\SettingController;
 use App\Controllers\PageController;
+use App\Controllers\AboutPageController;
 use App\Controllers\SeoMetaController;
 use App\Controllers\SupplierController;
 use App\Controllers\OrderController;
@@ -42,6 +43,8 @@ $router->get("$v1/vehicles/filters", [VehicleController::class, 'filters']);
 // by the {id} wildcard (mirrors the /vehicles/filters-before-{id} ordering below).
 $router->get("$v1/products", [ProductController::class, 'publicIndex']);
 $router->get("$v1/products/{id}", [ProductController::class, 'publicShow']);
+$router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
+$router->get("$v1/about-page", [AboutPageController::class, 'show']);
 
 // --- Protected Auth Routes ---
 $router->get("$v1/auth/me", [AuthController::class, 'me'], [AuthMiddleware::class]);
@@ -85,6 +88,10 @@ $router->group([
     $router->get('/vehicles/filters', [VehicleController::class, 'filters']);
     $router->get('/vehicles', [VehicleController::class, 'index']);
     $router->post('/vehicles', [VehicleController::class, 'store']);
+    // /vehicles/bulk is a literal POST path, not a GET/PUT/DELETE {id} match, so it
+    // doesn't strictly need to precede {id} — kept here anyway, grouped with the other
+    // static-before-wildcard registrations for consistency.
+    $router->post('/vehicles/bulk', [VehicleController::class, 'bulkStore']);
     $router->get('/vehicles/{id}', [VehicleController::class, 'show']);
     $router->put('/vehicles/{id}', [VehicleController::class, 'update']);
     $router->delete('/vehicles/{id}', [VehicleController::class, 'destroy']);
@@ -120,6 +127,10 @@ $router->group([
     $router->get('/pages/{id}', [PageController::class, 'show']);
     $router->put('/pages/{id}', [PageController::class, 'update']);
     $router->delete('/pages/{id}', [PageController::class, 'destroy']);
+
+    // --- About Us page (singleton) ---
+    $router->get('/about-page', [AboutPageController::class, 'show']);
+    $router->put('/about-page', [AboutPageController::class, 'update']);
 
     // --- SEO Meta ---
     $router->get('/seo', [SeoMetaController::class, 'index']);

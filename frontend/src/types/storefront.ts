@@ -3,6 +3,7 @@ export type VehicleFitment = {
   year_to: number;
   make: string;
   model: string;
+  chassis_code: string | null;
   vin_note: string | null;
 };
 
@@ -39,6 +40,10 @@ export type Product = {
   description_ar: string | null;
   brand: { name_en: string; name_ar: string; slug: string } | null;
   category: { name_en: string; name_ar: string; slug: string } | null;
+  part_type: "genuine" | "aftermarket" | "oem" | null;
+  oem_part_number: string | null;
+  material: string | null;
+  country_of_origin: string | null;
   price_aed: number;
   compare_at_price: number | null;
   images: string[];

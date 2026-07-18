@@ -15,7 +15,7 @@ import type { ProductFormValues } from "@/lib/admin/schemas/productSchema";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-type VehicleCatalogRow = { id: number; year: number; make: string; model: string };
+type VehicleCatalogRow = { id: number; year: number; make: string; model: string; chassis_code: string | null };
 
 /** Plain text input with a filtered suggestion dropdown — used for Make/Model so
  * fitment entries stay consistent with the vehicles catalog without forcing an
@@ -89,6 +89,7 @@ function FitmentRow({
   error,
   allMakes,
   modelsByMake,
+  chassisByMakeModel,
 }: {
   control: Control<ProductFormValues>;
   register: UseFormReturn<ProductFormValues>["register"];
@@ -97,16 +98,22 @@ function FitmentRow({
   error?: FieldErrors<ProductFormValues["fitments"][number]>;
   allMakes: string[];
   modelsByMake: Map<string, Set<string>>;
+  chassisByMakeModel: Map<string, Set<string>>;
 }) {
   const make = useWatch({ control, name: `fitments.${index}.make` }) || "";
+  const model = useWatch({ control, name: `fitments.${index}.model` }) || "";
   const models = useMemo(
     () => Array.from(modelsByMake.get(make.trim().toLowerCase()) ?? []).sort(),
     [modelsByMake, make]
   );
+  const chassisOptions = useMemo(
+    () => Array.from(chassisByMakeModel.get(`${make.trim().toLowerCase()}|${model.trim().toLowerCase()}`) ?? []).sort(),
+    [chassisByMakeModel, make, model]
+  );
 
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_0.7fr_0.7fr_1.2fr_auto]">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_0.8fr_0.7fr_0.7fr_1.2fr_auto]">
         <Controller
           control={control}
           name={`fitments.${index}.make`}
@@ -134,6 +141,20 @@ function FitmentRow({
               placeholder="Camry"
               error={!!error?.model}
               suggestions={models}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name={`fitments.${index}.chassis_code`}
+          render={({ field }) => (
+            <SuggestInput
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              placeholder="L32 (optional)"
+              suggestions={chassisOptions}
             />
           )}
         />
@@ -192,6 +213,16 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
     }
     return map;
   }, [vehicles]);
+  const chassisByMakeModel = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const v of vehicles) {
+      if (!v.chassis_code) continue;
+      const key = `${v.make.toLowerCase()}|${v.model.toLowerCase()}`;
+      if (!map.has(key)) map.set(key, new Set());
+      map.get(key)!.add(v.chassis_code);
+    }
+    return map;
+  }, [vehicles]);
 
   return (
     <Card>
@@ -203,7 +234,7 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
             variant="secondary"
             size="sm"
             onClick={() =>
-              append({ make: "", model: "", year_from: CURRENT_YEAR, year_to: CURRENT_YEAR, vin_note: "" })
+              append({ make: "", model: "", chassis_code: "", year_from: CURRENT_YEAR, year_to: CURRENT_YEAR, vin_note: "" })
             }
           >
             <Plus className="h-3.5 w-3.5" />
@@ -227,9 +258,10 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
             </p>
           ) : (
             <div className="space-y-3">
-              <div className="hidden grid-cols-[1fr_1fr_0.7fr_0.7fr_1.2fr_auto] gap-2 text-caption font-semibold uppercase tracking-wide text-ink-muted sm:grid">
+              <div className="hidden grid-cols-[1fr_1fr_0.8fr_0.7fr_0.7fr_1.2fr_auto] gap-2 text-caption font-semibold uppercase tracking-wide text-ink-muted sm:grid">
                 <span>Make</span>
                 <span>Model</span>
+                <span>Chassis / Gen</span>
                 <span>Year</span>
                 <span>Year to</span>
                 <span>VIN / Option</span>
@@ -245,6 +277,7 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
                   error={formState.errors.fitments?.[index]}
                   allMakes={allMakes}
                   modelsByMake={modelsByMake}
+                  chassisByMakeModel={chassisByMakeModel}
                 />
               ))}
             </div>

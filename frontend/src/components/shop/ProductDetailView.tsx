@@ -21,6 +21,7 @@ import { useProduct } from "@/hooks/useProduct";
 import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/Button";
 import { CheckFitmentWidget } from "./CheckFitmentWidget";
+import { PartTypeBadge } from "./PartTypeBadge";
 import { ProductCard } from "./ProductCard";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
@@ -41,7 +42,9 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [cartState, setCartState] = useState<"idle" | "loading" | "success">("idle");
-  const [activeTab, setActiveTab] = useState<"description" | "compatibility" | "shipping" | "reviews">("description");
+  const [activeTab, setActiveTab] = useState<"description" | "specifications" | "compatibility" | "shipping" | "reviews">(
+    "description"
+  );
 
   const isWishlisted = useWishlistStore((state) => (product ? state.hasItem(product.id) : false));
   const toggleWishlist = useWishlistStore((state) => state.toggleItem);
@@ -58,9 +61,17 @@ export function ProductDetailView({ productId }: { productId: string }) {
     }
   }, [product]);
 
+  // Prefer "other parts for this same vehicle" (e.g. viewing a Suzuki Every rear brake
+  // shoe set should surface Suzuki Every front pads/filters/etc., not just anything in
+  // the same category) over a plain category match. Universal parts (fits_all_vehicles,
+  // no compatible_vehicles row) have no vehicle to key off of, so those fall back to the
+  // old category-based related list.
+  const primaryFitment = product?.compatible_vehicles?.[0];
   const { data: relatedData } = useProducts(
-    { category: product?.category?.slug, per_page: 5 },
-    { enabled: !!product?.category?.slug }
+    primaryFitment
+      ? { fits_make: primaryFitment.make, fits_model: primaryFitment.model, per_page: 8 }
+      : { category: product?.category?.slug, per_page: 8 },
+    { enabled: !!(primaryFitment || product?.category?.slug) }
   );
 
   if (!product) {
@@ -108,6 +119,19 @@ export function ProductDetailView({ productId }: { productId: string }) {
     },
   ];
 
+  const specTableRows = [
+    ...(product.part_type
+      ? [{ label: t("specPartType"), value: <PartTypeBadge type={product.part_type} /> }]
+      : []),
+    ...(product.oem_part_number ? [{ label: t("specOemPartNumber"), value: product.oem_part_number }] : []),
+    ...(product.material ? [{ label: t("specMaterial"), value: product.material }] : []),
+    ...(product.country_of_origin ? [{ label: t("specCountryOrigin"), value: product.country_of_origin }] : []),
+    ...(product.specifications || []).map((s) => ({
+      label: locale === "ar" ? s.key_ar : s.key_en,
+      value: locale === "ar" ? s.value_ar : s.value_en,
+    })),
+  ];
+
   const trustItems = [
     { icon: Truck, title: t("fastDelivery"), note: t("fastDeliveryNote") },
     { icon: ShieldCheck, title: t("securePayment"), note: t("securePaymentNote") },
@@ -116,6 +140,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
 
   const tabs = [
     { key: "description" as const, label: t("tabDescription") },
+    { key: "specifications" as const, label: t("tabSpecifications") },
     { key: "compatibility" as const, label: t("tabCompatibility") },
     { key: "shipping" as const, label: t("tabShipping") },
     { key: "reviews" as const, label: `${t("tabReviews")} (${product.reviews})` },
@@ -222,8 +247,9 @@ export function ProductDetailView({ productId }: { productId: string }) {
 
           {/* Details */}
           <div>
-            <div className="mb-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              <span>{product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}</span>
+              {product.part_type && <PartTypeBadge type={product.part_type} />}
             </div>
             <h1 className="mb-3 text-3xl font-extrabold leading-tight tracking-tight text-foreground sm:text-4xl">
               {name}
@@ -394,6 +420,27 @@ export function ProductDetailView({ productId }: { productId: string }) {
               </div>
             )}
 
+            {activeTab === "specifications" && (
+              <div className="max-w-2xl">
+                {specTableRows.length > 0 ? (
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full text-start text-sm">
+                      <tbody className="divide-y divide-border">
+                        {specTableRows.map((row, idx) => (
+                          <tr key={idx} className="even:bg-secondary/40">
+                            <td className="w-1/3 px-4 py-3 font-semibold text-foreground">{row.label}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{row.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("noSpecifications")}</p>
+                )}
+              </div>
+            )}
+
             {activeTab === "compatibility" && (
               <div className="max-w-2xl">
                 {product.fits_all_vehicles ? (
@@ -407,6 +454,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                       <div key={idx} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
                         <span className="font-semibold text-foreground">
                           {v.make} {v.model}
+                          {v.chassis_code ? ` (${v.chassis_code})` : ""}
                         </span>
                         <span className="text-muted-foreground">
                           {v.year_from === v.year_to ? v.year_from : `${v.year_from}–${v.year_to}`}
