@@ -85,7 +85,10 @@ export default function OrderDetailPage() {
     steps.push({ id: "processing", label: "Processing", isCompleted: isProcessing, isCurrent: order.status === "processing" });
 
     if (order.status === "shipped" || order.status === "delivered" || order.status === "refunded") {
-      steps.push({ id: "shipped", label: "Shipped", note: "Handed to Courier. Tracking: 123456789", isCompleted: true, isCurrent: order.status === "shipped" });
+      const shippedNote = order.carrier && order.tracking_number
+        ? `Handed to ${order.carrier}. Tracking: ${order.tracking_number}`
+        : undefined;
+      steps.push({ id: "shipped", label: "Shipped", note: shippedNote, isCompleted: true, isCurrent: order.status === "shipped" });
     }
 
     if (order.status === "delivered" || order.status === "refunded") {
@@ -216,6 +219,32 @@ export default function OrderDetailPage() {
               </Button>
             </div>
           </div>
+
+          {/* Tracking */}
+          {order.tracking_number && (
+            <div className="rounded-xl border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-bold mb-3">Track Shipment</h2>
+              <div className="text-sm space-y-1">
+                <p className="font-semibold">{order.carrier}</p>
+                <p className="font-mono text-muted-foreground">{order.tracking_number}</p>
+                {order.shipped_at && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Shipped {format.dateTime(new Date(order.shipped_at), { dateStyle: "medium" })}
+                  </p>
+                )}
+              </div>
+              {order.carrier === "Aramex" && (
+                <a
+                  href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-bold text-primary hover:bg-secondary/50"
+                >
+                  Track on Aramex
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Delivery */}
           {order.shipping_address && (

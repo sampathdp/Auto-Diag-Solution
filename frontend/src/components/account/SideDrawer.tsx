@@ -33,10 +33,10 @@ export function SideDrawer({ open, onOpenChange, title, children }: SideDrawerPr
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — above the fixed WhatsApp/cart bubbles (z-[70]) so they don't float over the drawer */}
       <div
         className={cn(
-          "fixed inset-0 z-50 bg-black/50 transition-opacity",
+          "fixed inset-0 z-[80] bg-black/50 transition-opacity",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => onOpenChange(false)}
@@ -45,7 +45,7 @@ export function SideDrawer({ open, onOpenChange, title, children }: SideDrawerPr
       {/* Drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 right-0 z-50 w-full max-w-md bg-background shadow-2xl transition-transform duration-300 ease-in-out sm:w-[400px]",
+          "fixed inset-y-0 right-0 z-[80] w-full max-w-md bg-background shadow-2xl transition-transform duration-300 ease-in-out sm:w-[400px]",
           open ? "translate-x-0" : "translate-x-full"
         )}
       >

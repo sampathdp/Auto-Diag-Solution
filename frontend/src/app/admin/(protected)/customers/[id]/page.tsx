@@ -30,7 +30,7 @@ const orderColumns: ColumnDef<Order, any>[] = [
   {
     id: "items_count",
     header: "Items",
-    cell: ({ row }) => row.original.items.reduce((sum, it) => sum + it.quantity, 0),
+    cell: ({ row }) => row.original.items_count ?? row.original.items?.reduce((sum, it) => sum + it.quantity, 0) ?? 0,
   },
   { accessorKey: "total", header: "Total", cell: ({ row }) => formatAED(row.original.total) },
   { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },

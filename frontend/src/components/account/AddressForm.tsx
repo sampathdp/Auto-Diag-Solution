@@ -221,9 +221,9 @@ export function AddressForm({ initialData, defaultName, defaultPhone, onSubmit, 
         <Button type="button" variant="secondary" onClick={handleCancel}>
           Cancel
         </Button>
-        <Button 
-          type="submit" 
-          disabled={!form.formState.isDirty || !form.formState.isValid || form.formState.isSubmitting}
+        <Button
+          type="submit"
+          disabled={!form.formState.isDirty || form.formState.isSubmitting}
         >
           {form.formState.isSubmitting ? "Saving..." : "Save Address"}
         </Button>

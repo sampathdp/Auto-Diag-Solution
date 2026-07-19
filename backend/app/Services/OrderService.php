@@ -41,11 +41,24 @@ class OrderService
         $order['items'] = $this->repo->items($id);
         $order['status_history'] = $this->repo->statusHistory($id);
         $order['internal_notes'] = $this->notes->forEntity('order', $id);
+        $order['shipping_snapshot'] = $this->decodeShippingSnapshot($order['shipping_snapshot'] ?? null);
         return $order;
     }
 
-    public function updateStatus(int $id, string $newStatus, ?string $note, ?string $cancellationReason, int $adminId): array
-    {
+    /**
+     * Ships/cancels/otherwise transitions an order. There's no live courier API yet, so
+     * "shipping" is a manual admin action: picking a carrier and typing in the tracking
+     * number/label reference. That's required the moment $newStatus is 'shipped'.
+     */
+    public function updateStatus(
+        int $id,
+        string $newStatus,
+        ?string $note,
+        ?string $cancellationReason,
+        int $adminId,
+        ?string $carrier = null,
+        ?string $trackingNumber = null
+    ): array {
         $order = $this->repo->find($id);
         if (!$order) {
             throw new DomainException('Order not found', 404);
@@ -59,16 +72,35 @@ class OrderService
             throw new DomainException("Order is already {$order['status']} and cannot be changed further", 409);
         }
 
+        $data = ['status' => $newStatus];
+
         if ($newStatus === 'cancelled') {
             $reason = trim((string)($cancellationReason ?? ''));
             if ($reason === '') {
                 throw new DomainException('A cancellation reason is required', 422);
             }
-            $this->repo->update($id, ['status' => $newStatus, 'cancellation_reason' => $reason]);
-        } else {
-            $this->repo->update($id, ['status' => $newStatus]);
+            $data['cancellation_reason'] = $reason;
         }
 
+        if ($newStatus === 'shipped') {
+            $carrier = trim((string)($carrier ?? ''));
+            $trackingNumber = trim((string)($trackingNumber ?? ''));
+            if ($carrier === '' || $trackingNumber === '') {
+                throw new DomainException('A carrier and tracking number are required to mark an order as shipped', 422);
+            }
+            $data['carrier'] = $carrier;
+            $data['tracking_number'] = $trackingNumber;
+            if (!$order['shipped_at']) {
+                $data['shipped_at'] = date('Y-m-d H:i:s');
+            }
+            $note = trim(($note ? $note . ' — ' : '') . "Shipped via {$carrier}, tracking #{$trackingNumber}.");
+        }
+
+        if ($newStatus === 'delivered' && !$order['delivered_at']) {
+            $data['delivered_at'] = date('Y-m-d H:i:s');
+        }
+
+        $this->repo->update($id, $data);
         $this->repo->addStatusHistory($id, $newStatus, $note, $adminId);
 
         return $this->find($id);
@@ -105,5 +137,14 @@ class OrderService
         }
         $this->notes->create('order', $id, $adminId, $note);
         return $this->find($id);
+    }
+
+    private function decodeShippingSnapshot(?string $json): ?array
+    {
+        if (!$json) {
+            return null;
+        }
+        $decoded = json_decode($json, true);
+        return is_array($decoded) ? $decoded : null;
     }
 }

@@ -161,6 +161,8 @@ export interface Order {
    *  Mock-only field; the documented schema's payment_status enum has no equivalent state yet. */
   refund_requested_at: string | null;
   items: OrderItem[];
+  /** Only present on the admin order list endpoint (a cheap SUM, not the full item rows). */
+  items_count?: number;
   subtotal: number;
   vat_rate: number;
   vat_amount: number;
@@ -168,13 +170,25 @@ export interface Order {
   discount_amount: number;
   total: number;
   payment_reference: string;
+  /** Snapshotted at checkout — matches AddressService::shape(), not the raw customer_addresses row. */
   shipping_snapshot: {
+    label?: string;
+    name?: string;
+    phone?: string;
     emirate: string;
     city: string;
     area: string;
-    address_line: string;
-  };
-  status_history: { status: OrderStatus; changed_at: string; changed_by: string | null }[];
+    street?: string;
+    building?: string;
+    apartment?: string | null;
+    instructions?: string | null;
+  } | null;
+  /** Carrier/tracking are set manually by an admin when marking an order shipped — no live courier API yet. */
+  carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  status_history: { status: OrderStatus; note?: string | null; created_at: string; changed_by_name?: string | null }[];
   /** Mock-only structured notes; the documented schema has a plain `notes` text column. */
   internal_notes: OrderNote[];
   cancellation_reason: string | null;
@@ -692,15 +706,21 @@ export const orders: Order[] = (() => {
       total,
       payment_reference: `pi_mock_${Math.abs(Math.floor(rng() * 1e10))}`,
       shipping_snapshot: {
+        name: customer.name,
         emirate,
         city: customer.city,
         area: pick(CITY_BY_EMIRATE[emirate]),
-        address_line: `Villa ${int(1, 99)}, Street ${int(1, 40)}`,
+        street: `Street ${int(1, 40)}`,
+        building: `Villa ${int(1, 99)}`,
       },
+      carrier: status === "shipped" || status === "delivered" ? "Aramex" : null,
+      tracking_number: status === "shipped" || status === "delivered" ? `${int(100000000, 999999999)}` : null,
+      shipped_at: status === "shipped" || status === "delivered" ? daysAgo(Math.max(created - 1, 0)) : null,
+      delivered_at: status === "delivered" ? daysAgo(Math.max(created - 2, 0)) : null,
       status_history: [
-        { status: "pending", changed_at: daysAgo(created), changed_by: null },
+        { status: "pending", created_at: daysAgo(created), changed_by_name: null },
         ...(status !== "pending"
-          ? [{ status, changed_at: daysAgo(Math.max(created - 1, 0)), changed_by: "Admin" }]
+          ? [{ status, created_at: daysAgo(Math.max(created - 1, 0)), changed_by_name: "Admin" }]
           : []),
       ],
       internal_notes: [],
@@ -801,12 +821,18 @@ for (const seed of recentOrderSeeds) {
     total,
     payment_reference: `pi_mock_${Math.abs(Math.floor(rng() * 1e10))}`,
     shipping_snapshot: {
+      name: seed.customer.name,
       emirate: seed.customer.emirate,
       city: seed.customer.city,
       area: pick(CITY_BY_EMIRATE[seed.customer.emirate]),
-      address_line: `Villa ${int(1, 99)}, Street ${int(1, 40)}`,
+      street: `Street ${int(1, 40)}`,
+      building: `Villa ${int(1, 99)}`,
     },
-    status_history: [{ status: "pending", changed_at: seed.created_at, changed_by: null }],
+    carrier: null,
+    tracking_number: null,
+    shipped_at: null,
+    delivered_at: null,
+    status_history: [{ status: "pending", created_at: seed.created_at, changed_by_name: null }],
     internal_notes: [],
     cancellation_reason: null,
     created_at: seed.created_at,

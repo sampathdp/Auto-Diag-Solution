@@ -37,7 +37,7 @@ const columns: ColumnDef<Order, any>[] = [
     id: "items_count",
     header: "Items",
     enableSorting: false,
-    cell: ({ row }) => row.original.items.reduce((sum, it) => sum + it.quantity, 0),
+    cell: ({ row }) => row.original.items_count ?? row.original.items?.reduce((sum, it) => sum + it.quantity, 0) ?? 0,
   },
   { accessorKey: "total", header: "Total", cell: ({ row }) => formatAED(row.original.total) },
   {

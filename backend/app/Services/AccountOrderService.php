@@ -167,6 +167,10 @@ class AccountOrderService
             'shipping_amount' => (float)$order['shipping_amount'],
             'discount_amount' => (float)$order['discount_amount'],
             'cancellation_reason' => $order['cancellation_reason'] ?? null,
+            'carrier' => $order['carrier'] ?? null,
+            'tracking_number' => $order['tracking_number'] ?? null,
+            'shipped_at' => $order['shipped_at'] ?? null,
+            'delivered_at' => $order['delivered_at'] ?? null,
             'items' => array_map(function (array $item) use ($imagesByProduct) {
                 $productId = $item['product_id'] !== null ? (int)$item['product_id'] : null;
                 return [

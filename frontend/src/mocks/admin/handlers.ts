@@ -527,10 +527,16 @@ export const handlers = [
     if (!authenticate(request)) return fail("Unauthenticated", 401);
     const order = orders.find((o) => o.id === Number(params.id));
     if (!order) return fail("Order not found", 404);
-    const body = (await request.json()) as { status: OrderStatus; reason?: string };
+    const body = (await request.json()) as { status: OrderStatus; reason?: string; carrier?: string; tracking_number?: string };
     order.status = body.status;
-    order.status_history.push({ status: body.status, changed_at: new Date().toISOString(), changed_by: "Admin" });
+    order.status_history.push({ status: body.status, created_at: new Date().toISOString(), changed_by_name: "Admin" });
     if (body.status === "cancelled" && body.reason) order.cancellation_reason = body.reason;
+    if (body.status === "shipped") {
+      order.carrier = body.carrier ?? "Aramex";
+      order.tracking_number = body.tracking_number ?? null;
+      order.shipped_at = new Date().toISOString();
+    }
+    if (body.status === "delivered") order.delivered_at = new Date().toISOString();
     return ok(order as Order, "Order status updated");
   }),
 

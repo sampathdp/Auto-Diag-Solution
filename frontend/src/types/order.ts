@@ -36,6 +36,10 @@ export interface Order {
   shipping_amount: number;
   discount_amount: number;
   cancellation_reason: string | null;
+  carrier: string | null;
+  tracking_number: string | null;
+  shipped_at: string | null;
+  delivered_at: string | null;
   items: OrderItem[];
   shipping_address: OrderShippingAddress | null;
 }

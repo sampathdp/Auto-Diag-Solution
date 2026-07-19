@@ -4,12 +4,13 @@ import { formatDateTime } from "@/lib/admin/utils";
 
 export interface TimelineEntry {
   status: string;
-  changed_at: string;
-  changed_by: string | null;
+  note?: string | null;
+  created_at: string;
+  changed_by_name?: string | null;
 }
 
 export function StatusTimeline({ history }: { history: TimelineEntry[] }) {
-  const sorted = [...history].sort((a, b) => b.changed_at.localeCompare(a.changed_at));
+  const sorted = [...history].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
     <Card>
@@ -26,8 +27,9 @@ export function StatusTimeline({ history }: { history: TimelineEntry[] }) {
               </div>
               <div className="pb-1">
                 <StatusBadge status={entry.status} />
-                <p className="mt-1 text-caption text-ink-muted">{formatDateTime(entry.changed_at)}</p>
-                <p className="text-caption text-ink-muted">{entry.changed_by ?? "System"}</p>
+                <p className="mt-1 text-caption text-ink-muted">{formatDateTime(entry.created_at)}</p>
+                <p className="text-caption text-ink-muted">{entry.changed_by_name ?? "System"}</p>
+                {entry.note && <p className="mt-1 text-caption text-ink">{entry.note}</p>}
               </div>
             </li>
           ))}

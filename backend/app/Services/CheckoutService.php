@@ -9,6 +9,7 @@ use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
 use App\Repositories\PaymentTransactionRepository;
 use App\Repositories\ProductRepository;
+use App\Services\Fulfillment\FulfillmentService;
 
 /**
  * Places a real order from the cart, but with a stubbed-out payment step: the client's
@@ -28,6 +29,7 @@ class CheckoutService
     private OrderRepository $orders;
     private PaymentTransactionRepository $paymentTransactions;
     private AccountOrderService $accountOrders;
+    private FulfillmentService $fulfillment;
 
     public function __construct()
     {
@@ -36,6 +38,7 @@ class CheckoutService
         $this->orders = new OrderRepository();
         $this->paymentTransactions = new PaymentTransactionRepository();
         $this->accountOrders = new AccountOrderService();
+        $this->fulfillment = new FulfillmentService();
     }
 
     public function placeOrder(int $userId, int $shippingAddressId, array $items): array
@@ -120,6 +123,12 @@ class CheckoutService
             DatabaseManager::rollBack();
             throw $e;
         }
+
+        // Outside the transaction and after commit — an external HTTP call has no
+        // business holding DB locks, and a Fulfillor outage must never roll back an
+        // order the customer has already been told succeeded. Best-effort by design:
+        // failures are recorded on the order, never thrown back to the customer.
+        $this->fulfillment->pushOrder($orderId);
 
         return $this->accountOrders->show($userId, $orderId);
     }

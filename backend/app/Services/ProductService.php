@@ -408,7 +408,7 @@ class ProductService
             }
         }
 
-        foreach (['oem_part_number', 'material', 'country_of_origin'] as $field) {
+        foreach (['oem_part_number', 'material', 'country_of_origin', 'fulfillor_product_id'] as $field) {
             if (array_key_exists($field, $input)) {
                 $trimmed = trim((string)($input[$field] ?? ''));
                 $data[$field] = $trimmed !== '' ? $trimmed : null;

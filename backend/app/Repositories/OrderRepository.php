@@ -23,7 +23,8 @@ class OrderRepository extends BaseRepository
         $sortDir = strtoupper($sortDir) === 'DESC' ? 'DESC' : 'ASC';
         $offset = ($page - 1) * $perPage;
 
-        $sql = "SELECT o.*, u.name AS customer_name, u.email AS customer_email
+        $sql = "SELECT o.*, u.name AS customer_name, u.email AS customer_email,
+                       (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
                 FROM orders o
                 LEFT JOIN users u ON u.id = o.user_id
                 {$whereSql}

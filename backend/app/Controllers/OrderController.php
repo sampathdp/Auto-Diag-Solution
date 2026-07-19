@@ -59,7 +59,9 @@ class OrderController extends BaseController
             (string)$request->input('status'),
             $request->input('note'),
             $request->input('cancellation_reason'),
-            (int)$request->user->id
+            (int)$request->user->id,
+            $request->input('carrier'),
+            $request->input('tracking_number')
         );
         $this->success($order, 'Order status updated successfully');
     }

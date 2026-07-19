@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Printer, User as UserIcon, MapPin, CreditCard, ExternalLink, PackageX } from "lucide-react";
+import { Printer, User as UserIcon, MapPin, CreditCard, ExternalLink, PackageX, Truck } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { FullScreenLoader } from "@/components/admin/ui/FullScreenLoader";
 import { EmptyState } from "@/components/admin/ui/EmptyState";
@@ -20,6 +20,7 @@ import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { StatusTimeline } from "@/components/admin/StatusTimeline";
 import { NotesPanel } from "@/components/admin/NotesPanel";
 import { CancelOrderModal } from "@/components/admin/orders/CancelOrderModal";
+import { ShipOrderModal } from "@/components/admin/orders/ShipOrderModal";
 import { showSuccess } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminApi } from "@/lib/admin/api-client";
@@ -39,6 +40,7 @@ export default function AdminOrderDetailPage() {
 
   const [sendUpdate, setSendUpdate] = useState(true);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [shipOpen, setShipOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
 
   const orderQuery = useAdminQuery<Order>(adminQueryKeys.orders.detail(id), `/orders/${id}`);
@@ -71,12 +73,14 @@ export default function AdminOrderDetailPage() {
   };
 
   const updateStatus = useMutation({
-    mutationFn: (payload: { status: OrderStatus; reason?: string }) => adminApi.patch(`/orders/${id}/status`, payload),
+    mutationFn: (payload: { status: OrderStatus; reason?: string; carrier?: string; tracking_number?: string }) =>
+      adminApi.patch(`/orders/${id}/status`, payload),
     onSuccess: () => {
       showSuccess("Order status updated");
       if (sendUpdate) showSuccess("Customer notified by email");
       invalidate();
       setCancelOpen(false);
+      setShipOpen(false);
     },
   });
 
@@ -154,6 +158,7 @@ export default function AdminOrderDetailPage() {
             onChange={(e) => {
               const next = e.target.value as OrderStatus;
               if (next === "cancelled") setCancelOpen(true);
+              else if (next === "shipped") setShipOpen(true);
               else updateStatus.mutate({ status: next });
             }}
             className="w-44"
@@ -256,18 +261,61 @@ export default function AdminOrderDetailPage() {
               <h2 className="text-h4 font-bold text-ink">Delivery Address</h2>
             </CardHeader>
             <CardBody>
-              <p className="flex items-start gap-2 text-body text-ink">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
-                <span>
-                  {order.shipping_snapshot.address_line}
-                  <br />
-                  {order.shipping_snapshot.area}, {order.shipping_snapshot.city}
-                  <br />
-                  {order.shipping_snapshot.emirate}, UAE
-                </span>
-              </p>
+              {order.shipping_snapshot ? (
+                <p className="flex items-start gap-2 text-body text-ink">
+                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
+                  <span>
+                    {order.shipping_snapshot.name}
+                    <br />
+                    {order.shipping_snapshot.building}
+                    {order.shipping_snapshot.apartment ? `, ${order.shipping_snapshot.apartment}` : ""}
+                    {order.shipping_snapshot.street ? `, ${order.shipping_snapshot.street}` : ""}
+                    <br />
+                    {order.shipping_snapshot.area}, {order.shipping_snapshot.city}
+                    <br />
+                    {order.shipping_snapshot.emirate}, UAE
+                    {order.shipping_snapshot.phone && (
+                      <>
+                        <br />
+                        {order.shipping_snapshot.phone}
+                      </>
+                    )}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-body text-ink-muted">No address on file.</p>
+              )}
             </CardBody>
           </Card>
+
+          {order.carrier && (
+            <Card>
+              <CardHeader>
+                <h2 className="text-h4 font-bold text-ink">Shipping</h2>
+              </CardHeader>
+              <CardBody className="space-y-1.5">
+                <p className="flex items-center gap-2 text-body text-ink">
+                  <Truck className="h-3.5 w-3.5 text-ink-muted" />
+                  {order.carrier}
+                </p>
+                <p className="font-mono text-caption text-ink-muted">{order.tracking_number}</p>
+                {order.shipped_at && (
+                  <p className="text-caption text-ink-muted">Shipped {formatDateTime(order.shipped_at)}</p>
+                )}
+                {order.carrier === "Aramex" && order.tracking_number && (
+                  <a
+                    href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+                  >
+                    Track on Aramex
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </CardBody>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -293,6 +341,15 @@ export default function AdminOrderDetailPage() {
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
         onConfirm={(reason) => updateStatus.mutate({ status: "cancelled", reason })}
+        loading={updateStatus.isPending}
+      />
+
+      <ShipOrderModal
+        open={shipOpen}
+        onClose={() => setShipOpen(false)}
+        onConfirm={({ carrier, trackingNumber }) =>
+          updateStatus.mutate({ status: "shipped", carrier, tracking_number: trackingNumber })
+        }
         loading={updateStatus.isPending}
       />
 
