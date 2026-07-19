@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import apiClient from "@/lib/api/client";
+import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
 
 interface ReorderModalProps {
@@ -13,11 +14,18 @@ interface ReorderModalProps {
   orderId: number;
 }
 
+interface ReorderableItem {
+  product_id: number;
+  quantity: number;
+}
+
 export function ReorderModal({ isOpen, onClose, orderId }: ReorderModalProps) {
+  const addToCart = useCartStore(state => state.addItem);
   const [loading, setLoading] = useState(false);
   const [state, setState] = useState<"confirm" | "warning" | "success">("confirm");
   const [outOfStockItems, setOutOfStockItems] = useState<string[]>([]);
   const [addedCount, setAddedCount] = useState(0);
+  const [pendingItems, setPendingItems] = useState<ReorderableItem[]>([]);
   const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const partialTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -32,12 +40,15 @@ export function ReorderModal({ isOpen, onClose, orderId }: ReorderModalProps) {
     setLoading(true);
     try {
       const res = await apiClient.post(`/account/orders/${orderId}/reorder`);
-      if (res.data?.out_of_stock?.length > 0) {
-        setOutOfStockItems(res.data.out_of_stock);
-        setAddedCount(res.data.cart_items);
+      const data = res.data.data;
+      if (data?.out_of_stock?.length > 0) {
+        setOutOfStockItems(data.out_of_stock);
+        setAddedCount(data.cart_items);
+        setPendingItems(data.added || []);
         setState("warning");
       } else {
-        setAddedCount(res.data?.cart_items || 0);
+        (data?.added || []).forEach((item: ReorderableItem) => addToCart(String(item.product_id), item.quantity));
+        setAddedCount(data?.cart_items || 0);
         handleSuccess();
       }
     } catch (err) {
@@ -58,7 +69,7 @@ export function ReorderModal({ isOpen, onClose, orderId }: ReorderModalProps) {
 
   const handleProceedPartial = () => {
     setLoading(true);
-    // In a real app, another API call might happen here to confirm partial add
+    pendingItems.forEach((item) => addToCart(String(item.product_id), item.quantity));
     partialTimeoutRef.current = setTimeout(() => {
       setLoading(false);
       handleSuccess();

@@ -5,7 +5,7 @@ import { SideDrawer } from "@/components/account/SideDrawer";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Order } from "@/mocks/storefront/db";
+import type { Order } from "@/types/order";
 import { Button } from "@/components/ui/Button";
 import { Loader2, UploadCloud, X } from "lucide-react";
 import toast from "react-hot-toast";
@@ -93,7 +93,7 @@ export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawer
                   {...register("items")}
                   className="mt-1 h-4 w-4 rounded border-input text-primary focus:ring-primary"
                 />
-                <img src={item.image} alt="" className="h-10 w-10 object-contain bg-white rounded border p-1" />
+                <img src={item.image ?? undefined} alt="" className="h-10 w-10 object-contain bg-white rounded border p-1" />
                 <div className="flex-1">
                   <p className="text-sm font-medium line-clamp-1">{item.name_en}</p>
                   <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>

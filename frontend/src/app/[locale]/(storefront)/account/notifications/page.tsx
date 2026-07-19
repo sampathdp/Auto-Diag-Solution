@@ -34,14 +34,14 @@ export default function NotificationsPage() {
   useEffect(() => {
     apiClient.get('/account/notifications/preferences')
       .then(res => {
-        // Ensure defaults if mock API doesn't have all fields
+        const data = res.data.data ?? {};
         const loadedPrefs = {
-          email_orders: res.data.email_orders ?? true,
-          email_promotions: res.data.email_promotions ?? false,
-          sms_orders: res.data.sms_orders ?? true,
-          sms_promotions: res.data.sms_promotions ?? false,
-          whatsapp_updates: res.data.whatsapp_updates ?? false,
-          push_notifications: res.data.push_notifications ?? false,
+          email_orders: data.email_orders ?? true,
+          email_promotions: data.email_promotions ?? false,
+          sms_orders: data.sms_orders ?? true,
+          sms_promotions: data.sms_promotions ?? false,
+          whatsapp_updates: data.whatsapp_updates ?? false,
+          push_notifications: data.push_notifications ?? false,
         };
         setPrefs(loadedPrefs);
         setOriginalPrefs(loadedPrefs);

@@ -64,6 +64,12 @@ class Router
     public function resolve(Request $request): void
     {
         $method = $request->getMethod();
+        // This router has no dedicated PATCH bucket — routes are only ever registered
+        // via put(), so treat PATCH as PUT rather than 404ing every partial-update
+        // request the frontend sends with axios's .patch().
+        if ($method === 'PATCH') {
+            $method = 'PUT';
+        }
         $path = $request->getUri();
         $route = null;
         $params = [];

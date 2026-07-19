@@ -1,7 +1,8 @@
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+export type OrderStatus = "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
 
 const ORDER_STATUS_CLASSNAMES: Record<OrderStatus, string> = {
   pending: "bg-warning/10 text-warning-foreground border-warning/20",
+  paid: "bg-warning/10 text-warning-foreground border-warning/20",
   processing: "bg-warning/10 text-warning-foreground border-warning/20",
   shipped: "bg-info/10 text-info border-info/20",
   delivered: "bg-success/10 text-success border-success/20",

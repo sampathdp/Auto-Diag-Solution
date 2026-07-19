@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale } from "next-intl";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Loader2 } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
-import { mockProducts } from "@/mocks/storefront/data";
+import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { Button } from "@/components/ui/Button";
-import toast from "react-hot-toast";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const SHIPPING_FEE = 20;
 
 export default function CartPage() {
   const locale = useLocale();
+  const router = useRouter();
   const { items, updateQuantity, removeItem, clearCart } = useCartStore();
   const [mounted, setMounted] = useState(false);
 
@@ -22,8 +22,11 @@ export default function CartPage() {
     setMounted(true);
   }, []);
 
+  const productIds = items.map((item) => item.productId);
+  const { data: products, isLoading } = useProductsByIds(productIds);
+
   const lines = items
-    .map((item) => ({ ...item, product: mockProducts.find((p) => p.id === item.productId) }))
+    .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
     .filter((line) => line.product);
 
   const totalItems = lines.reduce((sum, l) => sum + l.quantity, 0);
@@ -33,7 +36,7 @@ export default function CartPage() {
   const total = subtotal + shipping + vat;
 
   const handleCheckout = () => {
-    toast("Checkout isn't connected yet — coming soon.");
+    router.push("/checkout");
   };
 
   if (!mounted) return null;
@@ -45,7 +48,11 @@ export default function CartPage() {
         subtitle="Review your items before checkout."
       />
 
-      {lines.length === 0 ? (
+      {items.length > 0 && isLoading ? (
+        <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl bg-card p-8 text-center shadow-soft">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : lines.length === 0 ? (
         <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl bg-card p-8 text-center shadow-soft">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary text-muted-foreground">
             <ShoppingBag className="h-8 w-8" />
@@ -77,7 +84,7 @@ export default function CartPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {p.brand}
+                          {p.brand ? (locale === "ar" ? p.brand.name_ar : p.brand.name_en) : ""}
                         </div>
                         <Link
                           href={`/shop/product/${p.id}` as any}

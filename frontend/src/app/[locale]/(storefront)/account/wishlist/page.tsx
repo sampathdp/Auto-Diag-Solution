@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useWishlistStore } from "@/store/useWishlistStore";
+import { useCartStore } from "@/store/useCartStore";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { ProductCardSkeleton } from "@/components/shop/ProductCardSkeleton";
@@ -15,6 +16,7 @@ import toast from "react-hot-toast";
 
 export default function WishlistPage() {
   const { items, clearWishlist } = useWishlistStore();
+  const addToCart = useCartStore(state => state.addItem);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [clearOpen, setClearOpen] = useState(false);
@@ -32,10 +34,9 @@ export default function WishlistPage() {
   const handleMoveAllToCart = async () => {
     setMovingToCart(true);
     try {
-      // In a real app, hit an endpoint to move all to cart.
-      await new Promise(r => setTimeout(r, 1000));
+      products.forEach((product) => addToCart(product.id));
+      await clearWishlist();
       toast.success("Items moved to cart");
-      clearWishlist();
     } catch (err) {
       toast.error("Failed to move items to cart");
     } finally {

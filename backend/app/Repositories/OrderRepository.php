@@ -40,6 +40,32 @@ class OrderRepository extends BaseRepository
         return (int) DatabaseManager::query($sql, $params)->fetch()['c'];
     }
 
+    public function countByUser(int $userId): int
+    {
+        return (int) DatabaseManager::query(
+            "SELECT COUNT(*) AS c FROM orders WHERE user_id = :user_id",
+            ['user_id' => $userId]
+        )->fetch()['c'];
+    }
+
+    /** Excludes cancelled orders — those were never actually fulfilled/paid for. */
+    public function sumTotalByUser(int $userId): float
+    {
+        return (float) DatabaseManager::query(
+            "SELECT COALESCE(SUM(total), 0) AS s FROM orders WHERE user_id = :user_id AND status != 'cancelled'",
+            ['user_id' => $userId]
+        )->fetch()['s'];
+    }
+
+    public function findForUser(int $id, int $userId): ?array
+    {
+        $row = DatabaseManager::query(
+            "SELECT * FROM orders WHERE id = :id AND user_id = :user_id",
+            ['id' => $id, 'user_id' => $userId]
+        )->fetch();
+        return $row ?: null;
+    }
+
     public function findWithCustomer(int $id): ?array
     {
         $row = DatabaseManager::query(
@@ -92,6 +118,10 @@ class OrderRepository extends BaseRepository
         if (array_key_exists('user_id', $filters)) {
             $conditions[] = 'o.user_id = :user_id';
             $params['user_id'] = $filters['user_id'];
+        }
+        if (array_key_exists('date_from', $filters)) {
+            $conditions[] = 'o.created_at >= :date_from';
+            $params['date_from'] = $filters['date_from'];
         }
 
         if ($search !== '') {

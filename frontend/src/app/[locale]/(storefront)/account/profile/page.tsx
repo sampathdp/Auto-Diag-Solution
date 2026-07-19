@@ -38,12 +38,20 @@ const passwordSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+interface AccountStats {
+  member_since: string;
+  total_orders: number;
+  total_spent: number;
+  tier: string;
+}
+
 export default function ProfilePage() {
   const { user, logout } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  
+  const [stats, setStats] = useState<AccountStats | null>(null);
+
   // Danger Zone
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
@@ -92,6 +100,7 @@ export default function ProfilePage() {
           marketingEmails: data.preferences?.marketing_emails || false,
           whatsappUpdates: data.preferences?.whatsapp_updates || false,
         });
+        setStats(data.stats || null);
       } catch (error) {
         toast.error("Failed to load profile");
       } finally {
@@ -104,7 +113,7 @@ export default function ProfilePage() {
   const onProfileSubmit = async (data: ProfileFormValues) => {
     setSavingProfile(true);
     try {
-      await apiClient.patch("/account/me", {
+      const res = await apiClient.patch("/account/me", {
         name: `${data.firstName} ${data.lastName}`,
         email: data.email,
         phone: data.phone,
@@ -115,6 +124,7 @@ export default function ProfilePage() {
           whatsapp_updates: data.whatsappUpdates,
         },
       });
+      setStats(res.data.data?.stats || null);
       profileForm.reset(data); // reset dirty state
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -403,20 +413,22 @@ export default function ProfilePage() {
             <div className="flex flex-col gap-4">
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-sm text-muted-foreground">Member Since</span>
-                <span className="text-sm font-medium">January 2024</span>
+                <span className="text-sm font-medium">
+                  {stats ? new Date(stats.member_since).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "—"}
+                </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-sm text-muted-foreground">Total Orders</span>
-                <span className="text-sm font-medium">12</span>
+                <span className="text-sm font-medium">{stats?.total_orders ?? 0}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b">
                 <span className="text-sm text-muted-foreground">Total Spent</span>
-                <span className="text-sm font-medium">AED 4,250.00</span>
+                <span className="text-sm font-medium">AED {(stats?.total_spent ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm text-muted-foreground">Status Tier</span>
                 <span className="inline-flex items-center rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-semibold text-warning-foreground">
-                  Gold Member
+                  {stats?.tier ?? "Member"}
                 </span>
               </div>
             </div>

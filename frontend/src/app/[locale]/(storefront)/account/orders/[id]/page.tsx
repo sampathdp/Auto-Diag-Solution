@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Order } from "@/mocks/storefront/db";
+import type { Order } from "@/types/order";
 import apiClient from "@/lib/api/client";
 import { OrderTimeline, OrderTimelineStep } from "@/components/account/OrderTimeline";
 import { RefundDrawer } from "@/components/account/RefundDrawer";
@@ -40,7 +40,7 @@ export default function OrderDetailPage() {
     setLoading(true);
     apiClient.get(`/account/orders/${id}`)
       .then(res => {
-        if (res.data) setOrder(res.data);
+        if (res.data.data) setOrder(res.data.data);
       })
       .catch(() => {
         toast.error("Order not found");
@@ -152,7 +152,7 @@ export default function OrderDetailPage() {
               {order.items.map((item) => (
                 <div key={item.sku} className="flex flex-col sm:flex-row gap-4 border-b pb-4 last:border-0 last:pb-0">
                   <div className="h-20 w-20 shrink-0 rounded-md border bg-white p-2">
-                    <img src={item.image} alt={item.name_en} className="h-full w-full object-contain" />
+                    <img src={item.image ?? undefined} alt={item.name_en} className="h-full w-full object-contain" />
                   </div>
                   <div className="flex-1 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div>
@@ -222,7 +222,7 @@ export default function OrderDetailPage() {
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h2 className="text-lg font-bold mb-3">Delivery Address</h2>
               <div className="text-sm space-y-1">
-                <p className="font-semibold">{order.shipping_address.name} ({order.shipping_address.type})</p>
+                <p className="font-semibold">{order.shipping_address.name} ({order.shipping_address.label})</p>
                 <p>{order.shipping_address.building}, {order.shipping_address.street}</p>
                 {order.shipping_address.apartment && <p>{order.shipping_address.apartment}</p>}
                 <p>{order.shipping_address.area}, {order.shipping_address.city}, {order.shipping_address.emirate}</p>

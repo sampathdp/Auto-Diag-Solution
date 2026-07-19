@@ -1,20 +1,22 @@
 "use client";
 
 import { useCompareStore } from "@/store/useCompareStore";
-import { mockProducts } from "@/mocks/storefront/data";
+import { useCartStore } from "@/store/useCartStore";
+import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { Link } from "@/i18n/navigation";
 import { useLocale } from "next-intl";
-import { CheckCircle2, AlertTriangle, X, ShoppingCart } from "lucide-react";
+import { CheckCircle2, AlertTriangle, X, ShoppingCart, Loader2 } from "lucide-react";
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useEffect, useState } from "react";
-import { Product } from "@/mocks/storefront/types";
 import toast from "react-hot-toast";
 
 export default function ComparePage() {
   const { items, removeItem, clearCompare } = useCompareStore();
+  const addToCart = useCartStore(state => state.addItem);
   const locale = useLocale();
   const [mounted, setMounted] = useState(false);
   const { fitsYear, fitsMake, fitsModel } = useShopFilters();
+  const { data: comparedProducts = [], isLoading } = useProductsByIds(items);
 
   useEffect(() => {
     setMounted(true);
@@ -22,7 +24,13 @@ export default function ComparePage() {
 
   if (!mounted) return null;
 
-  const comparedProducts = items.map(id => mockProducts.find(p => p.id === id)!).filter(Boolean);
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (comparedProducts.length === 0) {
     return (
@@ -39,14 +47,15 @@ export default function ComparePage() {
     );
   }
 
-  // Get all unique spec keys across all compared products
+  // Get all unique spec keys (by the English key, used as the stable identifier) across all compared products
   const allSpecKeys = Array.from(new Set(
-    comparedProducts.flatMap(p => p.specifications ? p.specifications.map(s => s.key) : [])
+    comparedProducts.flatMap(p => p.specifications ? p.specifications.map(s => s.key_en) : [])
   ));
 
   const hasVehicleContext = fitsYear || fitsMake || fitsModel;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (productId: string) => {
+    addToCart(productId);
     toast.success("Item added to cart");
   };
 
@@ -56,7 +65,7 @@ export default function ComparePage() {
         <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">
           Compare Products
         </h1>
-        <button 
+        <button
           onClick={clearCompare}
           className="text-sm font-bold text-muted-foreground hover:text-foreground"
         >
@@ -82,7 +91,7 @@ export default function ComparePage() {
                     <img src={product.images[0]} alt="" className="h-full w-full object-contain" />
                   </div>
                   <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {product.brand}
+                    {product.brand ? (locale === "ar" ? product.brand.name_ar : product.brand.name_en) : ""}
                   </div>
                   <Link href={`/shop/product/${product.id}` as any} className="mt-1 block text-base font-bold leading-tight hover:text-primary">
                     {locale === 'ar' ? product.name_ar : product.name_en}
@@ -90,13 +99,13 @@ export default function ComparePage() {
                   <div className="mt-3 text-lg font-extrabold">
                     AED {product.price_aed.toLocaleString()}
                   </div>
-                  <button 
-                    onClick={handleAddToCart}
-                    disabled={product.stock === 0}
+                  <button
+                    onClick={() => handleAddToCart(product.id)}
+                    disabled={product.stock_status === "out_of_stock"}
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2 text-sm font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
                     <ShoppingCart className="h-4 w-4" />
-                    {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                    {product.stock_status === "out_of_stock" ? "Out of Stock" : "Add to Cart"}
                   </button>
                 </td>
               ))}
@@ -107,8 +116,8 @@ export default function ComparePage() {
               <tr className="border-t">
                 <th className="p-4 font-bold text-muted-foreground bg-secondary/20">Fitment</th>
                 {comparedProducts.map(product => {
-                  const fits = product.compatible_vehicles.some(v => 
-                    (!fitsYear || v.year.toString() === fitsYear) &&
+                  const fits = product.fits_all_vehicles || product.compatible_vehicles.some(v =>
+                    (!fitsYear || (Number(fitsYear) >= v.year_from && Number(fitsYear) <= v.year_to)) &&
                     (!fitsMake || v.make.toLowerCase() === fitsMake.toLowerCase()) &&
                     (!fitsModel || v.model.toLowerCase() === fitsModel.toLowerCase())
                   );
@@ -132,15 +141,15 @@ export default function ComparePage() {
             )}
 
             {/* Specs */}
-            {allSpecKeys.map((key, i) => (
-              <tr key={key} className="border-t">
-                <th className="p-4 font-bold text-muted-foreground bg-secondary/10">{key}</th>
+            {allSpecKeys.map((keyEn) => (
+              <tr key={keyEn} className="border-t">
+                <th className="p-4 font-bold text-muted-foreground bg-secondary/10">{keyEn}</th>
                 {comparedProducts.map(product => {
-                  const spec = product.specifications?.find(s => s.key === key);
+                  const spec = product.specifications?.find(s => s.key_en === keyEn);
                   return (
                   <td key={product.id} className="p-4 border-l">
                     {spec ? (
-                      <span className="font-medium text-foreground">{spec.value}</span>
+                      <span className="font-medium text-foreground">{locale === "ar" ? spec.value_ar : spec.value_en}</span>
                     ) : (
                       <span className="text-muted-foreground/50">-</span>
                     )}

@@ -19,6 +19,13 @@ use App\Controllers\SupplierController;
 use App\Controllers\OrderController;
 use App\Controllers\ReviewController;
 use App\Controllers\DashboardController;
+use App\Controllers\AccountController;
+use App\Controllers\AccountAddressController;
+use App\Controllers\AccountVehicleController;
+use App\Controllers\AccountWishlistController;
+use App\Controllers\AccountOrderController;
+use App\Controllers\AccountNotificationController;
+use App\Controllers\CheckoutController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 
@@ -54,6 +61,51 @@ $router->get("$v1/auth/2fa/status", [App\Controllers\TwoFactorController::class,
 $router->post("$v1/auth/2fa/setup", [App\Controllers\TwoFactorController::class, 'setup'], [AuthMiddleware::class]);
 $router->post("$v1/auth/2fa/confirm", [App\Controllers\TwoFactorController::class, 'confirm'], [AuthMiddleware::class]);
 $router->post("$v1/auth/2fa/disable", [App\Controllers\TwoFactorController::class, 'disable'], [AuthMiddleware::class]);
+
+// --- Customer Account Routes ---
+// Any authenticated user (customers in practice) managing their own profile, addresses,
+// garage vehicles, wishlist, orders, and notification preferences.
+$router->group([
+    'prefix' => "$v1/account",
+    'middleware' => [AuthMiddleware::class],
+], function ($router) {
+    $router->get('/me', [AccountController::class, 'me']);
+    $router->put('/me', [AccountController::class, 'update']);
+    $router->post('/me/change-password', [AccountController::class, 'changePassword']);
+    $router->delete('/me', [AccountController::class, 'destroy']);
+
+    $router->get('/addresses', [AccountAddressController::class, 'index']);
+    $router->post('/addresses', [AccountAddressController::class, 'store']);
+    $router->put('/addresses/{id}', [AccountAddressController::class, 'update']);
+    $router->delete('/addresses/{id}', [AccountAddressController::class, 'destroy']);
+    $router->post('/addresses/{id}/default', [AccountAddressController::class, 'setDefault']);
+
+    $router->get('/vehicles', [AccountVehicleController::class, 'index']);
+    $router->post('/vehicles', [AccountVehicleController::class, 'store']);
+    $router->put('/vehicles/{id}', [AccountVehicleController::class, 'update']);
+    $router->delete('/vehicles/{id}', [AccountVehicleController::class, 'destroy']);
+    $router->post('/vehicles/{id}/default', [AccountVehicleController::class, 'setDefault']);
+
+    // /wishlist/clear is registered before /wishlist/{productId} so the router's
+    // first-match-wins resolution doesn't swallow "clear" as a product id.
+    $router->get('/wishlist', [AccountWishlistController::class, 'index']);
+    $router->delete('/wishlist/clear', [AccountWishlistController::class, 'clear']);
+    $router->post('/wishlist/{productId}', [AccountWishlistController::class, 'store']);
+    $router->delete('/wishlist/{productId}', [AccountWishlistController::class, 'destroy']);
+
+    $router->get('/orders', [AccountOrderController::class, 'index']);
+    $router->get('/orders/{id}', [AccountOrderController::class, 'show']);
+    $router->post('/orders/{id}/cancel', [AccountOrderController::class, 'cancel']);
+    $router->post('/orders/{id}/refund', [AccountOrderController::class, 'refund']);
+    $router->post('/orders/{id}/reorder', [AccountOrderController::class, 'reorder']);
+
+    $router->get('/notifications/preferences', [AccountNotificationController::class, 'show']);
+    $router->put('/notifications/preferences', [AccountNotificationController::class, 'update']);
+
+    // Mock checkout — creates a real order and auto-confirms payment via a 'mock'
+    // provider until the client's real payment gateway is integrated.
+    $router->post('/checkout', [CheckoutController::class, 'store']);
+});
 
 // --- Admin Routes ---
 // Every route registered inside this group requires a valid JWT AND the 'admin' role —

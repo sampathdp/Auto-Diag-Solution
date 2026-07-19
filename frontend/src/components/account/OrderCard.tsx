@@ -1,6 +1,6 @@
 "use client";
 
-import { Order } from "@/mocks/storefront/db";
+import type { Order } from "@/types/order";
 import { Link } from "@/i18n/navigation";
 import { useFormatter } from "next-intl";
 import { motion } from "framer-motion";
@@ -68,7 +68,7 @@ export function OrderCard({ order, onReorder, index = 0 }: OrderCardProps) {
                   className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-card bg-white shrink-0 shadow-sm"
                   style={{ zIndex: 3 - i }}
                 >
-                  <img src={item.image} alt="" className="h-full w-full object-contain p-1" />
+                  <img src={item.image ?? undefined} alt="" className="h-full w-full object-contain p-1" />
                 </div>
               ))}
               {order.items.length > 3 && (

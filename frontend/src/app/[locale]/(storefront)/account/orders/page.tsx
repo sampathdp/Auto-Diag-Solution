@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { OrderCard } from "@/components/account/OrderCard";
 import apiClient from "@/lib/api/client";
-import { Order } from "@/mocks/storefront/db";
+import type { Order } from "@/types/order";
 import { Search, Loader2, PackageX, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ReorderModal } from "@/components/account/ReorderModal";
 
 export default function OrdersPage() {
-  const t = useTranslations("account.orders");
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,9 +46,10 @@ export default function OrdersPage() {
 
     apiClient.get(`/account/orders?${params.toString()}`)
       .then(res => {
-        if (res.data) {
-          setOrders(res.data.items || []);
-          setTotalPages(res.data.meta?.total_pages || 1);
+        const data = res.data.data;
+        if (data) {
+          setOrders(data.items || []);
+          setTotalPages(data.meta?.total_pages || 1);
         }
       })
       .catch(console.error)

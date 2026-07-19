@@ -146,7 +146,7 @@ export default function AddressesPage() {
               
               <div className="mb-2 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold">{address.name} <span className="text-muted-foreground font-normal text-sm capitalize">({address.type})</span></h3>
+                <h3 className="font-semibold">{address.name} <span className="text-muted-foreground font-normal text-sm">({address.label})</span></h3>
               </div>
               
               <div className="mb-4 flex flex-col gap-1 text-sm text-muted-foreground">
