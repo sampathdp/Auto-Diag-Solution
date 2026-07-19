@@ -17,7 +17,8 @@ interface OrderCardProps {
 
 export function OrderCard({ order, onReorder, index = 0 }: OrderCardProps) {
   const format = useFormatter();
-  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const items = order.items ?? [];
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,8 +63,8 @@ export function OrderCard({ order, onReorder, index = 0 }: OrderCardProps) {
           {/* Middle: Images & Products */}
           <div className="flex-[1.5] flex items-center gap-4">
             <div className="flex -space-x-3">
-              {order.items.slice(0, 3).map((item, i) => (
-                <div 
+              {items.slice(0, 3).map((item, i) => (
+                <div
                   key={i}
                   className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-card bg-white shrink-0 shadow-sm"
                   style={{ zIndex: 3 - i }}
@@ -71,16 +72,18 @@ export function OrderCard({ order, onReorder, index = 0 }: OrderCardProps) {
                   <img src={item.image ?? undefined} alt="" className="h-full w-full object-contain p-1" />
                 </div>
               ))}
-              {order.items.length > 3 && (
+              {items.length > 3 && (
                 <div className="relative z-0 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-card bg-muted text-xs font-bold shadow-sm">
-                  +{order.items.length - 3}
+                  +{items.length - 3}
                 </div>
               )}
             </div>
             <div className="hidden sm:block">
-              <p className="line-clamp-1 text-sm font-medium">
-                {order.items[0].name_en} {order.items.length > 1 && <span className="text-muted-foreground font-normal">+{order.items.length - 1} more</span>}
-              </p>
+              {items[0] && (
+                <p className="line-clamp-1 text-sm font-medium">
+                  {items[0].name_en} {items.length > 1 && <span className="text-muted-foreground font-normal">+{items.length - 1} more</span>}
+                </p>
+              )}
             </div>
           </div>
 

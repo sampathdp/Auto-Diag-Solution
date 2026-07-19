@@ -19,5 +19,16 @@ export function GlobalStateInitializer() {
     }
   }, [isAuthenticated]);
 
+  // The storefront never uses MSW — but a browser that previously visited /admin
+  // (where MSW registers a site-root-scoped service worker) can be left with a
+  // stale worker that keeps intercepting real fetches here too, breaking API
+  // calls with no visible cause. Clear it out on every storefront page load.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    });
+  }, []);
+
   return null;
 }
