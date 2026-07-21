@@ -328,8 +328,15 @@ class ProductRepository extends BaseRepository
         }
 
         if ($search !== '') {
-            $conditions[] = 'MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search IN NATURAL LANGUAGE MODE)';
+            // Matches on name/description via fulltext, OR on a cross-reference number
+            // (e.g. an OEM/competitor part number printed on the old part) via LIKE —
+            // cross numbers are short codes that fulltext's stopword/min-length rules
+            // would otherwise swallow. The number itself is search-only and never shown
+            // back on the product (see ProductService::shapePublic).
+            $conditions[] = '(MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search IN NATURAL LANGUAGE MODE)
+                OR EXISTS (SELECT 1 FROM product_cross_references pcr WHERE pcr.product_id = p.id AND pcr.cross_number LIKE :cross_search))';
             $params['search'] = $search;
+            $params['cross_search'] = '%' . $search . '%';
         }
 
         return ['WHERE ' . implode(' AND ', $conditions), $params];
