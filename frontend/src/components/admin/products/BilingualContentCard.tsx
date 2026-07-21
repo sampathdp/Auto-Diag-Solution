@@ -21,6 +21,7 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
   } = form;
   const name = useTranslate();
   const shortDescription = useTranslate();
+  const description = useTranslate();
 
   const translateName = async () => {
     const translated = await name.translate(watch("name_en"));
@@ -30,6 +31,11 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
   const translateShortDescription = async () => {
     const translated = await shortDescription.translate(watch("short_description_en") ?? "");
     if (translated) setValue("short_description_ar", translated);
+  };
+
+  const translateDescription = async () => {
+    const translated = await description.translate(watch("description_en") ?? "");
+    if (translated) setValue("description_ar", translated);
   };
 
   return (
@@ -98,7 +104,16 @@ export function BilingualContentCard({ form }: { form: UseFormReturn<ProductForm
             >
               <Textarea id="short_description_ar" dir="rtl" rows={2} {...register("short_description_ar")} />
             </FormField>
-            <FormField label="الوصف الكامل">
+            <FormField
+              label={
+                <TranslateLabel
+                  label="الوصف الكامل"
+                  translating={description.translating}
+                  disabled={!watch("description_en")?.trim()}
+                  onTranslate={translateDescription}
+                />
+              }
+            >
               <Controller
                 name="description_ar"
                 control={control}

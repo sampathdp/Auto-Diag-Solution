@@ -334,7 +334,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                     AED {product.compare_at_price!.toLocaleString()}
                   </span>
                 )}
-                <span className="text-[10px] font-medium text-muted-foreground uppercase">VAT incl.</span>
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
               </div>
 
               {/* Row 6: Low-stock warning only — "in stock" is the assumed default, no need to announce it */}

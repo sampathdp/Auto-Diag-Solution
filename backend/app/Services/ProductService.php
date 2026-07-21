@@ -121,6 +121,7 @@ class ProductService
             'country_of_origin' => $row['country_of_origin'] ?? null,
             'price_aed' => (float)$row['price'],
             'compare_at_price' => $row['compare_at_price'] !== null ? (float)$row['compare_at_price'] : null,
+            'vat_inclusive' => (bool)$row['vat_inclusive'],
             'images' => $imageUrls,
             'stock' => (int)$row['stock_quantity'],
             'stock_status' => $row['stock_status'],

@@ -26,6 +26,7 @@ import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatAED, formatDateTime } from "@/lib/admin/utils";
+import { cn } from "@/lib/utils";
 import type { PaginatedResponse } from "@/types/api";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import type { Order, OrderItem, OrderStatus, Product } from "@/mocks/admin/db";
@@ -152,27 +153,33 @@ export default function AdminOrderDetailPage() {
 
       {/* Action bar */}
       <Card className="mb-6 print:hidden">
-        <CardBody className="flex flex-wrap items-center gap-4">
-          <Select
-            value={order.status}
-            onChange={(e) => {
-              const next = e.target.value as OrderStatus;
-              if (next === "cancelled") setCancelOpen(true);
-              else if (next === "shipped") setShipOpen(true);
-              else updateStatus.mutate({ status: next });
-            }}
-            className="w-44"
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s[0].toUpperCase() + s.slice(1)}
-              </option>
-            ))}
-          </Select>
+        <CardBody className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Status</label>
+            <Select
+              value={order.status}
+              onChange={(e) => {
+                const next = e.target.value as OrderStatus;
+                if (next === "cancelled") setCancelOpen(true);
+                else if (next === "shipped") setShipOpen(true);
+                else updateStatus.mutate({ status: next });
+              }}
+              className="w-44"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s[0].toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </Select>
+          </div>
 
-          <Switch label="Send update to customer" checked={sendUpdate} onChange={(e) => setSendUpdate(e.target.checked)} />
+          <div className="flex flex-col gap-1.5">
+            <span className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Notify</span>
+            <Switch label="Send update to customer" checked={sendUpdate} onChange={(e) => setSendUpdate(e.target.checked)} />
+          </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 self-stretch border-l border-border pl-6">
             <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={order.status === "cancelled"}>
               Cancel Order
             </Button>
@@ -187,8 +194,92 @@ export default function AdminOrderDetailPage() {
         </CardBody>
       </Card>
 
+      {/* Overview strip — Customer / Delivery / Payment side by side instead of stacked,
+          so this info sits above the fold instead of driving a long narrow sidebar. */}
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <Card>
+          <CardHeader className="py-3">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Customer</h2>
+          </CardHeader>
+          <CardBody className="space-y-1.5">
+            <p className="flex items-center gap-2 font-medium text-ink">
+              <UserIcon className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
+              {order.customer_name}
+            </p>
+            <p className="truncate text-body text-ink-muted">{order.customer_email}</p>
+            <Link
+              href={`/admin/customers/${order.customer_id}`}
+              className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+            >
+              View customer
+              <ExternalLink className="h-3 w-3" />
+            </Link>
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader className="py-3">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Delivery</h2>
+          </CardHeader>
+          <CardBody className={cn("space-y-1.5", order.carrier && "flex flex-col gap-3 space-y-0")}>
+            <div className="flex items-start gap-2 text-body text-ink">
+              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
+              {order.shipping_snapshot ? (
+                <span>
+                  {order.shipping_snapshot.name}
+                  <br />
+                  {order.shipping_snapshot.building}
+                  {order.shipping_snapshot.apartment ? `, ${order.shipping_snapshot.apartment}` : ""}
+                  {order.shipping_snapshot.street ? `, ${order.shipping_snapshot.street}` : ""}
+                  <br />
+                  {order.shipping_snapshot.area}, {order.shipping_snapshot.city}, {order.shipping_snapshot.emirate}
+                </span>
+              ) : (
+                <span className="text-ink-muted">No address on file.</span>
+              )}
+            </div>
+
+            {order.carrier && (
+              <div className="flex items-start gap-2 border-t border-border pt-3 text-body text-ink">
+                <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
+                <div className="space-y-1">
+                  <p className="font-medium">
+                    {order.carrier} <span className="font-mono font-normal text-ink-muted">· {order.tracking_number}</span>
+                  </p>
+                  {order.carrier === "Aramex" && order.tracking_number && (
+                    <a
+                      href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+                    >
+                      Track on Aramex
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader className="py-3">
+            <h2 className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Payment</h2>
+          </CardHeader>
+          <CardBody className="space-y-1.5">
+            <p className="flex items-center gap-2 text-body text-ink">
+              <CreditCard className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
+              <span className="truncate font-mono text-caption">{order.payment_reference}</span>
+            </p>
+            <p className="text-body text-ink-muted">Amount: {formatAED(order.total)}</p>
+            <StatusBadge status={order.refund_requested_at ? "refund_requested" : order.payment_status} />
+          </CardBody>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left column */}
+        {/* Main column */}
         <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
@@ -201,6 +292,11 @@ export default function AdminOrderDetailPage() {
             </CardBody>
           </Card>
 
+          <NotesPanel notes={order.internal_notes} onAdd={(text) => addNote.mutate(text)} adding={addNote.isPending} />
+        </div>
+
+        {/* Side column */}
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <h2 className="text-h4 font-bold text-ink">Order Totals</h2>
@@ -212,7 +308,7 @@ export default function AdminOrderDetailPage() {
                   <dd className="text-ink">{formatAED(order.subtotal)}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-ink-muted">VAT ({Math.round(order.vat_rate * 100)}%)</dt>
+                  <dt className="text-ink-muted">VAT ({Math.round(Number(order.vat_rate))}%)</dt>
                   <dd className="text-ink">{formatAED(order.vat_amount)}</dd>
                 </div>
                 <div className="flex justify-between">
@@ -232,108 +328,8 @@ export default function AdminOrderDetailPage() {
               </dl>
             </CardBody>
           </Card>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <h2 className="text-h4 font-bold text-ink">Customer</h2>
-            </CardHeader>
-            <CardBody className="space-y-1.5">
-              <p className="flex items-center gap-2 font-medium text-ink">
-                <UserIcon className="h-3.5 w-3.5 text-ink-muted" />
-                {order.customer_name}
-              </p>
-              <p className="text-body text-ink-muted">{order.customer_email}</p>
-              <Link
-                href={`/admin/customers/${order.customer_id}`}
-                className="mt-2 inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
-              >
-                View customer
-                <ExternalLink className="h-3 w-3" />
-              </Link>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <h2 className="text-h4 font-bold text-ink">Delivery Address</h2>
-            </CardHeader>
-            <CardBody>
-              {order.shipping_snapshot ? (
-                <p className="flex items-start gap-2 text-body text-ink">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-muted" />
-                  <span>
-                    {order.shipping_snapshot.name}
-                    <br />
-                    {order.shipping_snapshot.building}
-                    {order.shipping_snapshot.apartment ? `, ${order.shipping_snapshot.apartment}` : ""}
-                    {order.shipping_snapshot.street ? `, ${order.shipping_snapshot.street}` : ""}
-                    <br />
-                    {order.shipping_snapshot.area}, {order.shipping_snapshot.city}
-                    <br />
-                    {order.shipping_snapshot.emirate}, UAE
-                    {order.shipping_snapshot.phone && (
-                      <>
-                        <br />
-                        {order.shipping_snapshot.phone}
-                      </>
-                    )}
-                  </span>
-                </p>
-              ) : (
-                <p className="text-body text-ink-muted">No address on file.</p>
-              )}
-            </CardBody>
-          </Card>
-
-          {order.carrier && (
-            <Card>
-              <CardHeader>
-                <h2 className="text-h4 font-bold text-ink">Shipping</h2>
-              </CardHeader>
-              <CardBody className="space-y-1.5">
-                <p className="flex items-center gap-2 text-body text-ink">
-                  <Truck className="h-3.5 w-3.5 text-ink-muted" />
-                  {order.carrier}
-                </p>
-                <p className="font-mono text-caption text-ink-muted">{order.tracking_number}</p>
-                {order.shipped_at && (
-                  <p className="text-caption text-ink-muted">Shipped {formatDateTime(order.shipped_at)}</p>
-                )}
-                {order.carrier === "Aramex" && order.tracking_number && (
-                  <a
-                    href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
-                  >
-                    Track on Aramex
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </CardBody>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <h2 className="text-h4 font-bold text-ink">Payment</h2>
-            </CardHeader>
-            <CardBody className="space-y-1.5">
-              <p className="flex items-center gap-2 text-body text-ink">
-                <CreditCard className="h-3.5 w-3.5 text-ink-muted" />
-                <span className="font-mono text-caption">{order.payment_reference}</span>
-              </p>
-              <p className="text-body text-ink-muted">Amount: {formatAED(order.total)}</p>
-              <StatusBadge status={order.refund_requested_at ? "refund_requested" : order.payment_status} />
-            </CardBody>
-          </Card>
 
           <StatusTimeline history={order.status_history} />
-
-          <NotesPanel notes={order.internal_notes} onAdd={(text) => addNote.mutate(text)} adding={addNote.isPending} />
         </div>
       </div>
 

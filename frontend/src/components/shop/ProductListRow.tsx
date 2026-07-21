@@ -233,7 +233,7 @@ export function ProductListRow({ product }: { product: Product }) {
                         AED {product.compare_at_price!.toLocaleString()}
                       </span>
                     )}
-                    <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1">VAT incl.</span>
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
                   </div>
 
                   {(isOutOfStock || product.stock <= 10) && (

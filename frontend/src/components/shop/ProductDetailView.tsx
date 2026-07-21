@@ -109,14 +109,17 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const specRows = [
     ...(product.brand ? [{ label: t("specBrand"), value: locale === "ar" ? product.brand.name_ar : product.brand.name_en }] : []),
     { label: t("specSku"), value: product.sku },
-    ...(product.specifications || []).map((s) => ({
-      label: locale === "ar" ? s.key_ar : s.key_en,
-      value: locale === "ar" ? s.value_ar : s.value_en,
-    })),
     {
       label: t("specCompatibility"),
       value: product.fits_all_vehicles ? t("universalFit") : t("seeFitment", { count: product.compatible_vehicles.length }),
     },
+    ...(product.oem_part_number ? [{ label: t("specOemPartNumber"), value: product.oem_part_number }] : []),
+    ...(product.material ? [{ label: t("specMaterial"), value: product.material }] : []),
+    ...(product.country_of_origin ? [{ label: t("specCountryOrigin"), value: product.country_of_origin }] : []),
+    ...(product.specifications || []).map((s) => ({
+      label: locale === "ar" ? s.key_ar : s.key_en,
+      value: locale === "ar" ? s.value_ar : s.value_en,
+    })),
   ];
 
   const specTableRows = [
@@ -286,7 +289,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                   AED {product.compare_at_price!.toLocaleString()}
                 </span>
               )}
-              <span className="text-xs font-medium text-muted-foreground uppercase">VAT incl.</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
             </div>
 
             {!isOutOfStock && product.stock <= 10 && (
