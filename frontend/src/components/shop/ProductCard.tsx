@@ -328,7 +328,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               {!isOutOfStock && context !== "wishlist" && (
                 <button
                   onClick={handleBuyNow}
-                  className="flex-1 border-l border-background/20 bg-foreground py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:text-[13px]"
+                  className="flex-1 border-l border-navy-foreground/20 bg-navy py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-navy-foreground transition-colors hover:bg-navy/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-foreground focus-visible:ring-inset sm:text-[13px]"
                 >
                   Buy Now
                 </button>

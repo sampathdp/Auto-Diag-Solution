@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Printer, User as UserIcon, MapPin, CreditCard, ExternalLink, PackageX, Truck } from "lucide-react";
+import { Printer, User as UserIcon, MapPin, CreditCard, ExternalLink, PackageX, Truck, RefreshCw, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { FullScreenLoader } from "@/components/admin/ui/FullScreenLoader";
 import { EmptyState } from "@/components/admin/ui/EmptyState";
@@ -126,6 +126,14 @@ export default function AdminOrderDetailPage() {
       showSuccess("Order approved and sent to the 3PL");
       invalidate();
       setApproveOpen(false);
+    },
+  });
+
+  const syncFulfillment = useMutation({
+    mutationFn: () => adminApi.post(`/orders/${id}/sync-fulfillment`),
+    onSuccess: () => {
+      showSuccess("Fulfillment status synced");
+      invalidate();
     },
   });
 
@@ -364,6 +372,43 @@ export default function AdminOrderDetailPage() {
               </dl>
             </CardBody>
           </Card>
+
+          {(order.fulfillor_order_id || order.fulfillor_sync_error) && (
+            <Card>
+              <CardHeader className="flex items-center justify-between py-3">
+                <h2 className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Fulfillment (3PL)</h2>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => syncFulfillment.mutate()}
+                  loading={syncFulfillment.isPending}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Sync Now
+                </Button>
+              </CardHeader>
+              <CardBody className="space-y-2">
+                {order.fulfillor_order_id && (
+                  <p className="flex items-center justify-between text-body">
+                    <span className="text-ink-muted">Fulfillor Order</span>
+                    <span className="font-mono text-caption text-ink">{order.fulfillor_order_id}</span>
+                  </p>
+                )}
+                {order.fulfillor_synced_at && (
+                  <p className="flex items-center justify-between text-body">
+                    <span className="text-ink-muted">Last Synced</span>
+                    <span className="text-ink">{formatDateTime(order.fulfillor_synced_at)}</span>
+                  </p>
+                )}
+                {order.fulfillor_sync_error && (
+                  <div className="flex items-start gap-2 rounded-sm border border-danger/20 bg-danger/5 p-2.5 text-caption text-danger">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {order.fulfillor_sync_error}
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+          )}
 
           <StatusTimeline history={order.status_history} />
         </div>

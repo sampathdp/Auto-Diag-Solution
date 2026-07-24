@@ -26,7 +26,24 @@ export default function WishlistPage() {
     // Fetch detailed product data for the wishlist items
     setLoading(true);
     apiClient.get('/account/wishlist')
-      .then(res => setProducts(res.data.data))
+      .then(res => {
+        const data = res.data.data;
+        setProducts(data);
+        // Reconcile the store's id list (used by the header badge) with this
+        // authoritative fetch — a wishlisted product going inactive/deleted
+        // server-side otherwise leaves the badge stuck at the old count forever.
+        // Guarded by an equality check: this effect re-runs whenever `items`
+        // changes, so an unconditional setState here (a fresh array every
+        // fetch, same content or not) would retrigger itself forever.
+        const fetchedIds = data.map((p: Product) => p.id);
+        const current = useWishlistStore.getState().items;
+        const changed = fetchedIds.length !== current.length || fetchedIds.some((id: string, i: number) => id !== current[i]);
+        if (changed) {
+          useWishlistStore.setState({ items: fetchedIds, isInitialized: true });
+        } else if (!useWishlistStore.getState().isInitialized) {
+          useWishlistStore.setState({ isInitialized: true });
+        }
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   }, [items]); // Re-fetch if items change (like when one is removed)
@@ -46,24 +63,24 @@ export default function WishlistPage() {
 
   return (
     <div className="space-y-6">
-      <AccountPageHeader 
-        title={`My Wishlist (${items.length} items)`}
+      <AccountPageHeader
+        title={`My Wishlist (${products.length} items)`}
         subtitle="View and manage items you've saved for later."
         actions={
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="w-full sm:w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => setClearOpen(true)}
-              disabled={items.length === 0 || loading || movingToCart}
+              disabled={products.length === 0 || loading || movingToCart}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear Wishlist
             </Button>
-            <Button 
+            <Button
               className="w-full sm:w-auto"
               onClick={handleMoveAllToCart}
-              disabled={items.length === 0 || loading || movingToCart}
+              disabled={products.length === 0 || loading || movingToCart}
             >
               {movingToCart ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <ShoppingCart className="h-4 w-4 mr-2" />}
               Move All to Cart

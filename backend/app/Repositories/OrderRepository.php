@@ -105,6 +105,21 @@ class OrderRepository extends BaseRepository
         );
     }
 
+    /**
+     * Orders already handed to Fulfillor that haven't reached a terminal status yet —
+     * the polling half of keeping our status in sync with theirs (the push half is
+     * the webhook receiver). Used by both the admin console.php cron command and could
+     * back a scheduled job later.
+     */
+    public function findSyncableFulfillorOrders(): array
+    {
+        return DatabaseManager::query(
+            "SELECT * FROM orders
+             WHERE fulfillor_order_id IS NOT NULL
+               AND status NOT IN ('delivered', 'cancelled', 'refunded')"
+        )->fetchAll();
+    }
+
     private function buildWhere(array $filters, string $search): array
     {
         $conditions = [];

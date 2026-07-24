@@ -189,6 +189,10 @@ export interface Order {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  /** Set once the order's been pushed to Fulfillor (approve-fulfillment) — null until then. */
+  fulfillor_order_id: string | null;
+  fulfillor_synced_at: string | null;
+  fulfillor_sync_error: string | null;
   status_history: { status: OrderStatus; note?: string | null; created_at: string; changed_by_name?: string | null }[];
   /** Mock-only structured notes; the documented schema has a plain `notes` text column. */
   internal_notes: OrderNote[];
@@ -718,6 +722,9 @@ export const orders: Order[] = (() => {
       tracking_number: status === "shipped" || status === "delivered" ? `${int(100000000, 999999999)}` : null,
       shipped_at: status === "shipped" || status === "delivered" ? daysAgo(Math.max(created - 1, 0)) : null,
       delivered_at: status === "delivered" ? daysAgo(Math.max(created - 2, 0)) : null,
+      fulfillor_order_id: null,
+      fulfillor_synced_at: null,
+      fulfillor_sync_error: null,
       status_history: [
         { status: "pending", created_at: daysAgo(created), changed_by_name: null },
         ...(status !== "pending"
@@ -833,6 +840,9 @@ for (const seed of recentOrderSeeds) {
     tracking_number: null,
     shipped_at: null,
     delivered_at: null,
+    fulfillor_order_id: null,
+    fulfillor_synced_at: null,
+    fulfillor_sync_error: null,
     status_history: [{ status: "pending", created_at: seed.created_at, changed_by_name: null }],
     internal_notes: [],
     cancellation_reason: null,

@@ -16,8 +16,25 @@ switch ($command) {
     case 'migrate:rollback':
         rollbackMigrations();
         break;
+    case 'fulfillor:sync':
+        syncFulfillorOrders();
+        break;
     default:
-        echo "Usage: php console.php [migrate|migrate:rollback]\n";
+        echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync]\n";
+}
+
+// Polling half of "sync order status back from Fulfillor automatically" — the push
+// half is the /api/v1/webhooks/fulfillor receiver, for if/when Fulfillor supports
+// outbound webhooks. This only actually runs "automatically" once it's on a schedule;
+// add a cron entry along the lines of (adjust paths/interval as needed):
+//   */5 * * * * php /path/to/backend/console.php fulfillor:sync >> /path/to/backend/storage/logs/fulfillor-sync.log 2>&1
+// No-ops cleanly (prints a message, exits 0) until FULFILLOR_BASE_URL/FULFILLOR_API_KEY
+// are set in .env.
+function syncFulfillorOrders(): void
+{
+    $service = new \App\Services\Fulfillment\FulfillmentService();
+    $result = $service->syncAllPending();
+    echo "Fulfillor sync: checked {$result['checked']} order(s), updated {$result['updated']}.\n";
 }
 
 function ensureMigrationsLedger(): void

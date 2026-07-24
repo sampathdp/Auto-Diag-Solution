@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useWishlistStore } from "./useWishlistStore";
 
 interface User {
   id: number;
@@ -29,6 +30,9 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         set({ user: null, permissions: [], isAuthenticated: false });
+        // Wishlist is fetched per-account (see GlobalStateInitializer) — without this,
+        // its persisted items/isInitialized leak into the next session on this browser.
+        useWishlistStore.getState().reset();
       },
       updateUser: (data) =>
         set((state) => ({ user: state.user ? { ...state.user, ...data } : null })),

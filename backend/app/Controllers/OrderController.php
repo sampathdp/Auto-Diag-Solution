@@ -94,4 +94,10 @@ class OrderController extends BaseController
         );
         $this->success($order, 'Order approved and sent to 3PL');
     }
+
+    public function syncFulfillment(Request $request): void
+    {
+        $order = $this->service->syncFulfillmentStatus((int)$request->getParam('id'));
+        $this->success($order, 'Fulfillment status synced');
+    }
 }

@@ -60,6 +60,11 @@ $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 // /account/checkout above (still requires AuthMiddleware for saved-address checkout).
 $router->post("$v1/checkout/guest", [CheckoutController::class, 'guestStore']);
 
+// Fulfillor order-status webhook — necessarily unauthenticated (Fulfillor's server
+// calls this, not a logged-in browser); gated by a shared secret header instead of a
+// JWT. See FulfillorWebhookController for details.
+$router->post("$v1/webhooks/fulfillor", [App\Controllers\FulfillorWebhookController::class, 'handle']);
+
 // --- Protected Auth Routes ---
 $router->get("$v1/auth/me", [AuthController::class, 'me'], [AuthMiddleware::class]);
 $router->post("$v1/auth/change-password", [AuthController::class, 'changePassword'], [AuthMiddleware::class]);
@@ -212,6 +217,7 @@ $router->group([
     $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
     $router->post('/orders/{id}/approve-fulfillment', [OrderController::class, 'approveFulfillment']);
+    $router->post('/orders/{id}/sync-fulfillment', [OrderController::class, 'syncFulfillment']);
 
     // --- Review moderation ---
     $router->get('/reviews', [ReviewController::class, 'index']);

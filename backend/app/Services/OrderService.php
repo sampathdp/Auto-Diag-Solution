@@ -147,6 +147,21 @@ class OrderService
         return $this->find($id);
     }
 
+    /**
+     * Manual "Sync Now" — polls Fulfillor for this order's current status right away
+     * instead of waiting for the next scheduled fulfillor:sync run or an incoming
+     * webhook. Mainly useful for verifying the integration is actually wired up once
+     * real credentials are in place.
+     */
+    public function syncFulfillmentStatus(int $id): array
+    {
+        if (!$this->repo->find($id)) {
+            throw new DomainException('Order not found', 404);
+        }
+        $this->fulfillment->pullOrderStatus($id);
+        return $this->find($id);
+    }
+
     public function updatePaymentStatus(int $id, string $newPaymentStatus, int $adminId): array
     {
         $order = $this->repo->find($id);
