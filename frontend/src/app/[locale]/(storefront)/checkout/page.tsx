@@ -1,24 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useLocale } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useRouter, Link } from "@/i18n/navigation";
 import { CheckCircle2, Loader2, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
-import { AuthGuard } from "@/components/account/AuthGuard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/account/EmptyState";
 import { SideDrawer } from "@/components/account/SideDrawer";
 import { AddressForm } from "@/components/account/AddressForm";
-import { useAuthStore } from "@/store/useAuthStore";
+import { GuestDetailsForm, type GuestDetailsValue } from "@/components/checkout/GuestDetailsForm";
 import apiClient from "@/lib/api/client";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 
 const FREE_SHIPPING_THRESHOLD = 500;
 const SHIPPING_FEE = 20;
+
+const EMPTY_GUEST: GuestDetailsValue = {
+  name: "",
+  email: "",
+  phone: "",
+  emirate: "Dubai",
+  area: "",
+  building: "",
+  apartment: "",
+  street: "",
+  instructions: "",
+};
 
 interface Address {
   id: number;
@@ -36,19 +49,29 @@ interface Address {
 function CheckoutPageContent() {
   const locale = useLocale();
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { items, clearCart } = useCartStore();
+  const searchParams = useSearchParams();
+  const { user, isAuthenticated } = useAuthStore();
+  const { items: cartItems, clearCart } = useCartStore();
   const [mounted, setMounted] = useState(false);
+
+  // "Buy Now" — an express single-item checkout that never touches the persistent
+  // cart. When present, this product+quantity entirely replaces the cart as the
+  // checkout's source items (see ProductCard's Buy Now button).
+  const buyNowProductId = searchParams.get("buyNow");
+  const buyNowQty = Math.max(1, Number(searchParams.get("qty")) || 1);
+  const isBuyNow = !!buyNowProductId;
+  const sourceItems = isBuyNow ? [{ productId: buyNowProductId!, quantity: buyNowQty }] : cartItems;
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [guest, setGuest] = useState<GuestDetailsValue>(EMPTY_GUEST);
 
   useEffect(() => setMounted(true), []);
 
-  const productIds = items.map((item) => item.productId);
+  const productIds = sourceItems.map((item) => item.productId);
   const { data: products, isLoading: loadingProducts } = useProductsByIds(productIds);
 
   const fetchAddresses = async () => {
@@ -68,9 +91,14 @@ function CheckoutPageContent() {
   };
 
   useEffect(() => {
-    fetchAddresses();
+    // Guests have no saved address book — /account/addresses would just 401.
+    if (isAuthenticated) {
+      fetchAddresses();
+    } else {
+      setLoadingAddresses(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAuthenticated]);
 
   const handleAddressAdded = async (data: any) => {
     try {
@@ -84,7 +112,7 @@ function CheckoutPageContent() {
     }
   };
 
-  const lines = items
+  const lines = sourceItems
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
     .filter((line) => line.product);
 
@@ -93,19 +121,72 @@ function CheckoutPageContent() {
   const vat = Math.round((subtotal + shipping) * 0.05);
   const total = subtotal + shipping + vat;
 
+  const validateGuest = () => {
+    if (!guest.name.trim() || !guest.email.trim() || !guest.phone.trim()) {
+      toast.error("Please fill in your name, email, and phone number");
+      return false;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(guest.email.trim())) {
+      toast.error("Please enter a valid email address");
+      return false;
+    }
+    if (!guest.area.trim() || !guest.building.trim()) {
+      toast.error("Please fill in your delivery area and building");
+      return false;
+    }
+    return true;
+  };
+
   const handlePlaceOrder = async () => {
-    if (!selectedAddressId) {
-      toast.error("Please select a delivery address");
+    if (isAuthenticated) {
+      if (!selectedAddressId) {
+        toast.error("Please select a delivery address");
+        return;
+      }
+    } else if (!validateGuest()) {
       return;
     }
+
     setPlacingOrder(true);
     try {
-      const res = await apiClient.post("/account/checkout", {
-        shipping_address_id: selectedAddressId,
-        items: lines.map((l) => ({ product_id: Number(l.productId), quantity: l.quantity })),
-      });
+      const payloadItems = lines.map((l) => ({ product_id: Number(l.productId), quantity: l.quantity }));
+
+      const res = isAuthenticated
+        ? await apiClient.post("/account/checkout", {
+            shipping_address_id: selectedAddressId,
+            items: payloadItems,
+          })
+        : await apiClient.post("/checkout/guest", {
+            customer: {
+              name: guest.name.trim(),
+              email: guest.email.trim(),
+              phone: guest.phone.trim(),
+            },
+            shipping: {
+              emirate: guest.emirate,
+              area: guest.area.trim(),
+              building: guest.building.trim(),
+              apartment: guest.apartment.trim() || undefined,
+              street: guest.street.trim() || undefined,
+              instructions: guest.instructions.trim() || undefined,
+            },
+            items: payloadItems,
+          });
+
       const order = res.data.data;
-      clearCart();
+
+      if (!isAuthenticated) {
+        // Guests have no JWT to fetch /account/orders/{id} with — hand the order the
+        // server just returned straight to the success page via sessionStorage instead.
+        try {
+          sessionStorage.setItem(`guest-order-${order.id}`, JSON.stringify(order));
+        } catch {
+          // Storage can fail (private browsing, quota) — success page just falls back
+          // to showing a generic confirmation without order details.
+        }
+      }
+
+      if (!isBuyNow) clearCart();
       toast.success("Order placed successfully!");
       router.push(`/checkout/success?orderId=${order.id}` as any);
     } catch (error: any) {
@@ -117,7 +198,7 @@ function CheckoutPageContent() {
 
   if (!mounted) return null;
 
-  const isLoading = loadingProducts || loadingAddresses;
+  const isLoading = loadingProducts || (isAuthenticated && loadingAddresses);
 
   if (!isLoading && lines.length === 0) {
     return (
@@ -125,8 +206,12 @@ function CheckoutPageContent() {
         <AccountPageHeader title="Checkout" subtitle="Review your order and confirm delivery details." />
         <EmptyState
           icon={<ShoppingBag className="h-8 w-8" />}
-          title="Your cart is empty"
-          message="Add some parts to your cart before checking out."
+          title={isBuyNow ? "Product not available" : "Your cart is empty"}
+          message={
+            isBuyNow
+              ? "This product may no longer be available."
+              : "Add some parts to your cart before checking out."
+          }
           actionLabel="Browse Shop"
           onAction={() => router.push("/shop")}
         />
@@ -145,61 +230,67 @@ function CheckoutPageContent() {
       ) : (
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-            {/* Delivery Address */}
+            {/* Delivery Address / Guest Details */}
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  Delivery Address
+                  {isAuthenticated ? "Delivery Address" : "Your Details"}
                 </h3>
-                <button
-                  onClick={() => setDrawerOpen(true)}
-                  className="text-sm font-bold text-primary hover:underline"
-                >
-                  + Add New
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => setDrawerOpen(true)}
+                    className="text-sm font-bold text-primary hover:underline"
+                  >
+                    + Add New
+                  </button>
+                )}
               </div>
 
-              {addresses.length === 0 ? (
-                <EmptyState
-                  icon={<MapPin className="h-8 w-8" />}
-                  title="No addresses yet"
-                  message="Add a delivery address to continue."
-                  actionLabel="Add Address"
-                  onAction={() => setDrawerOpen(true)}
-                />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {addresses.map((address) => (
-                    <label
-                      key={address.id}
-                      className={cn(
-                        "flex cursor-pointer flex-col gap-1 rounded-lg border p-4 text-sm transition-colors",
-                        selectedAddressId === address.id
-                          ? "border-primary/50 ring-1 ring-primary/20 bg-primary/5"
-                          : "hover:bg-secondary/50"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold">
-                          {address.name} <span className="font-normal text-muted-foreground">({address.label})</span>
+              {isAuthenticated ? (
+                addresses.length === 0 ? (
+                  <EmptyState
+                    icon={<MapPin className="h-8 w-8" />}
+                    title="No addresses yet"
+                    message="Add a delivery address to continue."
+                    actionLabel="Add Address"
+                    onAction={() => setDrawerOpen(true)}
+                  />
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {addresses.map((address) => (
+                      <label
+                        key={address.id}
+                        className={cn(
+                          "flex cursor-pointer flex-col gap-1 rounded-lg border p-4 text-sm transition-colors",
+                          selectedAddressId === address.id
+                            ? "border-primary/50 ring-1 ring-primary/20 bg-primary/5"
+                            : "hover:bg-secondary/50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold">
+                            {address.name} <span className="font-normal text-muted-foreground">({address.label})</span>
+                          </span>
+                          <input
+                            type="radio"
+                            name="address"
+                            checked={selectedAddressId === address.id}
+                            onChange={() => setSelectedAddressId(address.id)}
+                            className="h-4 w-4 text-primary focus:ring-primary"
+                          />
+                        </div>
+                        <span className="text-muted-foreground">
+                          {address.building}
+                          {address.apartment ? `, Apt ${address.apartment}` : ""}, {address.street}
                         </span>
-                        <input
-                          type="radio"
-                          name="address"
-                          checked={selectedAddressId === address.id}
-                          onChange={() => setSelectedAddressId(address.id)}
-                          className="h-4 w-4 text-primary focus:ring-primary"
-                        />
-                      </div>
-                      <span className="text-muted-foreground">
-                        {address.building}
-                        {address.apartment ? `, Apt ${address.apartment}` : ""}, {address.street}
-                      </span>
-                      <span className="text-muted-foreground">{address.area}, {address.emirate}</span>
-                      <span className="text-muted-foreground">{address.phone}</span>
-                    </label>
-                  ))}
-                </div>
+                        <span className="text-muted-foreground">{address.area}, {address.emirate}</span>
+                        <span className="text-muted-foreground">{address.phone}</span>
+                      </label>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <GuestDetailsForm value={guest} onChange={setGuest} />
               )}
             </div>
 
@@ -278,7 +369,7 @@ function CheckoutPageContent() {
               </div>
               <Button
                 onClick={handlePlaceOrder}
-                disabled={placingOrder || !selectedAddressId}
+                disabled={placingOrder || (isAuthenticated && !selectedAddressId)}
                 className="mt-6 w-full"
               >
                 {placingOrder ? (
@@ -290,32 +381,43 @@ function CheckoutPageContent() {
                   </>
                 )}
               </Button>
-              <Link href="/cart" className="mt-4 block text-center text-sm font-bold text-primary hover:underline">
-                Back to Cart
+              <Link
+                href={isBuyNow ? "/shop" : "/cart"}
+                className="mt-4 block text-center text-sm font-bold text-primary hover:underline"
+              >
+                {isBuyNow ? "Back to Shop" : "Back to Cart"}
               </Link>
             </div>
           </div>
         </div>
       )}
 
-      <SideDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title="Add Address">
-        {drawerOpen && (
-          <AddressForm
-            defaultName={user?.name || ""}
-            defaultPhone=""
-            onSubmit={handleAddressAdded}
-            onCancel={() => setDrawerOpen(false)}
-          />
-        )}
-      </SideDrawer>
+      {isAuthenticated && (
+        <SideDrawer open={drawerOpen} onOpenChange={setDrawerOpen} title="Add Address">
+          {drawerOpen && (
+            <AddressForm
+              defaultName={user?.name || ""}
+              defaultPhone=""
+              onSubmit={handleAddressAdded}
+              onCancel={() => setDrawerOpen(false)}
+            />
+          )}
+        </SideDrawer>
+      )}
     </div>
   );
 }
 
 export default function CheckoutPage() {
   return (
-    <AuthGuard>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
       <CheckoutPageContent />
-    </AuthGuard>
+    </Suspense>
   );
 }

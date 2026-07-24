@@ -329,6 +329,8 @@
       "securePaymentNote": "100% Protected",
       "easyReturns": "Easy Returns",
       "easyReturnsNote": "30-Day Returns",
+      "freeShipping": "Free Shipping",
+      "freeShippingNote": "No Delivery Fees",
       "tabDescription": "Description",
       "tabSpecifications": "Specifications",
       "tabCompatibility": "Compatibility",

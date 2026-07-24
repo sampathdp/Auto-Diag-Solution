@@ -16,7 +16,7 @@ class ProductService
     private const VALID_STOCK_STATUS = ['in_stock', 'out_of_stock', 'backorder'];
     private const VALID_SOURCE = ['local', '3pl'];
     private const VALID_PART_TYPE = ['genuine', 'aftermarket', 'oem'];
-    private const BOOLEAN_FIELDS = ['vat_inclusive', 'track_inventory', 'fits_all_vehicles'];
+    private const BOOLEAN_FIELDS = ['vat_inclusive', 'track_inventory', 'fits_all_vehicles', 'free_shipping'];
     private const MIN_FITMENT_YEAR = 1980;
 
     private ProductRepository $repo;
@@ -129,6 +129,7 @@ class ProductService
             'stock' => (int)$row['stock_quantity'],
             'stock_status' => $row['stock_status'],
             'fits_all_vehicles' => (bool)$row['fits_all_vehicles'],
+            'free_shipping' => (bool)$row['free_shipping'],
             'compatible_vehicles' => array_map(fn (array $f) => [
                 'make' => $f['make'],
                 'model' => $f['model'],
@@ -396,7 +397,7 @@ class ProductService
             $data['source'] = $input['source'];
         }
 
-        foreach (['vat_inclusive', 'track_inventory', 'fits_all_vehicles'] as $field) {
+        foreach (['vat_inclusive', 'track_inventory', 'fits_all_vehicles', 'free_shipping'] as $field) {
             if (array_key_exists($field, $input)) {
                 $data[$field] = (int)(bool)$input[$field];
             }

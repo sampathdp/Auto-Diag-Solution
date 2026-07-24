@@ -46,10 +46,12 @@ export type Product = {
   country_of_origin: string | null;
   price_aed: number;
   compare_at_price: number | null;
+  vat_inclusive: boolean;
   images: string[];
   stock: number;
   stock_status: "in_stock" | "out_of_stock" | "backorder";
   fits_all_vehicles: boolean;
+  free_shipping: boolean;
   compatible_vehicles: VehicleFitment[];
   rating: number;
   reviews: number;

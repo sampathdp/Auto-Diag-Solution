@@ -136,6 +136,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   ];
 
   const trustItems = [
+    ...(product.free_shipping ? [{ icon: Truck, title: t("freeShipping"), note: t("freeShippingNote") }] : []),
     { icon: Truck, title: t("fastDelivery"), note: t("fastDeliveryNote") },
     { icon: ShieldCheck, title: t("securePayment"), note: t("securePaymentNote") },
     { icon: RotateCcw, title: t("easyReturns"), note: t("easyReturnsNote") },
@@ -278,6 +279,12 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 <span className="h-1.5 w-1.5 rounded-full bg-current" />
                 {isOutOfStock ? t("outOfStock") : t("inStock")}
               </span>
+              {product.free_shipping && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-info">
+                  <Truck className="h-3 w-3" />
+                  {t("freeShipping")}
+                </span>
+              )}
             </div>
 
             <div className="mb-6 flex items-baseline gap-4">
@@ -379,7 +386,10 @@ export function ProductDetailView({ productId }: { productId: string }) {
             </div>
 
             {/* Trust badges */}
-            <div className="grid grid-cols-3 divide-x divide-border rounded-lg border text-center rtl:divide-x-reverse">
+            <div
+              className="grid divide-x divide-border rounded-lg border text-center rtl:divide-x-reverse"
+              style={{ gridTemplateColumns: `repeat(${trustItems.length}, minmax(0, 1fr))` }}
+            >
               {trustItems.map(({ icon: Icon, title, note }) => (
                 <div key={title} className="flex flex-col items-center gap-1.5 px-2 py-4">
                   <Icon className="h-5 w-5 text-primary" strokeWidth={1.75} />

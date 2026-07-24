@@ -6,9 +6,9 @@ import { Link } from "@/i18n/navigation";
 import { CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
-import { AuthGuard } from "@/components/account/AuthGuard";
 import { Button } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { Order } from "@/types/order";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -18,6 +18,7 @@ const WHATSAPP_NUMBER = "971501234567";
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
+  const { isAuthenticated } = useAuthStore();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,21 @@ function CheckoutSuccessContent() {
       setLoading(false);
       return;
     }
+
+    // Guest orders: no JWT to fetch /account/orders/{id} with, so the checkout page
+    // stashes the order the server just returned in sessionStorage before navigating
+    // here — check that first.
+    try {
+      const stashed = sessionStorage.getItem(`guest-order-${orderId}`);
+      if (stashed) {
+        setOrder(JSON.parse(stashed));
+        setLoading(false);
+        return;
+      }
+    } catch {
+      // Fall through to the authenticated fetch below.
+    }
+
     apiClient
       .get(`/account/orders/${orderId}`)
       .then((res) => {
@@ -89,7 +105,9 @@ function CheckoutSuccessContent() {
       </div>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        {order && (
+        {/* Guest orders have no session to view them under /account/orders — that
+            page is auth-gated and would just bounce them to login. */}
+        {order && isAuthenticated && (
           <Button asChild variant="secondary">
             <Link href={`/account/orders/${order.id}` as any}>View Order Details</Link>
           </Button>
@@ -117,9 +135,5 @@ function CheckoutSuccessPageContent() {
 }
 
 export default function CheckoutSuccessPage() {
-  return (
-    <AuthGuard>
-      <CheckoutSuccessPageContent />
-    </AuthGuard>
-  );
+  return <CheckoutSuccessPageContent />;
 }

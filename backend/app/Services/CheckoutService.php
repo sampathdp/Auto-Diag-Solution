@@ -9,6 +9,7 @@ use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
 use App\Repositories\PaymentTransactionRepository;
 use App\Repositories\ProductRepository;
+use App\Repositories\UserRepository;
 
 /**
  * Places a real order from the cart, but with a stubbed-out payment step: the client's
@@ -28,6 +29,7 @@ class CheckoutService
     private OrderRepository $orders;
     private PaymentTransactionRepository $paymentTransactions;
     private AccountOrderService $accountOrders;
+    private UserRepository $users;
 
     public function __construct()
     {
@@ -36,6 +38,7 @@ class CheckoutService
         $this->orders = new OrderRepository();
         $this->paymentTransactions = new PaymentTransactionRepository();
         $this->accountOrders = new AccountOrderService();
+        $this->users = new UserRepository();
     }
 
     public function placeOrder(int $userId, int $shippingAddressId, array $items): array
@@ -47,6 +50,87 @@ class CheckoutService
         // Throws DomainException(404) if the address doesn't exist / isn't owned by this user.
         $address = $this->addresses->find($userId, $shippingAddressId);
 
+        return $this->createOrder($userId, $shippingAddressId, $address, $items);
+    }
+
+    /**
+     * Guest checkout — no session/JWT, just a name/email/phone and a shipping address
+     * typed in at checkout. If the email already belongs to a registered account, the
+     * order is attached to that account (matches how most storefronts handle it: email
+     * is the natural identity key, not a secret) rather than creating a duplicate row,
+     * which would collide with the unique index on users.email anyway. Otherwise a
+     * lightweight guest user is created — password NULL (already nullable, see the
+     * OAuth migration), is_guest = 1 — so every downstream admin/customer-account query
+     * keyed on orders.user_id keeps working unchanged instead of needing a parallel
+     * "guest order" code path.
+     */
+    public function placeGuestOrder(array $customer, array $shippingInput, array $items): array
+    {
+        if (!$items) {
+            throw new DomainException('Your cart is empty', 422);
+        }
+
+        $name = trim((string)($customer['name'] ?? ''));
+        $email = strtolower(trim((string)($customer['email'] ?? '')));
+        $phone = trim((string)($customer['phone'] ?? ''));
+
+        if ($name === '' || $email === '' || $phone === '') {
+            throw new DomainException('Name, email, and phone are required', 422);
+        }
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new DomainException('A valid email address is required', 422);
+        }
+
+        $userId = $this->resolveGuestUserId($name, $email, $phone);
+        $address = $this->buildGuestAddress($name, $phone, $shippingInput);
+
+        return $this->createOrder($userId, null, $address, $items);
+    }
+
+    private function resolveGuestUserId(string $name, string $email, string $phone): int
+    {
+        $existing = $this->users->findByEmail($email);
+        if ($existing) {
+            return (int)$existing['id'];
+        }
+
+        return $this->users->create([
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => null,
+            'role' => 'customer',
+            'is_guest' => 1,
+        ]);
+    }
+
+    /** Same shape as AddressService::shape() — snapshotted straight onto the order, never written to customer_addresses. */
+    private function buildGuestAddress(string $name, string $phone, array $input): array
+    {
+        $emirate = (string)($input['emirate'] ?? 'Dubai');
+        $area = trim((string)($input['area'] ?? ''));
+        $building = trim((string)($input['building'] ?? ''));
+
+        if ($area === '' || $building === '') {
+            throw new DomainException('Area and building are required', 422);
+        }
+
+        return [
+            'label' => 'Guest Checkout',
+            'name' => $name,
+            'phone' => $phone,
+            'emirate' => $emirate,
+            'city' => $emirate,
+            'area' => $area,
+            'street' => trim((string)($input['street'] ?? '')),
+            'building' => $building,
+            'apartment' => trim((string)($input['apartment'] ?? '')) ?: null,
+            'instructions' => trim((string)($input['instructions'] ?? '')) ?: null,
+        ];
+    }
+
+    private function createOrder(int $userId, ?int $shippingAddressId, array $address, array $items): array
+    {
         [$lineItems, $stockUpdates] = $this->resolveLineItems($items);
 
         $subtotal = array_sum(array_column($lineItems, 'line_total'));

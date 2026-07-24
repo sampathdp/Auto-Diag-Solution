@@ -55,6 +55,7 @@ export interface Product {
   source_synced_at: string | null;
   status: "draft" | "active" | "inactive";
   fits_all_vehicles: boolean;
+  free_shipping: boolean;
   created_at: string;
   updated_at: string;
   specifications: ProductSpecification[];

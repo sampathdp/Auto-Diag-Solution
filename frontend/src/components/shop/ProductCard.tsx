@@ -3,11 +3,11 @@
 import { useRef, useState } from "react";
 import { Product } from "@/types/storefront";
 import { useLocale, useTranslations } from "next-intl";
-import { Heart, Eye, Scale, Share2, CheckCircle2, AlertTriangle, Loader2, Check } from "lucide-react";
+import { Heart, Eye, Scale, Share2, CheckCircle2, AlertTriangle, Loader2, Check, Truck } from "lucide-react";
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
 import { productFitsVehicle } from "@/lib/productFitment";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
 import { useWishlistStore } from "@/store/useWishlistStore";
@@ -45,6 +45,7 @@ function ParticleBurst() {
 
 export function ProductCard({ product, context = "shop" }: { product: Product, context?: "shop" | "wishlist" }) {
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations("shop.toasts");
   const shouldReduceMotion = useReducedMotion();
   const name = locale === "ar" ? product.name_ar : product.name_en;
@@ -118,7 +119,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (cartState !== "idle") return;
 
     setCartState("loading");
@@ -131,6 +132,15 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
         setCartState("idle");
       }, 2000);
     }, 400);
+  };
+
+  // Express single-item checkout — bypasses the cart entirely (whatever's already in
+  // the cart is untouched) and goes straight to /checkout for just this product.
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isOutOfStock) return;
+    router.push(`/checkout?buyNow=${product.id}&qty=1` as any);
   };
 
   // Check fitment against both the shop filter AND the globally active vehicle
@@ -207,6 +217,12 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                   NEW
                 </span>
               )}
+              {product.free_shipping && (
+                <span className="flex items-center gap-1 rounded bg-info px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-info-foreground shadow-sm">
+                  <Truck className="h-2.5 w-2.5" />
+                  Free Shipping
+                </span>
+              )}
             </div>
 
             {/* Top-Right Wishlist / Remove Button */}
@@ -279,17 +295,17 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               <Eye className="h-5 w-5" />
             </motion.button>
 
-            {/* Bottom Slide-up Add to Cart Bar */}
-            <motion.div 
+            {/* Bottom Slide-up Add to Cart / Buy Now Bar */}
+            <motion.div
               variants={shouldReduceMotion ? {} : { rest: { y: "100%" }, hover: { y: "0%" } }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="absolute bottom-0 left-0 right-0 z-10"
+              className="absolute bottom-0 left-0 right-0 z-10 flex"
             >
               <button
                 ref={buttonRef}
                 disabled={isOutOfStock}
                 onClick={handleAddToCart}
-                className="w-full bg-primary py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:text-[13px]"
+                className="flex-1 bg-primary py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:text-[13px]"
               >
                 <AnimatePresence mode="wait">
                   {cartState === "idle" && (
@@ -309,6 +325,14 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                   )}
                 </AnimatePresence>
               </button>
+              {!isOutOfStock && context !== "wishlist" && (
+                <button
+                  onClick={handleBuyNow}
+                  className="flex-1 border-l border-background/20 bg-foreground py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:text-[13px]"
+                >
+                  Buy Now
+                </button>
+              )}
             </motion.div>
           </div>
 

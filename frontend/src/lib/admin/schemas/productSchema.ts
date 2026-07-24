@@ -94,6 +94,7 @@ export const ProductFormSchema = z
     country_of_origin: z.string().nullable().optional(),
 
     fits_all_vehicles: z.boolean(),
+    free_shipping: z.boolean(),
     fitments: z.array(ProductFitmentSchema),
 
     specifications: z.array(ProductSpecificationSchema),
@@ -139,6 +140,7 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   material: "",
   country_of_origin: "",
   fits_all_vehicles: false,
+  free_shipping: false,
   fitments: [],
   specifications: [],
   cross_reference_numbers: [],

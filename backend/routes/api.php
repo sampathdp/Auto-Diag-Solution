@@ -55,6 +55,11 @@ $router->get("$v1/products/{id}", [ProductController::class, 'publicShow']);
 $router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
 $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 
+// Guest checkout — no login required, customer + shipping details are typed in at
+// checkout instead of pulled from a saved account. Kept separate from the authenticated
+// /account/checkout above (still requires AuthMiddleware for saved-address checkout).
+$router->post("$v1/checkout/guest", [CheckoutController::class, 'guestStore']);
+
 // --- Protected Auth Routes ---
 $router->get("$v1/auth/me", [AuthController::class, 'me'], [AuthMiddleware::class]);
 $router->post("$v1/auth/change-password", [AuthController::class, 'changePassword'], [AuthMiddleware::class]);

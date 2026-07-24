@@ -31,6 +31,14 @@ export function InventoryCard({ form }: { form: UseFormReturn<ProductFormValues>
           />
         </FormField>
 
+        <FormField label="Free Shipping" className="sm:col-span-2">
+          <Switch
+            label={watch("free_shipping") ? "This product ships free" : "Standard shipping charges apply"}
+            checked={watch("free_shipping")}
+            onChange={(e) => setValue("free_shipping", e.target.checked, { shouldDirty: true })}
+          />
+        </FormField>
+
         <FormField label="Stock Quantity" htmlFor="stock_quantity" error={errors.stock_quantity?.message}>
           <Input
             id="stock_quantity"
