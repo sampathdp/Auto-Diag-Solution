@@ -9,7 +9,6 @@ use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
 use App\Repositories\PaymentTransactionRepository;
 use App\Repositories\ProductRepository;
-use App\Services\Fulfillment\FulfillmentService;
 
 /**
  * Places a real order from the cart, but with a stubbed-out payment step: the client's
@@ -29,7 +28,6 @@ class CheckoutService
     private OrderRepository $orders;
     private PaymentTransactionRepository $paymentTransactions;
     private AccountOrderService $accountOrders;
-    private FulfillmentService $fulfillment;
 
     public function __construct()
     {
@@ -38,7 +36,6 @@ class CheckoutService
         $this->orders = new OrderRepository();
         $this->paymentTransactions = new PaymentTransactionRepository();
         $this->accountOrders = new AccountOrderService();
-        $this->fulfillment = new FulfillmentService();
     }
 
     public function placeOrder(int $userId, int $shippingAddressId, array $items): array
@@ -65,7 +62,7 @@ class CheckoutService
             $orderId = $this->orders->create([
                 'order_number' => $orderNumber,
                 'user_id' => $userId,
-                'status' => 'processing',
+                'status' => 'pending_vin_verification',
                 'payment_status' => 'paid',
                 'payment_method' => 'mock',
                 'payment_reference' => $paymentReference,
@@ -113,8 +110,9 @@ class CheckoutService
 
             $this->orders->addStatusHistory(
                 $orderId,
-                'processing',
-                'Mock payment received — order confirmed automatically. Replace with the real payment gateway once available.',
+                'pending_vin_verification',
+                'Mock payment received — order confirmed automatically. Replace with the real payment gateway once available. '
+                    . 'Held for VIN verification before being sent to the 3PL.',
                 null
             );
 
@@ -124,12 +122,11 @@ class CheckoutService
             throw $e;
         }
 
-        // Outside the transaction and after commit — an external HTTP call has no
-        // business holding DB locks, and a Fulfillor outage must never roll back an
-        // order the customer has already been told succeeded. Best-effort by design:
-        // failures are recorded on the order, never thrown back to the customer.
-        $this->fulfillment->pushOrder($orderId);
-
+        // Deliberately does NOT push to Fulfillor here: the order sits in
+        // 'pending_vin_verification' until an admin manually checks the vehicle
+        // model/VIN in the admin panel and clicks "Approve & Send to 3PL"
+        // (OrderService::approveForFulfillment), to catch mismatches before they
+        // become returns.
         return $this->accountOrders->show($userId, $orderId);
     }
 

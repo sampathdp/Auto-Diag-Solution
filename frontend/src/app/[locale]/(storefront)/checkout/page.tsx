@@ -107,7 +107,7 @@ function CheckoutPageContent() {
       const order = res.data.data;
       clearCart();
       toast.success("Order placed successfully!");
-      router.push(`/account/orders/${order.id}` as any);
+      router.push(`/checkout/success?orderId=${order.id}` as any);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || "Failed to place order. Please try again.");
     } finally {

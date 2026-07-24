@@ -41,6 +41,8 @@ $router->post("$v1/auth/login", [AuthController::class, 'login']);
 $router->post("$v1/auth/refresh", [AuthController::class, 'refresh']);
 $router->post("$v1/auth/forgot-password", [AuthController::class, 'forgotPassword']);
 $router->post("$v1/auth/reset-password", [AuthController::class, 'resetPassword']);
+$router->post("$v1/auth/google", [AuthController::class, 'googleLogin']);
+$router->post("$v1/auth/facebook", [AuthController::class, 'facebookLogin']);
 
 // --- Public storefront routes ---
 $router->get("$v1/brands", [BrandController::class, 'active']);
@@ -204,6 +206,7 @@ $router->group([
     $router->put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
     $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
+    $router->post('/orders/{id}/approve-fulfillment', [OrderController::class, 'approveFulfillment']);
 
     // --- Review moderation ---
     $router->get('/reviews', [ReviewController::class, 'index']);

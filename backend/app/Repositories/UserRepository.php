@@ -19,4 +19,13 @@ class UserRepository extends BaseRepository
         );
         return $stmt->fetch() ?: null;
     }
+
+    public function findByOauth(string $provider, string $oauthId): ?array
+    {
+        $stmt = \App\Core\Database\DatabaseManager::query(
+            "SELECT * FROM users WHERE oauth_provider = :provider AND oauth_id = :oauth_id LIMIT 1",
+            ['provider' => $provider, 'oauth_id' => $oauthId]
+        );
+        return $stmt->fetch() ?: null;
+    }
 }

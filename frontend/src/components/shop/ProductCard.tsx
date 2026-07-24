@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Product } from "@/types/storefront";
 import { useLocale, useTranslations } from "next-intl";
-import { Heart, Eye, Scale, CheckCircle2, AlertTriangle, Loader2, Check } from "lucide-react";
+import { Heart, Eye, Scale, Share2, CheckCircle2, AlertTriangle, Loader2, Check } from "lucide-react";
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
 import { productFitsVehicle } from "@/lib/productFitment";
@@ -94,6 +94,25 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
     e.preventDefault();
     e.stopPropagation();
     setIsQuickViewOpen(true);
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const url = `${window.location.origin}/${locale}/shop/product/${product.id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name, url });
+      } catch {
+        // User dismissed the native share sheet — not an error.
+      }
+      return;
+    }
+
+    await navigator.clipboard.writeText(url);
+    toast.success(t("linkCopied"));
   };
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -232,6 +251,20 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                 className={`absolute right-3 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-soft backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rtl:left-3 rtl:right-auto transition-colors ${isCompared ? "bg-primary text-primary-foreground" : "bg-background/90 text-muted-foreground hover:text-foreground"}`}
               >
                 <Scale className="h-3.5 w-3.5" />
+              </motion.button>
+            )}
+
+            {/* Share Button (hover-reveal, stacked below Compare) */}
+            {context !== "wishlist" && (
+              <motion.button
+                onClick={handleShare}
+                whileTap={shouldReduceMotion ? {} : { scale: 0.9 }}
+                aria-label="Share product"
+                variants={shouldReduceMotion ? {} : { rest: { opacity: 0, y: -8 }, hover: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.2, delay: 0.03 }}
+                className="absolute right-3 top-[6.5rem] z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 text-muted-foreground shadow-soft backdrop-blur-sm hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rtl:left-3 rtl:right-auto"
+              >
+                <Share2 className="h-3.5 w-3.5" />
               </motion.button>
             )}
 

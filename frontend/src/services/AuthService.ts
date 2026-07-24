@@ -18,6 +18,14 @@ export class AuthService extends BaseService {
     return this.post("/auth/logout", {});
   }
 
+  static async googleLogin(payload: { credential: string }) {
+    return this.post("/auth/google", payload);
+  }
+
+  static async facebookLogin(payload: { access_token: string }) {
+    return this.post("/auth/facebook", payload);
+  }
+
   static async changePassword(payload: { current_password: string; new_password: string }) {
     return this.post("/auth/change-password", payload);
   }

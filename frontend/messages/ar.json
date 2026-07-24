@@ -232,7 +232,7 @@
     "requestNewLink": "طلب رابط جديد",
     "resetSuccess": "تم إعادة تعيين كلمة المرور بنجاح. يرجى تسجيل الدخول.",
     "orContinueWith": "أو تابع باستخدام",
-    "socialComingSoon": "تسجيل الدخول عبر {provider} غير متاح بعد — قريباً.",
+    "socialLoginFailed": "تعذر تسجيل الدخول عبر {provider}. يرجى المحاولة مرة أخرى.",
     "eyebrow": "الحساب",
     "panelEyebrow": "قطع غيار السيارات الإمارات",
     "panelTagline": "قطع أصلية. حساب واحد. لكل ورشة.",
@@ -356,7 +356,8 @@
     },
     "toasts": {
       "addedToWishlist": "أُضيف إلى المفضلة",
-      "compareLimitReached": "يمكنك مقارنة 3 منتجات كحد أقصى في نفس الوقت."
+      "compareLimitReached": "يمكنك مقارنة 3 منتجات كحد أقصى في نفس الوقت.",
+      "linkCopied": "تم نسخ الرابط"
     }
   },
   "account": {

@@ -1,11 +1,12 @@
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 const WHATSAPP_NUMBER = "971501234567";
+const FITMENT_MESSAGE = "Hi, I need help checking part fitment for my car.";
 
 export function WhatsAppBubble() {
   return (
     <a
-      href={`https://wa.me/${WHATSAPP_NUMBER}`}
+      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(FITMENT_MESSAGE)}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat on WhatsApp"

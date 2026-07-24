@@ -81,6 +81,16 @@ export default function OrderDetailPage() {
   if (order.status === "cancelled") {
     steps.push({ id: "cancelled", label: "Order Cancelled", isCompleted: true, isCurrent: true, isTerminal: true, terminalType: "cancelled" });
   } else {
+    const pastVinVerification =
+      order.status === "processing" || order.status === "shipped" || order.status === "delivered" || order.status === "refunded";
+    steps.push({
+      id: "vin_verification",
+      label: "Vehicle VIN Verification",
+      note: order.status === "pending_vin_verification" ? "Send us your VIN or Mulkiya photo on WhatsApp so we can confirm the part fits." : undefined,
+      isCompleted: pastVinVerification,
+      isCurrent: order.status === "pending_vin_verification",
+    });
+
     const isProcessing = order.status === "processing" || order.status === "shipped" || order.status === "delivered" || order.status === "refunded";
     steps.push({ id: "processing", label: "Processing", isCompleted: isProcessing, isCurrent: order.status === "processing" });
 
@@ -122,7 +132,7 @@ export default function OrderDetailPage() {
             <RotateCcw className="h-4 w-4" /> Reorder
           </Button>
           
-          {(order.status === "pending" || order.status === "processing") && (
+          {(order.status === "pending" || order.status === "pending_vin_verification" || order.status === "processing") && (
             <Button variant="secondary" onClick={() => setCancelOpen(true)} className="gap-2 text-destructive hover:bg-destructive/10 border-destructive/20 hover:text-destructive">
               <XCircle className="h-4 w-4" /> Cancel Order
             </Button>

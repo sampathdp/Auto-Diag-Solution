@@ -11,6 +11,9 @@ use App\Repositories\UserRepository;
 use App\Services\RateLimiter;
 use App\Services\TwoFactorService;
 use App\Services\SimpleSmtpMailer;
+use App\Services\SocialAuth\GoogleTokenVerifier;
+use App\Services\SocialAuth\FacebookTokenVerifier;
+use App\Services\SocialAuth\SocialAuthException;
 
 class AuthController extends BaseController
 {
@@ -44,6 +47,11 @@ class AuthController extends BaseController
     private const FORGOT_PASSWORD_IP_LOCKOUT_SECONDS = 3600; // 1 hour
 
     private const RESET_TOKEN_TTL_SECONDS = 1800; // 30 minutes
+
+    // Social sign-in is unauthenticated like registration, and can create accounts
+    // just like it — same throttling shape.
+    private const OAUTH_IP_MAX_ATTEMPTS = 10;
+    private const OAUTH_IP_LOCKOUT_SECONDS = 3600; // 1 hour
 
     private function lockoutMessage(int $lockedSeconds): string
     {
@@ -164,6 +172,105 @@ class AuthController extends BaseController
         );
 
         $this->success(null, 'User registered successfully', 201);
+    }
+
+    public function googleLogin(Request $request): void
+    {
+        $credential = (string)$request->input('credential');
+        if ($credential === '') {
+            $this->error('Google credential is required', null, 400);
+            return;
+        }
+
+        try {
+            $profile = (new GoogleTokenVerifier())->verify($credential);
+        } catch (SocialAuthException $e) {
+            $this->error($e->getMessage(), null, 401);
+            return;
+        }
+
+        $this->issueSessionForSocialUser($profile, 'google', $request->getIp());
+    }
+
+    public function facebookLogin(Request $request): void
+    {
+        $accessToken = (string)$request->input('access_token');
+        if ($accessToken === '') {
+            $this->error('Facebook access token is required', null, 400);
+            return;
+        }
+
+        try {
+            $profile = (new FacebookTokenVerifier())->verify($accessToken);
+        } catch (SocialAuthException $e) {
+            $this->error($e->getMessage(), null, 401);
+            return;
+        }
+
+        $this->issueSessionForSocialUser($profile, 'facebook', $request->getIp());
+    }
+
+    /**
+     * Find-or-create the local user for an already-verified social profile, then
+     * issue the same cookie-based session login()/changePassword() issue.
+     *
+     * @param array{oauth_id: string, email: string, name: string} $profile
+     */
+    private function issueSessionForSocialUser(array $profile, string $provider, string $ip): void
+    {
+        $lockedSeconds = RateLimiter::secondsUntilUnlocked('oauth:ip', $ip);
+        if ($lockedSeconds > 0) {
+            $this->error($this->lockoutMessage($lockedSeconds), null, 429);
+            return;
+        }
+        RateLimiter::hit('oauth:ip', $ip, self::OAUTH_IP_MAX_ATTEMPTS, self::OAUTH_IP_LOCKOUT_SECONDS);
+
+        $user = $this->userRepo->findByOauth($provider, $profile['oauth_id']);
+
+        if (!$user) {
+            // Same verified email as an existing password account — link instead of
+            // creating a duplicate.
+            $user = $this->userRepo->findByEmail($profile['email']);
+
+            if ($user) {
+                $this->userRepo->update((int)$user['id'], [
+                    'oauth_provider' => $provider,
+                    'oauth_id' => $profile['oauth_id'],
+                ]);
+                $user = $this->userRepo->find((int)$user['id']);
+            } else {
+                $userId = $this->userRepo->create([
+                    'name' => $profile['name'],
+                    'email' => $profile['email'],
+                    'password' => null,
+                    'role' => 'customer',
+                    'oauth_provider' => $provider,
+                    'oauth_id' => $profile['oauth_id'],
+                ]);
+                $user = $this->userRepo->find($userId);
+            }
+        }
+
+        if (!$user || !(bool)($user['is_active'] ?? true)) {
+            $this->error('This account is not available', null, 403);
+            return;
+        }
+
+        $accessToken = $this->jwtService->generateAccessToken($user);
+        $refreshToken = $this->jwtService->generateRefreshToken((int)$user['id']);
+        $decoded = $this->jwtService->validateToken($accessToken);
+
+        $this->setAuthCookies($accessToken, $refreshToken);
+
+        $this->success([
+            'user' => [
+                'id' => $user['id'],
+                'name' => $user['name'],
+                'role' => $user['role'],
+                'needs_password_change' => false,
+            ],
+            'permissions' => $decoded->permissions ?? []
+        ], 'Login successful');
     }
 
     public function forgotPassword(Request $request): void

@@ -16,6 +16,7 @@ const fontArabic = IBM_Plex_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "ASIL Auto Parts Hub",
   description: "Genuine auto parts, delivered across the UAE.",
 };

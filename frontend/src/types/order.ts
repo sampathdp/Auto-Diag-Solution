@@ -23,7 +23,15 @@ export interface OrderShippingAddress {
   instructions?: string;
 }
 
-export type OrderStatus = "pending" | "paid" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+export type OrderStatus =
+  | "pending"
+  | "pending_vin_verification"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "refunded";
 
 export interface Order {
   id: number;

@@ -232,7 +232,7 @@
     "requestNewLink": "Request a new link",
     "resetSuccess": "Password reset successfully. Please sign in.",
     "orContinueWith": "or continue with",
-    "socialComingSoon": "{provider} sign-in isn't connected yet — coming soon.",
+    "socialLoginFailed": "Could not sign in with {provider}. Please try again.",
     "eyebrow": "Account",
     "panelEyebrow": "Auto Parts UAE",
     "panelTagline": "Genuine parts. One account. Every garage.",
@@ -356,7 +356,8 @@
     },
     "toasts": {
       "addedToWishlist": "Added to wishlist",
-      "compareLimitReached": "You can only compare up to 3 products at once."
+      "compareLimitReached": "You can only compare up to 3 products at once.",
+      "linkCopied": "Link copied to clipboard"
     }
   },
   "account": {

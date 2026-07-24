@@ -54,6 +54,9 @@ export type Product = {
   rating: number;
   reviews: number;
   specifications?: Specification[];
+  /** Only present on the single-product endpoint (used for SEO metadata/schema). */
+  cross_reference_numbers?: string[];
+  updated_at?: string | null;
 };
 
 export type ProductFilters = {

@@ -125,6 +125,7 @@ export interface Product {
 
 export type OrderStatus =
   | "pending"
+  | "pending_vin_verification"
   | "processing"
   | "shipped"
   | "delivered"

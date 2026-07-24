@@ -7,21 +7,26 @@ namespace App\Services;
 use App\Exceptions\DomainException;
 use App\Repositories\AdminNoteRepository;
 use App\Repositories\OrderRepository;
+use App\Services\Fulfillment\FulfillmentService;
 
 class OrderService
 {
-    private const VALID_STATUSES = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'];
+    private const VALID_STATUSES = [
+        'pending', 'pending_vin_verification', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded',
+    ];
     private const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
     // Once an order reaches one of these, it's done — no further status changes.
     private const TERMINAL_STATUSES = ['delivered', 'cancelled', 'refunded'];
 
     private OrderRepository $repo;
     private AdminNoteRepository $notes;
+    private FulfillmentService $fulfillment;
 
     public function __construct()
     {
         $this->repo = new OrderRepository();
         $this->notes = new AdminNoteRepository();
+        $this->fulfillment = new FulfillmentService();
     }
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
@@ -72,6 +77,17 @@ class OrderService
             throw new DomainException("Order is already {$order['status']} and cannot be changed further", 409);
         }
 
+        // Awaiting VIN verification is a gate, not just another status: the only way out
+        // of it (besides cancelling a bad order) is approveForFulfillment(), which is what
+        // actually triggers the 3PL push. Otherwise an admin could drag the status straight
+        // to "shipped" via the dropdown and skip the VIN check entirely.
+        if ($order['status'] === 'pending_vin_verification' && !in_array($newStatus, ['pending_vin_verification', 'cancelled'], true)) {
+            throw new DomainException(
+                'This order is awaiting VIN verification. Use "Approve & Send to 3PL" once the VIN is confirmed, or cancel the order.',
+                409
+            );
+        }
+
         $data = ['status' => $newStatus];
 
         if ($newStatus === 'cancelled') {
@@ -102,6 +118,31 @@ class OrderService
 
         $this->repo->update($id, $data);
         $this->repo->addStatusHistory($id, $newStatus, $note, $adminId);
+
+        return $this->find($id);
+    }
+
+    /**
+     * The one way out of 'pending_vin_verification': an admin has manually checked the
+     * vehicle model/VIN against the order and confirmed it's correct, so it's now safe to
+     * hand off to Fulfillor. Moves the order to 'processing' and pushes it — same
+     * best-effort push CheckoutService used to fire automatically at checkout, just gated
+     * on this manual check now.
+     */
+    public function approveForFulfillment(int $id, int $adminId): array
+    {
+        $order = $this->repo->find($id);
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        if ($order['status'] !== 'pending_vin_verification') {
+            throw new DomainException('Only orders awaiting VIN verification can be approved for fulfillment', 409);
+        }
+
+        $this->repo->update($id, ['status' => 'processing']);
+        $this->repo->addStatusHistory($id, 'processing', 'VIN verified — approved for fulfillment and sent to 3PL.', $adminId);
+
+        $this->fulfillment->pushOrder($id);
 
         return $this->find($id);
     }

@@ -58,6 +58,9 @@ class ProductService
         $fitment = $this->repo->fitmentRowsForProducts([$id])[$id] ?? [];
         $shaped = $this->shapePublic($product, $fitment);
         $shaped['specifications'] = $this->repo->specifications($id);
+        // Needed by the product page's SEO metadata/schema (MPN, OG last-modified) —
+        // not used by the product grid, so publicList()/shapePublic() callers there skip it.
+        $shaped['cross_reference_numbers'] = $this->repo->crossReferences($id);
         return $shaped;
     }
 
@@ -136,6 +139,7 @@ class ProductService
             ], $fitment),
             'rating' => round((float)$row['rating'], 1),
             'reviews' => (int)$row['review_count'],
+            'updated_at' => $row['updated_at'] ?? null,
         ];
     }
 

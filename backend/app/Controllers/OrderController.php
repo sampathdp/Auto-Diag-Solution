@@ -85,4 +85,13 @@ class OrderController extends BaseController
         );
         $this->success($order, 'Note added successfully', 201);
     }
+
+    public function approveFulfillment(Request $request): void
+    {
+        $order = $this->service->approveForFulfillment(
+            (int)$request->getParam('id'),
+            (int)$request->user->id
+        );
+        $this->success($order, 'Order approved and sent to 3PL');
+    }
 }

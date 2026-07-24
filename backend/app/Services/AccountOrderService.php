@@ -9,7 +9,7 @@ use App\Repositories\OrderRepository;
 
 class AccountOrderService
 {
-    private const CANCELLABLE_STATUSES = ['pending', 'processing'];
+    private const CANCELLABLE_STATUSES = ['pending', 'pending_vin_verification', 'processing'];
 
     private OrderRepository $repo;
     private ProductService $products;

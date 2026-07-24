@@ -15,6 +15,7 @@ import { Select } from "@/components/admin/ui/Select";
 import { Switch } from "@/components/admin/ui/Switch";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
+import { ConfirmModal } from "@/components/admin/ui/Modal";
 import { DataTable } from "@/components/admin/DataTable";
 import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { StatusTimeline } from "@/components/admin/StatusTimeline";
@@ -31,7 +32,23 @@ import type { PaginatedResponse } from "@/types/api";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import type { Order, OrderItem, OrderStatus, Product } from "@/mocks/admin/db";
 
-const STATUS_OPTIONS: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"];
+const STATUS_OPTIONS: OrderStatus[] = [
+  "pending",
+  "pending_vin_verification",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+  "refunded",
+];
+
+const STATUS_LABELS: Partial<Record<OrderStatus, string>> = {
+  pending_vin_verification: "Pending VIN Verification",
+};
+
+function statusLabel(status: OrderStatus): string {
+  return STATUS_LABELS[status] ?? status[0].toUpperCase() + status.slice(1);
+}
 
 export default function AdminOrderDetailPage() {
   const params = useParams<{ id: string }>();
@@ -43,6 +60,7 @@ export default function AdminOrderDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [shipOpen, setShipOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
 
   const orderQuery = useAdminQuery<Order>(adminQueryKeys.orders.detail(id), `/orders/${id}`);
   const order = orderQuery.data;
@@ -102,6 +120,15 @@ export default function AdminOrderDetailPage() {
     },
   });
 
+  const approveFulfillment = useMutation({
+    mutationFn: () => adminApi.post(`/orders/${id}/approve-fulfillment`),
+    onSuccess: () => {
+      showSuccess("Order approved and sent to the 3PL");
+      invalidate();
+      setApproveOpen(false);
+    },
+  });
+
   const itemColumns: ColumnDef<OrderItem, any>[] = [
     {
       id: "image",
@@ -158,6 +185,7 @@ export default function AdminOrderDetailPage() {
             <label className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Status</label>
             <Select
               value={order.status}
+              disabled={order.status === "pending_vin_verification"}
               onChange={(e) => {
                 const next = e.target.value as OrderStatus;
                 if (next === "cancelled") setCancelOpen(true);
@@ -168,10 +196,13 @@ export default function AdminOrderDetailPage() {
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>
-                  {s[0].toUpperCase() + s.slice(1)}
+                  {statusLabel(s)}
                 </option>
               ))}
             </Select>
+            {order.status === "pending_vin_verification" && (
+              <span className="text-caption text-ink-muted">Verify the VIN, then approve below.</span>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -180,6 +211,11 @@ export default function AdminOrderDetailPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 self-stretch border-l border-border pl-6">
+            {order.status === "pending_vin_verification" && (
+              <Button variant="primary" onClick={() => setApproveOpen(true)}>
+                Approve &amp; Send to 3PL
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={order.status === "cancelled"}>
               Cancel Order
             </Button>
@@ -357,6 +393,16 @@ export default function AdminOrderDetailPage() {
         itemLabel="order for refund"
         extraWarning="This only flags the order — process the actual refund in the Stripe dashboard."
         loading={requestRefund.isPending}
+      />
+
+      <ConfirmModal
+        open={approveOpen}
+        onClose={() => setApproveOpen(false)}
+        onConfirm={() => approveFulfillment.mutate()}
+        title="Approve & send to 3PL?"
+        description="Confirm the vehicle model and VIN have been verified against this order. Once approved, order details are sent to the 3PL for fulfillment and this can't be undone."
+        confirmLabel="Approve & Send to 3PL"
+        loading={approveFulfillment.isPending}
       />
     </div>
   );
