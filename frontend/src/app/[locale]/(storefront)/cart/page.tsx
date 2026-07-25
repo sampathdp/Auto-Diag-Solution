@@ -150,10 +150,12 @@ export default function CartPage() {
                     {shipping === 0 ? "Free" : `AED ${shipping}`}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">VAT (5%)</span>
-                  <span className="font-semibold text-foreground">AED {vat.toLocaleString()}</span>
-                </div>
+                {vat > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VAT (5%)</span>
+                    <span className="font-semibold text-foreground">AED {vat.toLocaleString()}</span>
+                  </div>
+                )}
               </div>
               <div className="mt-4 flex items-baseline justify-between border-t pt-4">
                 <span className="text-sm font-bold text-foreground">Total</span>

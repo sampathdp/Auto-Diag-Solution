@@ -138,7 +138,8 @@ class CheckoutService
 
         // Per line item: `vat_inclusive` products already have VAT baked into their price
         // (back the tax portion out of it instead of taxing it again); `vat_inclusive =
-        // false` products are taxed 5% on top. `subtotal` is always shown pre-tax so the
+        // false` ("VAT exclusive") products aren't taxed at all — charged exactly at their
+        // listed price, no 5% added on top. `subtotal` is always shown pre-tax so the
         // breakdown adds up the same way regardless of a line's vat_inclusive flag.
         $subtotal = 0.0;
         $vatAmount = 0.0;
@@ -149,7 +150,7 @@ class CheckoutService
                 $itemVat = round($item['line_total'] - $exclusive, 2);
             } else {
                 $exclusive = $item['line_total'];
-                $itemVat = round($item['line_total'] * (self::VAT_RATE / 100), 2);
+                $itemVat = 0.0;
             }
             $subtotal += $exclusive;
             $vatAmount += $itemVat;

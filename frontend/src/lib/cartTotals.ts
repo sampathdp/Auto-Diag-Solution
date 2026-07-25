@@ -31,11 +31,12 @@ export interface ShippingRateOverride {
 /**
  * Mirrors backend/app/Services/CheckoutService.php::createOrder() + ShippingService::
  * calculateShipping() exactly — keep the three in sync. A `vat_inclusive` product's
- * price_aed already has VAT baked in (back the tax portion out instead of taxing it
- * again); a `vat_inclusive: false` product is taxed 5% on top. Shipping is free only if
- * every line is free_shipping-eligible, or the subtotal clears the applicable threshold
- * (the selected district's, or the flat default) — a mixed cart still pays the fee since
- * it all ships together in one shipment.
+ * price_aed already has VAT baked in (back the tax portion out for display — it's still
+ * being collected, just embedded in the price). A `vat_inclusive: false` ("VAT exclusive")
+ * product isn't taxed at all — its price is charged exactly as listed, no 5% added on
+ * top. Shipping is free only if every line is free_shipping-eligible, or the subtotal
+ * clears the applicable threshold (the selected district's, or the flat default) — a
+ * mixed cart still pays the fee since it all ships together in one shipment.
  */
 export function computeCartTotals(lines: TotalsLine[], shippingRate?: ShippingRateOverride): CartTotals {
   let subtotal = 0;
@@ -51,7 +52,7 @@ export function computeCartTotals(lines: TotalsLine[], shippingRate?: ShippingRa
       itemVat = round2(lineTotal - exclusive);
     } else {
       exclusive = lineTotal;
-      itemVat = round2(lineTotal * VAT_RATE);
+      itemVat = 0;
     }
     subtotal += exclusive;
     vat += itemVat;

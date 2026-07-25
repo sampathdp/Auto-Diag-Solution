@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
   ChevronRight,
@@ -34,6 +34,7 @@ const WHATSAPP_NUMBER = "971501234567";
 
 export function ProductDetailView({ productId }: { productId: string }) {
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations("shop.quickView");
   const tToast = useTranslations("shop.toasts");
 
@@ -176,6 +177,13 @@ export function ProductDetailView({ productId }: { productId: string }) {
       triggerFly(buttonRef.current);
       setTimeout(() => setCartState("idle"), 2000);
     }, 400);
+  };
+
+  // Express single-item checkout — bypasses the cart entirely (whatever's already in
+  // the cart is untouched) and goes straight to /checkout for just this product.
+  const handleBuyNow = () => {
+    if (isOutOfStock) return;
+    router.push(`/checkout?buyNow=${product.id}&qty=${quantity}` as any);
   };
 
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
@@ -373,6 +381,15 @@ export function ProductDetailView({ productId }: { productId: string }) {
                   <Scale className="h-5 w-5" />
                 </button>
               </div>
+
+              {!isOutOfStock && (
+                <button
+                  onClick={handleBuyNow}
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-md bg-navy text-xs font-bold uppercase tracking-wide text-navy-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-navy/90 hover:shadow-lifted sm:text-[13px]"
+                >
+                  {t("buyNow")}
+                </button>
+              )}
 
               <a
                 href={whatsappHref}

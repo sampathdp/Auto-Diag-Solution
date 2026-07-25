@@ -207,10 +207,12 @@ export default function OrderDetailPage() {
                 <span className="text-muted-foreground">Shipping</span>
                 <span>AED {order.shipping_amount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">VAT (5%)</span>
-                <span>AED {order.vat_amount.toFixed(2)}</span>
-              </div>
+              {order.vat_amount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">VAT (5%)</span>
+                  <span>AED {order.vat_amount.toFixed(2)}</span>
+                </div>
+              )}
               {order.discount_amount > 0 && (
                 <div className="flex justify-between text-success font-medium">
                   <span>Discount</span>
