@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import { useUnsavedChangesGuard } from "@/lib/admin/hooks/useUnsavedChangesGuard";
+import { useShippingDistricts } from "@/hooks/useShippingDistricts";
 
 const addressSchema = z.object({
   label: z.string().min(1, "Label is required"),
@@ -14,6 +15,7 @@ const addressSchema = z.object({
   name: z.string().min(2, "Full name is required"),
   phone: z.string().regex(/^\+971(5[0-9]|2|3|4|6|7|9)[0-9]{7}$/, "Must be a valid UAE phone number"),
   emirate: z.enum(["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah", "Fujairah", "Umm Al Quwain"]),
+  district_id: z.number().nullable(),
   area: z.string().min(2, "Area is required"),
   building: z.string().min(1, "Building name/number is required"),
   apartment: z.string().optional(),
@@ -41,6 +43,7 @@ export function AddressForm({ initialData, defaultName, defaultPhone, onSubmit, 
       name: initialData?.name || defaultName || "",
       phone: initialData?.phone || defaultPhone || "+971",
       emirate: initialData?.emirate || "Dubai",
+      district_id: initialData?.district_id ?? null,
       area: initialData?.area || "",
       building: initialData?.building || "",
       apartment: initialData?.apartment || "",
@@ -68,6 +71,8 @@ export function AddressForm({ initialData, defaultName, defaultPhone, onSubmit, 
 
   const labelType = form.watch("label");
   const emirate = form.watch("emirate");
+  const districtId = form.watch("district_id");
+  const { data: districts = [] } = useShippingDistricts();
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="flex h-full flex-col">
@@ -139,6 +144,26 @@ export function AddressForm({ initialData, defaultName, defaultPhone, onSubmit, 
               <option value="Umm Al Quwain">Umm Al Quwain</option>
             </select>
           </div>
+
+          {districts.length > 0 && (
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <label className="text-sm font-medium">District (Optional)</label>
+              <select
+                value={districtId ?? ""}
+                onChange={(e) =>
+                  form.setValue("district_id", e.target.value ? Number(e.target.value) : null, { shouldDirty: true })
+                }
+                className="flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <option value="">Standard rate</option>
+                {districts.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <label className="text-sm font-medium">Area / Neighborhood</label>

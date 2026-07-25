@@ -55,4 +55,10 @@ export const adminQueryKeys = {
   reports: {
     sales: ["admin", "reports", "sales"] as const,
   },
+  shipping: {
+    districts: (filters: Record<string, unknown> = {}) => ["admin", "shipping", "districts", filters] as const,
+    // Fixed key used by the Rates tab's district picker (fetches the full list, no filters).
+    allDistricts: ["admin", "shipping", "districts", "all"] as const,
+    rates: (filters: Record<string, unknown> = {}) => ["admin", "shipping", "rates", filters] as const,
+  },
 };

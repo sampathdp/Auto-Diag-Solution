@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Search, X, Clock, ArrowRight } from "lucide-react";
+import { Search, X, Clock, ArrowRight, Loader2 } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "@/i18n/navigation";
@@ -16,7 +16,9 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
   const locale = useLocale();
 
   useEffect(() => {
-    const handler = setTimeout(() => setDebouncedQuery(query), 300);
+    // Short debounce — long enough to skip a query per keystroke on fast typers,
+    // short enough that results still feel instant.
+    const handler = setTimeout(() => setDebouncedQuery(query), 150);
     return () => clearTimeout(handler);
   }, [query]);
 
@@ -48,11 +50,14 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const { data } = useProducts(
-    { q: debouncedQuery, per_page: 4 },
+  const { data, isFetching } = useProducts(
+    { q: debouncedQuery, per_page: 5 },
     { enabled: debouncedQuery.length > 0 }
   );
   const results = query ? data?.data || [] : [];
+  // Debounce still pending (user typed after the last fetch fired) — treat as loading
+  // too, so the spinner doesn't flicker off between keystrokes.
+  const isSearching = query.length > 0 && (query !== debouncedQuery || isFetching);
 
   return (
     <div ref={containerRef} className="relative z-[70] flex items-center">
@@ -76,7 +81,11 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
             className="absolute right-0 top-14 w-[360px] md:w-[480px] rounded-xl border bg-card p-4 shadow-2xl rtl:left-0 rtl:right-auto"
           >
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
+              {isSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary rtl:left-auto rtl:right-3" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground rtl:left-auto rtl:right-3" />
+              )}
               <input
                 ref={inputRef}
                 type="text"
@@ -134,7 +143,7 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
                   ))}
                 </div>
                 <Link
-                  href={`/shop?q=${query}`}
+                  href={`/shop?q=${encodeURIComponent(query)}`}
                   onClick={() => setIsOpen(false)}
                   className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-secondary py-3 text-sm font-bold text-foreground hover:bg-secondary/80"
                 >
@@ -143,7 +152,7 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
               </div>
             )}
 
-            {query && results.length === 0 && (
+            {query && !isSearching && results.length === 0 && (
               <div className="py-8 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
                   <Search className="h-6 w-6 text-muted-foreground" />

@@ -8,9 +8,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { Button } from "@/components/ui/Button";
-
-const FREE_SHIPPING_THRESHOLD = 500;
-const SHIPPING_FEE = 20;
+import { computeCartTotals } from "@/lib/cartTotals";
 
 export default function CartPage() {
   const locale = useLocale();
@@ -30,10 +28,9 @@ export default function CartPage() {
     .filter((line) => line.product);
 
   const totalItems = lines.reduce((sum, l) => sum + l.quantity, 0);
-  const subtotal = lines.reduce((sum, l) => sum + l.product!.price_aed * l.quantity, 0);
-  const shipping = subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? SHIPPING_FEE : 0;
-  const vat = Math.round((subtotal + shipping) * 0.05);
-  const total = subtotal + shipping + vat;
+  const { subtotal, shipping, vat, total } = computeCartTotals(
+    lines.map((l) => ({ product: l.product!, quantity: l.quantity }))
+  );
 
   const handleCheckout = () => {
     router.push("/checkout");

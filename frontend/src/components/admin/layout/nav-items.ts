@@ -12,6 +12,7 @@ import {
   ImageIcon,
   Settings,
   BarChart3,
+  Truck,
 } from "lucide-react";
 
 export interface NavLeaf {
@@ -38,6 +39,7 @@ export const NAV_ITEMS: NavEntry[] = [
   { label: "Categories", href: "/admin/categories", icon: FolderTree },
   { label: "Brands", href: "/admin/brands", icon: Tag },
   { label: "Vehicles", href: "/admin/vehicles", icon: Car },
+  { label: "Shipping", href: "/admin/shipping", icon: Truck },
   { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { label: "Customers", href: "/admin/customers", icon: Users },
   {

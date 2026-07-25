@@ -107,6 +107,9 @@ class AddressService
             'phone' => $phone,
             'emirate' => $emirate,
             'city' => $emirate,
+            // Optional — an address without a district just prices shipping at the flat
+            // fallback rate (see ShippingService::calculateShipping) instead of blocking save.
+            'district_id' => !empty($input['district_id']) ? (int)$input['district_id'] : null,
             'area' => $area,
             'street_address' => trim((string)($input['street'] ?? '')),
             'building' => $building,
@@ -124,6 +127,7 @@ class AddressService
             'phone' => $row['phone'],
             'emirate' => $row['emirate'],
             'city' => $row['city'],
+            'district_id' => $row['district_id'] !== null ? (int)$row['district_id'] : null,
             'area' => $row['area'],
             'street' => $row['street_address'],
             'building' => $row['building'],

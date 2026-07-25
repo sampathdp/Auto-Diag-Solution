@@ -26,6 +26,7 @@ use App\Controllers\AccountWishlistController;
 use App\Controllers\AccountOrderController;
 use App\Controllers\AccountNotificationController;
 use App\Controllers\CheckoutController;
+use App\Controllers\ShippingController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
 
@@ -48,6 +49,7 @@ $router->post("$v1/auth/facebook", [AuthController::class, 'facebookLogin']);
 $router->get("$v1/brands", [BrandController::class, 'active']);
 $router->get("$v1/categories", [CategoryController::class, 'active']);
 $router->get("$v1/vehicles/filters", [VehicleController::class, 'filters']);
+$router->get("$v1/shipping/districts", [ShippingController::class, 'publicDistricts']);
 // /products/{id} is registered after /products so a literal path never gets swallowed
 // by the {id} wildcard (mirrors the /vehicles/filters-before-{id} ordering below).
 $router->get("$v1/products", [ProductController::class, 'publicIndex']);
@@ -159,6 +161,19 @@ $router->group([
     $router->get('/vehicles/{id}', [VehicleController::class, 'show']);
     $router->put('/vehicles/{id}', [VehicleController::class, 'update']);
     $router->delete('/vehicles/{id}', [VehicleController::class, 'destroy']);
+
+    // --- Shipping (districts + their rates, managed as separate resources) ---
+    $router->get('/shipping/districts', [ShippingController::class, 'indexDistricts']);
+    $router->post('/shipping/districts', [ShippingController::class, 'storeDistrict']);
+    $router->get('/shipping/districts/{id}', [ShippingController::class, 'showDistrict']);
+    $router->put('/shipping/districts/{id}', [ShippingController::class, 'updateDistrict']);
+    $router->delete('/shipping/districts/{id}', [ShippingController::class, 'destroyDistrict']);
+
+    $router->get('/shipping/rates', [ShippingController::class, 'indexRates']);
+    $router->post('/shipping/rates', [ShippingController::class, 'storeRate']);
+    $router->get('/shipping/rates/{id}', [ShippingController::class, 'showRate']);
+    $router->put('/shipping/rates/{id}', [ShippingController::class, 'updateRate']);
+    $router->delete('/shipping/rates/{id}', [ShippingController::class, 'destroyRate']);
 
     // --- Media library ---
     $router->get('/media', [MediaController::class, 'index']);

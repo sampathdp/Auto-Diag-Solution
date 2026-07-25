@@ -328,15 +328,46 @@ class ProductRepository extends BaseRepository
         }
 
         if ($search !== '') {
-            // Matches on name/description via fulltext, OR on a cross-reference number
-            // (e.g. an OEM/competitor part number printed on the old part) via LIKE —
-            // cross numbers are short codes that fulltext's stopword/min-length rules
-            // would otherwise swallow. The number itself is search-only and never shown
-            // back on the product (see ProductService::shapePublic).
-            $conditions[] = '(MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search IN NATURAL LANGUAGE MODE)
-                OR EXISTS (SELECT 1 FROM product_cross_references pcr WHERE pcr.product_id = p.id AND pcr.cross_number LIKE :cross_search))';
-            $params['search'] = $search;
-            $params['cross_search'] = '%' . $search . '%';
+            // NATURAL LANGUAGE MODE has two problems for a live "search-as-you-type" box:
+            // it silently drops any word that appears in >50% of rows (a real risk on a
+            // small/demo catalog), and it only matches whole indexed words, so "spark" won't
+            // match "sparkplug"-style tokens until the full word is typed. BOOLEAN MODE with
+            // a trailing wildcard per word fixes both — each word becomes a prefix match with
+            // no 50%-threshold suppression.
+            $words = preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY);
+            $booleanTerms = [];
+            foreach ($words as $word) {
+                // Strip characters BOOLEAN MODE treats as operators (+ - > < ( ) ~ * " @)
+                // so user input can't be (mis)interpreted as query syntax.
+                $clean = preg_replace('/[+\-><()~*"@]/', '', $word);
+                if ($clean !== '') {
+                    $booleanTerms[] = '+' . $clean . '*';
+                }
+            }
+
+            // Matches on name/description via fulltext, OR on SKU / brand name / a
+            // cross-reference number (e.g. an OEM/competitor part number printed on the old
+            // part) via LIKE — these are short codes that fulltext's stopword/min-length
+            // rules would otherwise swallow. The cross-reference number itself is
+            // search-only and never shown back on the product (see ProductService::shapePublic).
+            $likeConditions = [
+                'p.sku LIKE :search_sku',
+                'b.name_en LIKE :search_brand_en',
+                'b.name_ar LIKE :search_brand_ar',
+                'EXISTS (SELECT 1 FROM product_cross_references pcr WHERE pcr.product_id = p.id AND pcr.cross_number LIKE :cross_search)',
+            ];
+            $like = '%' . $search . '%';
+            $params['search_sku'] = $like;
+            $params['search_brand_en'] = $like;
+            $params['search_brand_ar'] = $like;
+            $params['cross_search'] = $like;
+
+            if (!empty($booleanTerms)) {
+                $likeConditions[] = 'MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search_bool IN BOOLEAN MODE)';
+                $params['search_bool'] = implode(' ', $booleanTerms);
+            }
+
+            $conditions[] = '(' . implode(' OR ', $likeConditions) . ')';
         }
 
         return ['WHERE ' . implode(' AND ', $conditions), $params];

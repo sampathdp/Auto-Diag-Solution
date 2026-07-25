@@ -20,8 +20,6 @@ use App\Repositories\UserRepository;
  */
 class CheckoutService
 {
-    private const FREE_SHIPPING_THRESHOLD = 500.0;
-    private const SHIPPING_FEE = 20.0;
     private const VAT_RATE = 5.0;
 
     private AddressService $addresses;
@@ -30,6 +28,7 @@ class CheckoutService
     private PaymentTransactionRepository $paymentTransactions;
     private AccountOrderService $accountOrders;
     private UserRepository $users;
+    private ShippingService $shipping;
 
     public function __construct()
     {
@@ -39,6 +38,7 @@ class CheckoutService
         $this->paymentTransactions = new PaymentTransactionRepository();
         $this->accountOrders = new AccountOrderService();
         $this->users = new UserRepository();
+        $this->shipping = new ShippingService();
     }
 
     public function placeOrder(int $userId, int $shippingAddressId, array $items): array
@@ -126,6 +126,9 @@ class CheckoutService
             'building' => $building,
             'apartment' => trim((string)($input['apartment'] ?? '')) ?: null,
             'instructions' => trim((string)($input['instructions'] ?? '')) ?: null,
+            // Optional — an unrecognized/omitted district just falls back to the flat rate
+            // in ShippingService rather than blocking checkout over a shipping-cost detail.
+            'district_id' => !empty($input['district_id']) ? (int)$input['district_id'] : null,
         ];
     }
 
@@ -133,10 +136,39 @@ class CheckoutService
     {
         [$lineItems, $stockUpdates] = $this->resolveLineItems($items);
 
-        $subtotal = array_sum(array_column($lineItems, 'line_total'));
-        $shipping = $subtotal > 0 && $subtotal < self::FREE_SHIPPING_THRESHOLD ? self::SHIPPING_FEE : 0.0;
-        $vatAmount = round(($subtotal + $shipping) * (self::VAT_RATE / 100), 2);
-        $total = $subtotal + $shipping + $vatAmount;
+        // Per line item: `vat_inclusive` products already have VAT baked into their price
+        // (back the tax portion out of it instead of taxing it again); `vat_inclusive =
+        // false` products are taxed 5% on top. `subtotal` is always shown pre-tax so the
+        // breakdown adds up the same way regardless of a line's vat_inclusive flag.
+        $subtotal = 0.0;
+        $vatAmount = 0.0;
+        $allLinesFreeShipping = true;
+        foreach ($lineItems as $item) {
+            if ($item['vat_inclusive']) {
+                $exclusive = round($item['line_total'] / (1 + self::VAT_RATE / 100), 2);
+                $itemVat = round($item['line_total'] - $exclusive, 2);
+            } else {
+                $exclusive = $item['line_total'];
+                $itemVat = round($item['line_total'] * (self::VAT_RATE / 100), 2);
+            }
+            $subtotal += $exclusive;
+            $vatAmount += $itemVat;
+            if (!$item['free_shipping']) {
+                $allLinesFreeShipping = false;
+            }
+        }
+        $subtotal = round($subtotal, 2);
+        $vatAmount = round($vatAmount, 2);
+
+        // Free if every item in the order is individually free-shipping-eligible; otherwise
+        // priced by the address's shipping district (ShippingService falls back to the flat
+        // fee/threshold when there's no district or the district has no rate configured).
+        $districtId = isset($address['district_id']) && $address['district_id'] !== null ? (int)$address['district_id'] : null;
+        $shipping = $allLinesFreeShipping ? 0.0 : $this->shipping->calculateShipping($districtId, $subtotal);
+        if ($shipping > 0) {
+            $vatAmount = round($vatAmount + ($shipping * (self::VAT_RATE / 100)), 2);
+        }
+        $total = round($subtotal + $shipping + $vatAmount, 2);
 
         $orderNumber = $this->generateOrderNumber();
         $paymentReference = 'MOCK-' . strtoupper(bin2hex(random_bytes(6)));
@@ -215,7 +247,7 @@ class CheckoutService
     }
 
     /**
-     * @return array{0: array<int, array{product_id:int,sku:string,name_en:string,name_ar:string,unit_price:float,quantity:int,line_total:float}>, 1: array<int, array{stock_quantity:int,stock_status:string}>}
+     * @return array{0: array<int, array{product_id:int,sku:string,name_en:string,name_ar:string,unit_price:float,quantity:int,line_total:float,vat_inclusive:bool,free_shipping:bool}>, 1: array<int, array{stock_quantity:int,stock_status:string}>}
      */
     private function resolveLineItems(array $items): array
     {
@@ -249,6 +281,8 @@ class CheckoutService
                 'unit_price' => $unitPrice,
                 'quantity' => $quantity,
                 'line_total' => round($unitPrice * $quantity, 2),
+                'vat_inclusive' => (bool)$product['vat_inclusive'],
+                'free_shipping' => (bool)$product['free_shipping'],
             ];
 
             if (!empty($product['track_inventory'])) {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/admin/ui/Button";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
@@ -28,7 +29,7 @@ import { VehicleCompatibilityCard } from "./VehicleCompatibilityCard";
 import { SpecificationsCard } from "./SpecificationsCard";
 import { CrossReferenceCard } from "./CrossReferenceCard";
 import { SeoCard } from "./SeoCard";
-import { PreviewCard } from "./PreviewCard";
+import { PreviewModal } from "./PreviewModal";
 
 function productToFormValues(product: Product): ProductFormValues {
   return {
@@ -67,6 +68,7 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
   const router = useRouter();
   const queryClient = useQueryClient();
   const [pendingIntent, setPendingIntent] = useState<"draft" | "publish" | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductFormSchema),
@@ -161,43 +163,47 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
 
   return (
     <form onSubmit={(e) => e.preventDefault()}>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <BasicInfoCard form={form} categories={categories} brands={brands} />
-          <BilingualContentCard form={form} />
-          <PricingCard form={form} />
-          <InventoryCard form={form} />
-          <ImagesCard form={form} mediaById={mediaById} />
-          <VehicleCompatibilityCard form={form} />
-          <CrossReferenceCard form={form} />
-          <SpecificationsCard form={form} />
-          <SeoCard form={form} />
-        </div>
+      <div className="space-y-6">
+        <BasicInfoCard form={form} categories={categories} brands={brands} />
+        <BilingualContentCard form={form} />
+        <PricingCard form={form} />
+        <InventoryCard form={form} />
+        <ImagesCard form={form} mediaById={mediaById} />
+        <VehicleCompatibilityCard form={form} />
+        <CrossReferenceCard form={form} />
+        <SpecificationsCard form={form} />
+        <SeoCard form={form} />
+      </div>
 
-        <div className="lg:col-span-1">
-          <PreviewCard
-            form={form}
-            categories={categories}
-            mediaById={mediaById}
-            product={product}
-            saving={save.isPending}
-            onSaveDraft={submitAs("draft")}
-            onPublish={submitAs("publish")}
-          />
+      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex items-center justify-between gap-2 border-t border-border bg-surface px-4 py-4 shadow-md md:-mx-8 md:px-8">
+        <Button type="button" variant="ghost" onClick={() => setPreviewOpen(true)}>
+          <Eye className="h-4 w-4" />
+          Preview
+        </Button>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" onClick={() => router.push("/admin/products")}>
+            Cancel
+          </Button>
+          <Button type="button" variant="secondary" onClick={submitAs("draft")} loading={save.isPending}>
+            Save as Draft
+          </Button>
+          <Button type="button" onClick={submitAs("publish")} loading={save.isPending}>
+            Publish
+          </Button>
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 -mx-4 mt-6 flex items-center justify-end gap-2 border-t border-border bg-surface px-4 py-4 shadow-md md:-mx-8 md:px-8">
-        <Button type="button" variant="ghost" onClick={() => router.push("/admin/products")}>
-          Cancel
-        </Button>
-        <Button type="button" variant="secondary" onClick={submitAs("draft")} loading={save.isPending}>
-          Save as Draft
-        </Button>
-        <Button type="button" onClick={submitAs("publish")} loading={save.isPending}>
-          Publish
-        </Button>
-      </div>
+      <PreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        form={form}
+        categories={categories}
+        mediaById={mediaById}
+        product={product}
+        saving={save.isPending}
+        onSaveDraft={submitAs("draft")}
+        onPublish={submitAs("publish")}
+      />
     </form>
   );
 }

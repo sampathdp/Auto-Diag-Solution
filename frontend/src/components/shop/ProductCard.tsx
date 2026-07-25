@@ -295,17 +295,13 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               <Eye className="h-5 w-5" />
             </motion.button>
 
-            {/* Bottom Slide-up Add to Cart / Buy Now Bar */}
-            <motion.div
-              variants={shouldReduceMotion ? {} : { rest: { y: "100%" }, hover: { y: "0%" } }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="absolute bottom-0 left-0 right-0 z-10 flex"
-            >
+            {/* Add to Cart / Buy Now Bar — always visible on mobile (no hover to reveal it), slide-up reveal on desktop hover */}
+            <div className="absolute bottom-0 left-0 right-0 z-10 flex translate-y-0 transition-transform duration-300 ease-out md:translate-y-full md:group-hover:translate-y-0">
               <button
                 ref={buttonRef}
                 disabled={isOutOfStock}
                 onClick={handleAddToCart}
-                className="flex-1 bg-primary py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:text-[13px]"
+                className="flex-1 bg-primary py-3 flex items-center justify-center text-[11px] font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:py-3.5 sm:text-[13px]"
               >
                 <AnimatePresence mode="wait">
                   {cartState === "idle" && (
@@ -328,12 +324,12 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               {!isOutOfStock && context !== "wishlist" && (
                 <button
                   onClick={handleBuyNow}
-                  className="flex-1 border-l border-navy-foreground/20 bg-navy py-3.5 flex items-center justify-center text-xs font-bold uppercase tracking-wide text-navy-foreground transition-colors hover:bg-navy/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-foreground focus-visible:ring-inset sm:text-[13px]"
+                  className="flex-1 border-l border-navy-foreground/20 bg-navy py-3 flex items-center justify-center text-[11px] font-bold uppercase tracking-wide text-navy-foreground transition-colors hover:bg-navy/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy-foreground focus-visible:ring-inset sm:py-3.5 sm:text-[13px]"
                 >
                   Buy Now
                 </button>
               )}
-            </motion.div>
+            </div>
           </div>
 
           {/* Content Area */}

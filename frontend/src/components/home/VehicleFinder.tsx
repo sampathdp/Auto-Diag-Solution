@@ -2,50 +2,9 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-
-// Placeholder fitment data — will be replaced by a live vehicles/product_vehicle API call.
-const VEHICLE_DATA: Record<string, Record<string, string[]>> = {
-  "2024": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-  "2022": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-  "2020": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-  "2019": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-  "2017": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-  "2015": {
-    Toyota: ["Land Cruiser", "Hilux", "Camry", "Corolla"],
-    Nissan: ["Patrol", "Altima", "X-Trail"],
-    Ford: ["F-150", "Explorer"],
-    Honda: ["Accord", "CR-V"],
-  },
-};
-
-const YEARS = Object.keys(VEHICLE_DATA).sort().reverse();
+import { useVehicleFilters } from "@/hooks/useVehicleFilters";
 
 function SelectField({
   label,
@@ -54,6 +13,7 @@ function SelectField({
   onChange,
   options,
   disabled,
+  loading,
 }: {
   label: string;
   placeholder: string;
@@ -61,6 +21,7 @@ function SelectField({
   onChange: (v: string) => void;
   options: string[];
   disabled?: boolean;
+  loading?: boolean;
 }) {
   return (
     <div>
@@ -83,7 +44,11 @@ function SelectField({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute end-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+        {loading ? (
+          <Loader2 className="pointer-events-none absolute end-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-white/50" />
+        ) : (
+          <ChevronDown className="pointer-events-none absolute end-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+        )}
       </div>
     </div>
   );
@@ -117,16 +82,18 @@ export function VehicleFinder() {
     }
   }, [isAuthenticated]);
 
-  const makes = year ? Object.keys(VEHICLE_DATA[year] || {}) : [];
-  const models = year && make ? VEHICLE_DATA[year]?.[make] || [] : [];
+  const { data: vehicleOptions, isLoading: isLoadingOptions } = useVehicleFilters(year, make);
+  const years = vehicleOptions?.years || [];
+  const makes = year ? vehicleOptions?.makes || [] : [];
+  const models = year && make ? vehicleOptions?.models || [] : [];
 
   const handleSubmit = () => {
     if (year || make || model) {
       setVehicleStore({ year, make, model });
       const params = new URLSearchParams();
-      if (year) params.set("fitsYear", year);
-      if (make) params.set("fitsMake", make);
-      if (model) params.set("fitsModel", model);
+      if (year) params.set("fits_year", year);
+      if (make) params.set("fits_make", make);
+      if (model) params.set("fits_model", model);
       router.push(`/shop?${params.toString()}`);
     } else {
       router.push("/shop");
@@ -146,9 +113,9 @@ export function VehicleFinder() {
         nickname: v.nickname,
       });
       const params = new URLSearchParams();
-      params.set("fitsYear", v.year.toString());
-      params.set("fitsMake", v.make);
-      params.set("fitsModel", v.model);
+      params.set("fits_year", v.year.toString());
+      params.set("fits_make", v.make);
+      params.set("fits_model", v.model);
       router.push(`/shop?${params.toString()}`);
     }
   };
@@ -189,7 +156,9 @@ export function VehicleFinder() {
             setMake("");
             setModel("");
           }}
-          options={YEARS}
+          options={years}
+          disabled={isLoadingOptions && years.length === 0}
+          loading={isLoadingOptions && years.length === 0}
         />
         <SelectField
           label={t("make")}

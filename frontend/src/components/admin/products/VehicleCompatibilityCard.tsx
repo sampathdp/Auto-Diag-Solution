@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useFieldArray, useWatch, Controller, type Control, type UseFormReturn, type FieldErrors } from "react-hook-form";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ListPlus } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/admin/ui/Card";
 import { FormField } from "@/components/admin/ui/FormField";
 import { Input } from "@/components/admin/ui/Input";
@@ -12,8 +12,15 @@ import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import type { PaginatedResponse } from "@/types/api";
 import type { ProductFormValues } from "@/lib/admin/schemas/productSchema";
+import { FitmentVehiclePickerModal } from "./FitmentVehiclePickerModal";
 
 const CURRENT_YEAR = new Date().getFullYear();
+
+// minmax() floors so no column can be squeezed below a readable width — on a narrow
+// viewport the grid overflows its container instead of clipping field text, and the
+// shared overflow-x-auto wrapper below turns that into a horizontal scroll.
+const FITMENT_GRID_COLS =
+  "sm:grid-cols-[minmax(140px,1fr)_minmax(140px,1fr)_minmax(170px,1fr)_minmax(100px,0.7fr)_minmax(100px,0.7fr)_minmax(190px,1.2fr)_44px]";
 
 type VehicleCatalogRow = { id: number; year: number; make: string; model: string; chassis_code: string | null };
 
@@ -113,7 +120,7 @@ function FitmentRow({
 
   return (
     <div className="space-y-1">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_0.8fr_0.7fr_0.7fr_1.2fr_auto]">
+      <div className={`grid grid-cols-2 gap-2 ${FITMENT_GRID_COLS}`}>
         <Controller
           control={control}
           name={`fitments.${index}.make`}
@@ -195,6 +202,8 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
   const { control, register, watch, setValue, formState } = form;
   const { fields, append, remove } = useFieldArray({ control, name: "fitments" });
   const fitsAll = watch("fits_all_vehicles");
+  const currentFitments = watch("fitments");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const vehiclesQuery = useAdminQuery<PaginatedResponse<VehicleCatalogRow>>(
     adminQueryKeys.vehicles.list({ per_page: 1000 }),
@@ -229,17 +238,23 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
       <CardHeader className="flex items-center justify-between">
         <h2 className="text-h4 font-bold text-ink">Vehicle Compatibility</h2>
         {!fitsAll && (
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              append({ make: "", model: "", chassis_code: "", year_from: CURRENT_YEAR, year_to: CURRENT_YEAR, vin_note: "" })
-            }
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add fitment
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setPickerOpen(true)}>
+              <ListPlus className="h-3.5 w-3.5" />
+              Add from catalog
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                append({ make: "", model: "", chassis_code: "", year_from: CURRENT_YEAR, year_to: CURRENT_YEAR, vin_note: "" })
+              }
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add fitment
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardBody className="space-y-4">
@@ -257,32 +272,53 @@ export function VehicleCompatibilityCard({ form }: { form: UseFormReturn<Product
               No fitment rows yet — add every make/model/year range this part fits, e.g. 2018–2022 Toyota Camry.
             </p>
           ) : (
-            <div className="space-y-3">
-              <div className="hidden grid-cols-[1fr_1fr_0.8fr_0.7fr_0.7fr_1.2fr_auto] gap-2 text-caption font-semibold uppercase tracking-wide text-ink-muted sm:grid">
-                <span>Make</span>
-                <span>Model</span>
-                <span>Chassis / Gen</span>
-                <span>Year</span>
-                <span>Year to</span>
-                <span>VIN / Option</span>
-                <span />
+            <div className="overflow-x-auto">
+              <div className="space-y-3">
+                <div className={`hidden gap-2 text-caption font-semibold uppercase tracking-wide text-ink-muted sm:grid ${FITMENT_GRID_COLS}`}>
+                  <span>Make</span>
+                  <span>Model</span>
+                  <span>Chassis / Gen</span>
+                  <span>Year</span>
+                  <span>Year to</span>
+                  <span>VIN / Option</span>
+                  <span />
+                </div>
+                {fields.map((field, index) => (
+                  <FitmentRow
+                    key={field.id}
+                    control={control}
+                    register={register}
+                    index={index}
+                    remove={remove}
+                    error={formState.errors.fitments?.[index]}
+                    allMakes={allMakes}
+                    modelsByMake={modelsByMake}
+                    chassisByMakeModel={chassisByMakeModel}
+                  />
+                ))}
               </div>
-              {fields.map((field, index) => (
-                <FitmentRow
-                  key={field.id}
-                  control={control}
-                  register={register}
-                  index={index}
-                  remove={remove}
-                  error={formState.errors.fitments?.[index]}
-                  allMakes={allMakes}
-                  modelsByMake={modelsByMake}
-                  chassisByMakeModel={chassisByMakeModel}
-                />
-              ))}
             </div>
           ))}
       </CardBody>
+
+      <FitmentVehiclePickerModal
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        vehicles={vehicles}
+        existingFitments={currentFitments ?? []}
+        onConfirm={(groups) => {
+          append(
+            groups.map((g) => ({
+              make: g.make,
+              model: g.model,
+              chassis_code: g.chassis_code ?? "",
+              year_from: g.year_from,
+              year_to: g.year_to,
+              vin_note: "",
+            }))
+          );
+        }}
+      />
     </Card>
   );
 }

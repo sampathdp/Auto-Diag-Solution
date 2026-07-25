@@ -17,15 +17,15 @@ import { GuestDetailsForm, type GuestDetailsValue } from "@/components/checkout/
 import apiClient from "@/lib/api/client";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
-
-const FREE_SHIPPING_THRESHOLD = 500;
-const SHIPPING_FEE = 20;
+import { computeCartTotals } from "@/lib/cartTotals";
+import { useShippingDistricts } from "@/hooks/useShippingDistricts";
 
 const EMPTY_GUEST: GuestDetailsValue = {
   name: "",
   email: "",
   phone: "",
   emirate: "Dubai",
+  district_id: null,
   area: "",
   building: "",
   apartment: "",
@@ -39,6 +39,7 @@ interface Address {
   name: string;
   phone: string;
   emirate: string;
+  district_id: number | null;
   area: string;
   street: string;
   building: string;
@@ -116,10 +117,16 @@ function CheckoutPageContent() {
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
     .filter((line) => line.product);
 
-  const subtotal = lines.reduce((sum, l) => sum + l.product!.price_aed * l.quantity, 0);
-  const shipping = subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? SHIPPING_FEE : 0;
-  const vat = Math.round((subtotal + shipping) * 0.05);
-  const total = subtotal + shipping + vat;
+  const { data: districts = [] } = useShippingDistricts();
+  const selectedDistrictId = isAuthenticated
+    ? addresses.find((a) => a.id === selectedAddressId)?.district_id ?? null
+    : guest.district_id;
+  const selectedDistrict = districts.find((d) => d.id === selectedDistrictId);
+
+  const { subtotal, shipping, vat, total } = computeCartTotals(
+    lines.map((l) => ({ product: l.product!, quantity: l.quantity })),
+    selectedDistrict
+  );
 
   const validateGuest = () => {
     if (!guest.name.trim() || !guest.email.trim() || !guest.phone.trim()) {
@@ -164,6 +171,7 @@ function CheckoutPageContent() {
             },
             shipping: {
               emirate: guest.emirate,
+              district_id: guest.district_id ?? undefined,
               area: guest.area.trim(),
               building: guest.building.trim(),
               apartment: guest.apartment.trim() || undefined,

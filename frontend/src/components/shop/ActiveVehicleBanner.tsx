@@ -1,19 +1,27 @@
 "use client";
 
 import { useVehicleStore } from "@/store/useVehicleStore";
+import { usePathname } from "@/i18n/navigation";
 import { useEffect, useState } from "react";
 import { X, Car } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Vehicle fitment only affects shop browsing/comparison — hide the banner on pages
+// (home, checkout, account, etc.) where "Shopping for: X" would just be noise.
+const RELEVANT_PATH_PREFIXES = ["/shop", "/compare"];
+
 export function ActiveVehicleBanner() {
   const { vehicle, clearVehicle } = useVehicleStore();
+  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (!mounted || !vehicle) return null;
+  const isRelevantPage = RELEVANT_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+
+  if (!mounted || !vehicle || !isRelevantPage) return null;
 
   return (
     <AnimatePresence>
