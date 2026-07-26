@@ -251,7 +251,7 @@
       "sortNewest": "Newest"
     },
     "sidebar": {
-      "searchPlaceholder": "Filter by name...",
+      "searchPlaceholder": "Filter by name, SKU, chassis code...",
       "vehicleFitment": "Vehicle Fitment",
       "myVehicles": "My Vehicles",
       "showingPartsFor": "Showing parts for",

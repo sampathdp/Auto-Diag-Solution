@@ -347,20 +347,24 @@ class ProductRepository extends BaseRepository
 
             // Matches on name/description via fulltext, OR on SKU / brand name / a
             // cross-reference number (e.g. an OEM/competitor part number printed on the old
-            // part) via LIKE — these are short codes that fulltext's stopword/min-length
-            // rules would otherwise swallow. The cross-reference number itself is
-            // search-only and never shown back on the product (see ProductService::shapePublic).
+            // part) / a fitment chassis-gen code (e.g. "2GRFE", "ACV40" — printed on the
+            // vehicle, not the part, but customers search by it just as often) via LIKE —
+            // these are short codes that fulltext's stopword/min-length rules would
+            // otherwise swallow. Neither the cross-reference number nor the chassis code
+            // is shown back on the product (see ProductService::shapePublic) — search-only.
             $likeConditions = [
                 'p.sku LIKE :search_sku',
                 'b.name_en LIKE :search_brand_en',
                 'b.name_ar LIKE :search_brand_ar',
                 'EXISTS (SELECT 1 FROM product_cross_references pcr WHERE pcr.product_id = p.id AND pcr.cross_number LIKE :cross_search)',
+                'EXISTS (SELECT 1 FROM product_fitments pfc WHERE pfc.product_id = p.id AND pfc.chassis_code LIKE :chassis_search)',
             ];
             $like = '%' . $search . '%';
             $params['search_sku'] = $like;
             $params['search_brand_en'] = $like;
             $params['search_brand_ar'] = $like;
             $params['cross_search'] = $like;
+            $params['chassis_search'] = $like;
 
             if (!empty($booleanTerms)) {
                 $likeConditions[] = 'MATCH(p.name_en, p.name_ar, p.short_description_en, p.short_description_ar) AGAINST (:search_bool IN BOOLEAN MODE)';

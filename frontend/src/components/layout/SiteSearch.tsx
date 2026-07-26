@@ -91,7 +91,7 @@ export function SiteSearch({ scrolled }: { scrolled: boolean }) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search products, brands, SKU... (Press / to focus)"
+                placeholder="Search products, brands, SKU, chassis code... (Press / to focus)"
                 className="h-12 w-full rounded-md border bg-secondary/50 pl-10 pr-10 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary rtl:pl-10 rtl:pr-10"
               />
               {query && (
