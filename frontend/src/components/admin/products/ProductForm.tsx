@@ -102,10 +102,15 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
       mode === "edit" && product
         ? adminApi.put<Product>(`/products/${product.id}`, payload)
         : adminApi.post<Product>("/products", payload),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       showSuccess(mode === "edit" ? "Product updated" : `Product ${pendingIntent === "draft" ? "saved as draft" : "created"}`);
+      // Write the server's response straight into the cache instead of just
+      // invalidating: invalidate only schedules a background refetch, and the
+      // router.push right below unmounts this page before that refetch can land,
+      // so React Query discards the result and the next visit to the edit page
+      // serves the pre-save (stale) product until a hard reload rebuilds the cache.
+      queryClient.setQueryData(adminQueryKeys.products.detail(saved.id), saved);
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.products.list() });
-      if (product) queryClient.invalidateQueries({ queryKey: adminQueryKeys.products.detail(product.id) });
       router.push("/admin/products");
     },
     onError: (err) => showError(err instanceof ApiError ? err.message : "Could not save the product."),
