@@ -12,21 +12,20 @@ import { FullScreenLoader } from "@/components/admin/ui/FullScreenLoader";
 import { MediaCard } from "@/components/admin/media/MediaCard";
 import { MediaUploadDropzone } from "@/components/admin/media/MediaUploadDropzone";
 import { MediaDetailDrawer } from "@/components/admin/media/MediaDetailDrawer";
-import { showSuccess } from "@/components/admin/ui/toast";
+import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { useDataTable } from "@/lib/admin/hooks/useDataTable";
-import { adminApi } from "@/lib/admin/api-client";
+import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import type { PaginatedResponse } from "@/types/api";
-import type { MediaItem } from "@/mocks/admin/db";
 
 function AdminMediaPageContent() {
   const dt = useDataTable({ defaultPageSize: 100 });
   const type = dt.getFilter("type");
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [activeItem, setActiveItem] = useState<MediaItem | null>(null);
+  const [activeItemId, setActiveItemId] = useState<number | null>(null);
 
   const filters = useMemo(() => ({ per_page: 100 }), []);
   const mediaQuery = useAdminQuery<PaginatedResponse<RawMediaRow>>(adminQueryKeys.media.list(filters), "/media", filters);
@@ -38,6 +37,14 @@ function AdminMediaPageContent() {
     return list;
   }, [mediaQuery.data, type, dt.search]);
 
+  // Derived from the live query data (not a snapshot captured on click) so the
+  // drawer picks up the rename/alt-text save it just made instead of showing the
+  // pre-edit copy until the drawer is closed and reopened.
+  const activeItem = useMemo(
+    () => (activeItemId !== null ? (items.find((i) => i.id === activeItemId) ?? null) : null),
+    [items, activeItemId]
+  );
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: adminQueryKeys.media.list() });
 
   const upload = useMutation({
@@ -46,7 +53,11 @@ function AdminMediaPageContent() {
       formData.append("file", file);
       return adminApi.post("/media", formData);
     },
-    onSuccess: invalidate,
+    onSuccess: () => {
+      showSuccess("File uploaded");
+      invalidate();
+    },
+    onError: (err) => showError(err instanceof ApiError ? err.message : "Upload failed"),
   });
 
   const bulkDelete = useMutation({
@@ -117,14 +128,14 @@ function AdminMediaPageContent() {
                 item={item}
                 selected={selectedIds.includes(item.id)}
                 onToggleSelect={() => toggleSelect(item.id)}
-                onClick={() => setActiveItem(item)}
+                onClick={() => setActiveItemId(item.id)}
               />
             ))}
           </div>
         )}
       </div>
 
-      <MediaDetailDrawer item={activeItem} onClose={() => setActiveItem(null)} />
+      <MediaDetailDrawer item={activeItem} onClose={() => setActiveItemId(null)} />
     </div>
   );
 }

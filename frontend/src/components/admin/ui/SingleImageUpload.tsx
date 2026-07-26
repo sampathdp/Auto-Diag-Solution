@@ -89,17 +89,22 @@ export function SingleImageUpload({
     <div
       onDragOver={(e) => {
         e.preventDefault();
-        setDragActive(true);
+        if (!upload.isPending) setDragActive(true);
       }}
       onDragLeave={() => setDragActive(false)}
       onDrop={(e) => {
         e.preventDefault();
         setDragActive(false);
+        if (upload.isPending) return;
         handleFiles(e.dataTransfer.files);
       }}
-      onClick={() => inputRef.current?.click()}
+      onClick={() => {
+        if (!upload.isPending) inputRef.current?.click();
+      }}
+      aria-disabled={upload.isPending}
       className={cn(
-        "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
+        "flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
+        upload.isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer",
         dragActive ? "border-primary bg-primary/5" : "border-border bg-app hover:border-primary/40"
       )}
     >
@@ -115,6 +120,7 @@ export function SingleImageUpload({
         ref={inputRef}
         type="file"
         accept="image/*"
+        disabled={upload.isPending}
         className="hidden"
         onChange={(e) => {
           handleFiles(e.target.files);

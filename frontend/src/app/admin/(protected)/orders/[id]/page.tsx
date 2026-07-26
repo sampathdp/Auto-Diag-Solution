@@ -193,7 +193,7 @@ export default function AdminOrderDetailPage() {
             <label className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Status</label>
             <Select
               value={order.status}
-              disabled={order.status === "pending_vin_verification"}
+              disabled={order.status === "pending_vin_verification" || updateStatus.isPending}
               onChange={(e) => {
                 const next = e.target.value as OrderStatus;
                 if (next === "cancelled") setCancelOpen(true);

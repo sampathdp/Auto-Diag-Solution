@@ -134,23 +134,31 @@ export function ImagesCard({
         <div
           onDragOver={(e) => {
             e.preventDefault();
-            setDragActive(true);
+            if (!uploadFile.isPending) setDragActive(true);
           }}
           onDragLeave={() => setDragActive(false)}
           onDrop={(e) => {
             e.preventDefault();
             setDragActive(false);
+            if (uploadFile.isPending) return;
             handleFiles(e.dataTransfer.files);
           }}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (!uploadFile.isPending) fileInputRef.current?.click();
+          }}
+          aria-disabled={uploadFile.isPending}
           className={cn(
-            "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors",
+            "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors",
+            uploadFile.isPending ? "cursor-not-allowed opacity-60" : "cursor-pointer",
             dragActive ? "border-primary bg-primary/5" : "border-border bg-app hover:border-primary/40"
           )}
         >
           <UploadCloud className="h-6 w-6 text-ink-muted" />
           <p className="text-body text-ink">
-            <span className="font-semibold text-primary">Click to upload</span> or drag and drop
+            <span className="font-semibold text-primary">
+              {uploadFile.isPending ? "Uploading…" : "Click to upload"}
+            </span>
+            {!uploadFile.isPending && " or drag and drop"}
           </p>
           <p className="text-caption text-ink-muted">PNG, JPG or WEBP</p>
           <input
@@ -158,6 +166,7 @@ export function ImagesCard({
             type="file"
             accept="image/*"
             multiple
+            disabled={uploadFile.isPending}
             className="hidden"
             onChange={(e) => handleFiles(e.target.files)}
           />

@@ -229,6 +229,7 @@ function AdminProductsPageContent() {
               size="sm"
               variant="secondary"
               onClick={() => bulkAction.mutate({ action: "activate", ids: rows.map((r) => r.id) }, { onSuccess: clear })}
+              loading={bulkAction.isPending}
             >
               Activate
             </Button>
@@ -236,6 +237,7 @@ function AdminProductsPageContent() {
               size="sm"
               variant="secondary"
               onClick={() => bulkAction.mutate({ action: "deactivate", ids: rows.map((r) => r.id) }, { onSuccess: clear })}
+              loading={bulkAction.isPending}
             >
               Deactivate
             </Button>
@@ -243,6 +245,7 @@ function AdminProductsPageContent() {
               size="sm"
               variant="danger"
               onClick={() => bulkAction.mutate({ action: "delete", ids: rows.map((r) => r.id) }, { onSuccess: clear })}
+              loading={bulkAction.isPending}
             >
               Delete
             </Button>

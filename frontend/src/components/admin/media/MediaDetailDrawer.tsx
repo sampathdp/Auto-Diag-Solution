@@ -25,6 +25,7 @@ export function MediaDetailDrawer({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const [filename, setFilename] = useState("");
   const [altEn, setAltEn] = useState("");
   const [altAr, setAltAr] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -37,6 +38,7 @@ export function MediaDetailDrawer({
 
   useEffect(() => {
     if (item) {
+      setFilename(item.filename);
       setAltEn(item.alt_text_en);
       setAltAr(item.alt_text_ar);
     }
@@ -45,7 +47,11 @@ export function MediaDetailDrawer({
   const invalidate = () => queryClient.invalidateQueries({ queryKey: adminQueryKeys.media.list() });
 
   const save = useMutation({
-    mutationFn: (payload: Partial<MediaItem>) => adminApi.put(`/media/${item!.id}`, payload),
+    // Backend column is `original_filename`, not `filename` — MediaItem.filename is
+    // the frontend-adapted name (see mediaAdapter.ts), so a rename sends that key
+    // explicitly rather than the adapted shape.
+    mutationFn: (payload: Partial<MediaItem> & { original_filename?: string }) =>
+      adminApi.put(`/media/${item!.id}`, payload),
     onSuccess: () => {
       showSuccess("Media updated");
       invalidate();
@@ -75,6 +81,21 @@ export function MediaDetailDrawer({
             <div className="h-40 overflow-hidden rounded-lg border border-border">
               <MediaThumbnail item={item} size="lg" className="rounded-none" />
             </div>
+
+            <FormField label="Filename" htmlFor="filename">
+              <div className="flex gap-2">
+                <Input id="filename" value={filename} onChange={(e) => setFilename(e.target.value)} />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => save.mutate({ original_filename: filename.trim() })}
+                  loading={save.isPending}
+                  disabled={!filename.trim() || filename.trim() === item.filename}
+                >
+                  Rename
+                </Button>
+              </div>
+            </FormField>
 
             <dl className="grid grid-cols-2 gap-3 text-caption">
               <div>

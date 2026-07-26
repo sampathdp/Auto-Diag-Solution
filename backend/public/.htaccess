@@ -22,3 +22,9 @@
     Order allow,deny
     Deny from all
 </FilesMatch>
+
+# Dotfiles (.htaccess itself, .user.ini) are config, never a response body
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>

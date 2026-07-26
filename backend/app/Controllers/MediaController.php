@@ -38,7 +38,8 @@ class MediaController extends BaseController
     {
         $files = $request->getFiles();
         if (empty($files['file'])) {
-            $this->error('No file provided', null, 400);
+            [$message, $statusCode] = $this->missingFileError();
+            $this->error($message, null, $statusCode);
             return;
         }
 
@@ -50,6 +51,42 @@ class MediaController extends BaseController
         );
 
         $this->success($media, 'File uploaded successfully', 201);
+    }
+
+    /**
+     * When the request body exceeds `post_max_size`, PHP empties $_FILES/$_POST
+     * entirely before any app code runs — no error field, nothing to catch. Without
+     * this, an oversized upload looks identical to "no file attached" and the real
+     * problem (file too large) never reaches the user.
+     *
+     * @return array{0: string, 1: int} [message, statusCode]
+     */
+    private function missingFileError(): array
+    {
+        $contentLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+        $postMaxBytes = self::iniToBytes((string) ini_get('post_max_size'));
+
+        if ($contentLength > 0 && $postMaxBytes > 0 && $contentLength > $postMaxBytes) {
+            return ["File is too large. Maximum upload size is " . intdiv($postMaxBytes, 1048576) . " MB.", 413];
+        }
+
+        return ['No file provided', 400];
+    }
+
+    private static function iniToBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+        $unit = strtolower(substr($value, -1));
+        $number = (int) $value;
+        return match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (int) $value,
+        };
     }
 
     public function update(Request $request): void

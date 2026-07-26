@@ -66,10 +66,17 @@ class MediaService
         return $this->find($id);
     }
 
-    /** Alt-text is the only editable field — replacing the file itself is a new upload, not a PUT. */
+    /**
+     * Editable fields: alt text, and the display filename. Replacing the file itself
+     * is a new upload, not a PUT — but renaming IS supported: it renames the physical
+     * file to a slug of the new name (keeping its real extension) and updates `path`
+     * to match, so the public URL (derived from `path`, see mediaAdapter.ts) reflects
+     * the rename too.
+     */
     public function update(int $id, array $input): array
     {
-        if (!$this->repo->find($id)) {
+        $media = $this->repo->find($id);
+        if (!$media) {
             throw new DomainException('Media not found', 404);
         }
 
@@ -85,11 +92,62 @@ class MediaService
                 : null;
         }
 
+        if (array_key_exists('original_filename', $input)) {
+            $newName = trim((string) $input['original_filename']);
+            if ($newName === '') {
+                throw new DomainException('Filename cannot be empty', 422);
+            }
+            if ($newName !== $media['original_filename']) {
+                $data['path'] = $this->renameStoredFile($media['path'], $newName);
+            }
+            $data['original_filename'] = $newName;
+        }
+
         if (!empty($data)) {
             $this->repo->update($id, $data);
         }
 
         return $this->find($id);
+    }
+
+    /**
+     * Renames the physical file to a slug of the new display name, keeping its real
+     * extension (never one typed by the user). Falls back to a numeric suffix on a
+     * same-directory collision, same as how uploads already dodge collisions.
+     */
+    private function renameStoredFile(string $currentPath, string $newDisplayName): string
+    {
+        $absoluteBase = dirname(__DIR__, 2) . '/public';
+        $currentAbsolute = $absoluteBase . $currentPath;
+        if (!is_file($currentAbsolute)) {
+            throw new DomainException('Stored file is missing, cannot rename', 409);
+        }
+
+        $extension = pathinfo($currentPath, PATHINFO_EXTENSION);
+        $directory = dirname($currentPath);
+
+        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($newDisplayName)), '-');
+        if ($slug === '') {
+            $slug = 'file';
+        }
+
+        $suffix = 0;
+        do {
+            $candidateName = $suffix === 0 ? $slug : "{$slug}-{$suffix}";
+            $candidatePath = $directory . '/' . $candidateName . ($extension !== '' ? '.' . $extension : '');
+            $candidateAbsolute = $absoluteBase . $candidatePath;
+            $suffix++;
+        } while ($candidateAbsolute !== $currentAbsolute && is_file($candidateAbsolute));
+
+        if ($candidateAbsolute === $currentAbsolute) {
+            return $currentPath;
+        }
+
+        if (!@rename($currentAbsolute, $candidateAbsolute)) {
+            throw new DomainException('Could not rename file on disk', 500);
+        }
+
+        return $candidatePath;
     }
 
     public function delete(int $id): void
