@@ -9,34 +9,7 @@ import { cn } from "@/lib/utils";
 import { useUnsavedChangesGuard } from "@/lib/admin/hooks/useUnsavedChangesGuard";
 import { Loader2, ChevronDown, ShieldCheck, HelpCircle } from "lucide-react";
 import apiClient from "@/lib/api/client";
-import { COMMON_VEHICLE_MAKES } from "@/lib/vehicleData";
-
-// Simplified cascading data for demonstration. In a real app, this would come from an API.
-const VEHICLE_DB: Record<string, Record<string, Record<string, string[]>>> = {
-  "2024": {
-    "Toyota": {
-      "Land Cruiser": ["VXR", "GXR", "EXR", "Black Edition"],
-      "Hilux": ["Single Cab", "Double Cab", "Adventure"],
-    },
-    "Nissan": {
-      "Patrol": ["XE", "SE", "LE", "Nismo"],
-    }
-  },
-  "2023": {
-    "Toyota": {
-      "Land Cruiser": ["VXR", "GXR", "EXR"],
-      "Camry": ["LE", "SE", "XLE", "Hybrid"],
-    },
-  },
-  "2019": {
-    "Toyota": {
-      "Land Cruiser": ["VXR 5.7L V8", "GXR 4.6L V8", "GXR 4.0L V6", "EXR"],
-    },
-  }
-};
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 35 }, (_, i) => (CURRENT_YEAR + 1 - i).toString());
+import { useVehicleFilters } from "@/hooks/useVehicleFilters";
 
 const vehicleSchema = z.object({
   year: z.string().min(4, "Year is required"),
@@ -103,16 +76,22 @@ export function VehicleDrawer({ initialData, onSubmit, onCancel }: VehicleDrawer
   const watchMake = form.watch("make");
   const watchModel = form.watch("model");
 
-  const availableMakes = watchYear && VEHICLE_DB[watchYear] ? Object.keys(VEHICLE_DB[watchYear]) : COMMON_VEHICLE_MAKES;
-  const availableModels = watchYear && watchMake && VEHICLE_DB[watchYear]?.[watchMake] ? Object.keys(VEHICLE_DB[watchYear][watchMake]) : (watchMake ? ["Model A", "Model B", "Model C"] : []);
-  const availableTrims = watchYear && watchMake && watchModel && VEHICLE_DB[watchYear]?.[watchMake]?.[watchModel] ? VEHICLE_DB[watchYear][watchMake][watchModel] : [];
+  // Cascading Year -> Make -> Model options come from the same catalog the shop's
+  // "find parts for my vehicle" search uses (see VehicleFinder/ShopSidebar) — a garage
+  // vehicle outside that catalog could never actually match any fitment anyway, so the
+  // "instantly filter the shop to parts that fit" promise below only holds if we only
+  // ever offer vehicles the catalog knows about.
+  const { data: vehicleOptions } = useVehicleFilters(watchYear, watchMake);
+  const availableYears = vehicleOptions?.years ?? [];
+  const availableMakes = vehicleOptions?.makes ?? [];
+  const availableModels = vehicleOptions?.models ?? [];
 
   useEffect(() => {
-    if (watchMake && watchModel) {
+    if (watchYear && watchMake && watchModel) {
       setLoadingCount(true);
       const timer = setTimeout(async () => {
         try {
-          const res = await apiClient.get(`/vehicles/part-count?make=${watchMake}&model=${watchModel}`);
+          const res = await apiClient.get(`/vehicles/part-count?year=${watchYear}&make=${watchMake}&model=${watchModel}`);
           setPartCount(res.data.data.count);
         } catch (e) {
           setPartCount(null);
@@ -124,7 +103,7 @@ export function VehicleDrawer({ initialData, onSubmit, onCancel }: VehicleDrawer
     } else {
       setPartCount(null);
     }
-  }, [watchMake, watchModel]);
+  }, [watchYear, watchMake, watchModel]);
 
   const handleCancel = () => {
     if (confirmDiscard()) {
@@ -159,7 +138,7 @@ export function VehicleDrawer({ initialData, onSubmit, onCancel }: VehicleDrawer
                 )}
               >
                 <option value="">Select Year</option>
-                {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
               </select>
               <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
             </div>
@@ -215,25 +194,19 @@ export function VehicleDrawer({ initialData, onSubmit, onCancel }: VehicleDrawer
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium">Trim / Variant</label>
-            <div className="relative">
-              <select
-                {...form.register("trim")}
-                disabled={!watchModel}
-                className={cn(
-                  "flex h-10 w-full appearance-none rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50",
-                  form.formState.errors.trim && "border-destructive"
-                )}
-              >
-                <option value="">Select Trim (Optional)</option>
-                {availableTrims.map(t => <option key={t} value={t}>{t}</option>)}
-                <option value="Other">Other / Not sure</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-            </div>
+            <input
+              {...form.register("trim")}
+              disabled={!watchModel}
+              placeholder="e.g. VXR, GXR, LE (optional)"
+              className={cn(
+                "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50",
+                form.formState.errors.trim && "border-destructive"
+              )}
+            />
           </div>
-          
+
           {/* Live Lookup Result */}
-          {watchMake && watchModel && (
+          {watchYear && watchMake && watchModel && (
             <div className="rounded-lg bg-primary/5 p-3 flex items-start gap-3 border border-primary/10">
               <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
               <div>

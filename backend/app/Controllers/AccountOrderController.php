@@ -59,9 +59,22 @@ class AccountOrderController extends BaseController
             (int)$request->getParam('id'),
             (string)($request->input('reason') ?? ''),
             (string)($request->input('description') ?? ''),
-            (array)($request->input('items') ?? [])
+            (array)($request->input('items') ?? []),
+            (array)($request->input('photos') ?? [])
         );
         $this->success($order, 'Refund request submitted successfully');
+    }
+
+    public function uploadRefundPhoto(Request $request): void
+    {
+        $files = $request->getFiles();
+        if (empty($files['file'])) {
+            $this->error('No file provided', null, 400);
+            return;
+        }
+
+        $url = $this->service->uploadRefundPhoto($files['file']);
+        $this->success(['url' => $url], 'Photo uploaded successfully', 201);
     }
 
     public function reorder(Request $request): void

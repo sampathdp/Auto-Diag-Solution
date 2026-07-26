@@ -52,7 +52,7 @@ function CheckoutPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuthStore();
-  const { items: cartItems, clearCart } = useCartStore();
+  const { items: cartItems, clearCart, removeItem: removeCartItem } = useCartStore();
   const [mounted, setMounted] = useState(false);
 
   // "Buy Now" — an express single-item checkout that never touches the persistent
@@ -116,6 +116,23 @@ function CheckoutPageContent() {
   const lines = sourceItems
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
     .filter((line) => line.product);
+
+  // Same reconciliation as the cart page — a persisted cart item whose product was
+  // deleted/deactivated since it was added would otherwise silently vanish from this
+  // page's totals while still inflating the header's cart-count badge forever.
+  useEffect(() => {
+    if (isBuyNow || loadingProducts || !products) return;
+    const validIds = new Set(products.map((p) => p.id));
+    const staleItems = cartItems.filter((item) => !validIds.has(item.productId));
+    if (staleItems.length === 0) return;
+    staleItems.forEach((item) => removeCartItem(item.productId));
+    toast.error(
+      staleItems.length === 1
+        ? "1 item in your cart is no longer available and was removed."
+        : `${staleItems.length} items in your cart are no longer available and were removed.`
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBuyNow, loadingProducts, products]);
 
   const { data: districts = [] } = useShippingDistricts();
   const selectedDistrictId = isAuthenticated

@@ -10,6 +10,7 @@ import { productFitsVehicle } from "@/lib/productFitment";
 import { Link } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
+import { PartTypeBadge } from "./PartTypeBadge";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
 import { useCartStore } from "@/store/useCartStore";
@@ -121,6 +122,9 @@ export function ProductListRow({ product }: { product: Product }) {
   const hasDiscount = !!product.compare_at_price;
   const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price_aed) / product.compare_at_price!) * 100) : 0;
   const imageSrc = product.images[0] || "/placeholder-product.svg";
+  const description =
+    (locale === "ar" ? product.short_description_ar : product.short_description_en) ||
+    (locale === "ar" ? product.description_ar : product.description_en);
 
   return (
     <>
@@ -166,7 +170,7 @@ export function ProductListRow({ product }: { product: Product }) {
               {!isOutOfStock && hasDiscount && (
                 <span className="rounded bg-destructive px-2 py-1 text-[10px] font-bold tracking-wider text-destructive-foreground shadow-sm">-{discountPercent}%</span>
               )}
-              <span className="rounded bg-background/90 px-2 py-1 text-[10px] font-bold text-foreground backdrop-blur-sm shadow-sm border">OEM</span>
+              {product.part_type && <PartTypeBadge type={product.part_type} />}
             </div>
 
             {/* Quick View Button on Image */}
@@ -215,9 +219,11 @@ export function ProductListRow({ product }: { product: Product }) {
                 </div>
               )}
 
-              <p className="mt-auto hidden text-sm text-muted-foreground sm:block line-clamp-2">
-                High quality aftermarket replacement part. Engineered to match OEM specifications for durability and performance. Backed by manufacturer warranty.
-              </p>
+              {description && (
+                <p className="mt-auto hidden text-sm text-muted-foreground sm:block line-clamp-2">
+                  {description}
+                </p>
+              )}
             </div>
 
             {/* Right Action Section */}

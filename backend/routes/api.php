@@ -49,7 +49,9 @@ $router->post("$v1/auth/facebook", [AuthController::class, 'facebookLogin']);
 $router->get("$v1/brands", [BrandController::class, 'active']);
 $router->get("$v1/categories", [CategoryController::class, 'active']);
 $router->get("$v1/vehicles/filters", [VehicleController::class, 'filters']);
+$router->get("$v1/vehicles/part-count", [VehicleController::class, 'partCount']);
 $router->get("$v1/shipping/districts", [ShippingController::class, 'publicDistricts']);
+$router->get("$v1/reviews/featured", [ReviewController::class, 'featured']);
 // /products/{id} is registered after /products so a literal path never gets swallowed
 // by the {id} wildcard (mirrors the /vehicles/filters-before-{id} ordering below).
 $router->get("$v1/products", [ProductController::class, 'publicIndex']);
@@ -61,6 +63,9 @@ $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
 // /account/checkout above (still requires AuthMiddleware for saved-address checkout).
 $router->post("$v1/checkout/guest", [CheckoutController::class, 'guestStore']);
+
+// Public contact form — no login required.
+$router->post("$v1/contact", [App\Controllers\ContactMessageController::class, 'store']);
 
 // Fulfillor order-status webhook — necessarily unauthenticated (Fulfillor's server
 // calls this, not a logged-in browser); gated by a shared secret header instead of a
@@ -108,6 +113,10 @@ $router->group([
     $router->delete('/wishlist/{productId}', [AccountWishlistController::class, 'destroy']);
 
     $router->get('/orders', [AccountOrderController::class, 'index']);
+    // /orders/refund-photos is a literal POST path, registered before /orders/{id} for
+    // consistency with this file's "static before wildcard" convention (see /vehicles/
+    // filters above) — no actual GET/{id} collision since it's POST-only.
+    $router->post('/orders/refund-photos', [AccountOrderController::class, 'uploadRefundPhoto']);
     $router->get('/orders/{id}', [AccountOrderController::class, 'show']);
     $router->post('/orders/{id}/cancel', [AccountOrderController::class, 'cancel']);
     $router->post('/orders/{id}/refund', [AccountOrderController::class, 'refund']);

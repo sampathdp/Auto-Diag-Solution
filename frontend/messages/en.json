@@ -59,20 +59,15 @@
       "eyebrow": "Shop By Category",
       "title": "Every system, properly stocked.",
       "viewAll": "View All Categories",
-      "partsLabel": "Parts",
-      "engine": "Engine Components",
-      "brakes": "Brakes & Suspension",
-      "filters": "Filters & Fluids",
-      "electrical": "Electrical & Lighting",
-      "body": "Body & Exterior",
-      "interior": "Interior & Trim"
+      "partsLabel": "Parts"
     },
     "products": {
       "eyebrow": "Best Sellers",
       "title": "Parts drivers reorder.",
       "addToCart": "Add to Cart",
       "inStock": "In Stock",
-      "lowStock": "Low Stock"
+      "lowStock": "Low Stock",
+      "outOfStock": "Out of Stock"
     },
     "brands": {
       "eyebrow": "Trusted Brands",
@@ -93,9 +88,8 @@
       "returnsBody": "Wrong fitment or changed your mind — 30 days to return, no restocking questions asked."
     },
     "testimonial": {
-      "quote": "Ordered brake pads for my Land Cruiser on a Tuesday morning — they were at my garage in Al Quoz by 3pm the same day. Genuine Brembo, exactly as described.",
-      "name": "Ahmed Al Falasi",
-      "role": "Dubai, UAE — Toyota Land Cruiser 2019"
+      "verifiedBuyer": "Verified Buyer",
+      "verifiedPurchase": "Verified purchase — {product}"
     },
     "cta": {
       "title": "Can't find your part? Talk to us on WhatsApp.",
@@ -359,6 +353,7 @@
     },
     "toasts": {
       "addedToWishlist": "Added to wishlist",
+      "addedToCart": "Added to cart",
       "compareLimitReached": "You can only compare up to 3 products at once.",
       "linkCopied": "Link copied to clipboard"
     }

@@ -18,6 +18,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useProduct } from "@/hooks/useProduct";
+import { isNewProduct } from "@/lib/productBadges";
 import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/Button";
 import { CheckFitmentWidget } from "./CheckFitmentWidget";
@@ -102,8 +103,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
   const discountPercent = hasDiscount
     ? Math.round(((product.compare_at_price! - product.price_aed) / product.compare_at_price!) * 100)
     : 0;
-  const idHash = product.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const isNew = idHash % 10 > 6;
+  const isNew = isNewProduct(product);
 
   const relatedProducts = (relatedData?.data || []).filter((p) => p.id !== product.id).slice(0, 4);
 

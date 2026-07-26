@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\FileUploader;
 use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
 
@@ -67,7 +68,7 @@ class AccountOrderService
         return $this->show($userId, $id);
     }
 
-    public function requestRefund(int $userId, int $id, string $reason, string $description, array $items): array
+    public function requestRefund(int $userId, int $id, string $reason, string $description, array $items, array $photoUrls = []): array
     {
         $order = $this->repo->findForUser($id, $userId);
         if (!$order) {
@@ -78,7 +79,8 @@ class AccountOrderService
         }
 
         $note = "Refund requested — reason: {$reason}. {$description}"
-            . ($items ? ' Items: ' . implode(', ', $items) : '');
+            . ($items ? ' Items: ' . implode(', ', $items) : '')
+            . ($photoUrls ? ' Photos: ' . implode(', ', $photoUrls) : '');
 
         $this->repo->update($id, [
             'status' => 'refunded',
@@ -87,6 +89,25 @@ class AccountOrderService
         ]);
 
         return $this->show($userId, $id);
+    }
+
+    /** A customer's evidence photo for a refund request. The upload itself still
+     * requires a valid account JWT, but the resulting URL is servable without one
+     * (like product images) — filenames are random, unguessable, and the frontend
+     * needs to render an <img> preview immediately, which can't attach auth headers. */
+    public function uploadRefundPhoto(array $file): string
+    {
+        try {
+            $relativePath = FileUploader::upload($file, 'refunds');
+        } catch (\Exception $e) {
+            throw new DomainException($e->getMessage(), 422);
+        }
+        if ($relativePath === '') {
+            throw new DomainException('No file was uploaded', 422);
+        }
+
+        $baseUrl = rtrim($_ENV['APP_URL'] ?? 'http://localhost:8000', '/');
+        return $baseUrl . '/api/v1/storage' . substr($relativePath, strlen('/uploads'));
     }
 
     /**

@@ -1,18 +1,54 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { ArrowRight, Cog, Disc, Filter, Zap, CarFront, Armchair } from "lucide-react";
+import { ArrowRight, Cog, Disc, Filter, Zap, CarFront, Armchair, type LucideIcon } from "lucide-react";
 
-const CATEGORIES = [
-  { key: "engine", count: "2,140", tint: "from-[#33231a]", icon: Cog, image: "/cat-engine.png" },
-  { key: "brakes", count: "1,860", tint: "from-[#1c2636]", icon: Disc, image: "/cat-brakes.png" },
-  { key: "filters", count: "980", tint: "from-[#2a2016]", icon: Filter, image: "/cat-filters.png" },
-  { key: "electrical", count: "1,410", tint: "from-[#1a2e2a]", icon: Zap, image: "/cat-electrical.png" },
-  { key: "body", count: "760", tint: "from-[#2c1f2b]", icon: CarFront, image: "/cat-body.png" },
-  { key: "interior", count: "640", tint: "from-[#22283a]", icon: Armchair, image: "/cat-interior.png" },
-] as const;
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+
+type Category = {
+  id: number;
+  slug: string;
+  name_en: string;
+  name_ar: string;
+  image: string | null;
+  products_count: number;
+};
+
+const TINTS = ["from-[#33231a]", "from-[#1c2636]", "from-[#2a2016]", "from-[#1a2e2a]", "from-[#2c1f2b]", "from-[#22283a]"];
+
+// Purely decorative fallback when a category has no admin-uploaded image — no fake
+// data involved, just a best-guess icon based on the (real) category name.
+function iconForCategory(slug: string): LucideIcon {
+  const s = slug.toLowerCase();
+  if (s.includes("brake") || s.includes("disc") || s.includes("rotor")) return Disc;
+  if (s.includes("filter")) return Filter;
+  if (s.includes("electr") || s.includes("battery") || s.includes("alternator") || s.includes("starter")) return Zap;
+  if (s.includes("body") || s.includes("bumper") || s.includes("mirror")) return CarFront;
+  if (s.includes("interior") || s.includes("seat")) return Armchair;
+  return Cog;
+}
+
+async function getActiveCategories(): Promise<Category[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/categories`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json?.data?.items ?? []) as Category[];
+  } catch {
+    return [];
+  }
+}
 
 export async function CategoryGrid() {
   const t = await getTranslations("home.categories");
+  const locale = await getLocale();
+  const categories = (await getActiveCategories()).slice(0, 6);
+
+  if (categories.length === 0) {
+    return null;
+  }
 
   return (
     <section id="categories" className="bg-background py-14 md:py-28">
@@ -37,18 +73,23 @@ export async function CategoryGrid() {
         </div>
 
         <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
-          {CATEGORIES.map((cat) => {
-            const Icon = cat.icon;
+          {categories.map((cat, i) => {
+            const Icon = iconForCategory(cat.slug);
+            const name = locale === "ar" ? cat.name_ar : cat.name_en;
             return (
               <Link
-                key={cat.key}
-                href="/shop"
-                className="group relative aspect-[3/4] overflow-hidden rounded-xl shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lifted"
+                key={cat.id}
+                href={`/shop?category=${cat.slug}` as any}
+                className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-navy shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lifted"
               >
-                <div
-                  className={`absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105`}
-                  style={{ backgroundImage: `url('${cat.image}')` }}
-                />
+                {cat.image ? (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                    style={{ backgroundImage: `url('${cat.image}')` }}
+                  />
+                ) : (
+                  <div className={`absolute inset-0 bg-gradient-to-br ${TINTS[i % TINTS.length]} to-navy`} />
+                )}
                 <Icon
                   aria-hidden
                   strokeWidth={1}
@@ -60,9 +101,9 @@ export async function CategoryGrid() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0f141c]/90 via-[#0f141c]/15 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-                  <div className="text-lg font-extrabold">{t(cat.key)}</div>
+                  <div className="text-lg font-extrabold">{name}</div>
                   <div className="mt-1 text-xs text-white/65">
-                    <strong className="text-primary">{cat.count}</strong> {t("partsLabel")}
+                    <strong className="text-primary">{cat.products_count.toLocaleString()}</strong> {t("partsLabel")}
                   </div>
                 </div>
               </Link>

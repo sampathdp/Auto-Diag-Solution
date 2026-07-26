@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Request;
+use App\Services\ProductService;
 use App\Services\VehicleService;
 
 class VehicleController extends BaseController
@@ -51,6 +52,21 @@ class VehicleController extends BaseController
         $year = $request->input('year') !== null ? (int)$request->input('year') : null;
         $make = $request->input('make') !== null ? (string)$request->input('make') : null;
         $this->success($this->service->filters($year, $make));
+    }
+
+    /** Public — live "N parts available" lookup shown while a customer adds a vehicle to their garage. */
+    public function partCount(Request $request): void
+    {
+        $year = (int)($request->input('year') ?? 0);
+        $make = trim((string)($request->input('make') ?? ''));
+        $model = trim((string)($request->input('model') ?? ''));
+
+        if ($year <= 0 || $make === '' || $model === '') {
+            $this->success(['count' => 0]);
+            return;
+        }
+
+        $this->success(['count' => (new ProductService())->countForVehicle($year, $make, $model)]);
     }
 
     public function show(Request $request): void

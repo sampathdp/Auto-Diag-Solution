@@ -9,6 +9,8 @@ import { ContactSchema, ContactFormValues } from "@/schemas/ContactSchema";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
+import apiClient from "@/lib/api/client";
+import toast from "react-hot-toast";
 
 export function ContactForm() {
   const t = useTranslations("contact.form");
@@ -21,12 +23,14 @@ export function ContactForm() {
     formState: { errors, isSubmitting },
   } = useForm<ContactFormValues>({ resolver: zodResolver(ContactSchema) });
 
-  // No backend endpoint exists yet for contact messages — simulates the round trip
-  // so the form is fully usable; wire to a real endpoint once one exists.
-  const onSubmit = async () => {
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setSent(true);
-    reset();
+  const onSubmit = async (data: ContactFormValues) => {
+    try {
+      await apiClient.post("/contact", data);
+      setSent(true);
+      reset();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to send your message. Please try again.");
+    }
   };
 
   if (sent) {

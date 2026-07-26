@@ -53,6 +53,12 @@ class ReviewController extends BaseController
         $this->success($this->service->find((int)$request->getParam('id')));
     }
 
+    /** Public — one real approved review for the storefront testimonial section. */
+    public function featured(Request $request): void
+    {
+        $this->success($this->service->featured());
+    }
+
     public function approve(Request $request): void
     {
         $review = $this->service->approve((int)$request->getParam('id'));

@@ -9,6 +9,7 @@ import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { Button } from "@/components/ui/Button";
 import { computeCartTotals } from "@/lib/cartTotals";
+import toast from "react-hot-toast";
 
 export default function CartPage() {
   const locale = useLocale();
@@ -26,6 +27,27 @@ export default function CartPage() {
   const lines = items
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
     .filter((line) => line.product);
+
+  // The cart only ever stores {productId, quantity} — if a product was since deleted
+  // or taken off sale, the API silently drops it from the response and it'd otherwise
+  // stay in the cart forever (and keep inflating the header's cart-count badge) with
+  // no way to see or remove it here. Reconcile the store once product data lands.
+  useEffect(() => {
+    if (isLoading || !products) return;
+    const validIds = new Set(products.map((p) => p.id));
+    const staleItems = items.filter((item) => !validIds.has(item.productId));
+    if (staleItems.length === 0) return;
+    staleItems.forEach((item) => removeItem(item.productId));
+    toast.error(
+      staleItems.length === 1
+        ? "1 item in your cart is no longer available and was removed."
+        : `${staleItems.length} items in your cart are no longer available and were removed.`
+    );
+    // Only re-run when the fetched product set changes — `items`/`removeItem` are read
+    // fresh from the closure, not tracked as deps, so removing an item here doesn't
+    // immediately re-trigger this effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, products]);
 
   const totalItems = lines.reduce((sum, l) => sum + l.quantity, 0);
   const { subtotal, shipping, vat, total } = computeCartTotals(

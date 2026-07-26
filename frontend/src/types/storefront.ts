@@ -58,6 +58,7 @@ export type Product = {
   specifications?: Specification[];
   /** Only present on the single-product endpoint (used for SEO metadata/schema). */
   cross_reference_numbers?: string[];
+  created_at?: string | null;
   updated_at?: string | null;
 };
 

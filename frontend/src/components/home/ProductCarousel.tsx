@@ -1,55 +1,38 @@
 "use client";
 
 import { useRef } from "react";
-import { useTranslations } from "next-intl";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Activity,
-  Zap,
-  Filter,
-  Disc,
-  Gauge,
-  Cog,
-  type LucideIcon,
-} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/Button";
-
-interface Product {
-  brand: string;
-  name: string;
-  sku: string;
-  price: number;
-  lowStock?: boolean;
-  image: string;
-}
-
-const PRODUCTS: Product[] = [
-  { brand: "Bosch", name: "Lambda Oxygen Sensor", sku: "BSH-0258006537", price: 245, image: "/prod-sensor.png" },
-  { brand: "NGK", name: "Iridium Spark Plug — Set of 4", sku: "NGK-94702", price: 189, image: "/prod-sparkplug.png" },
-  { brand: "Denso", name: "Cabin Air Filter", sku: "DEN-454300", price: 65, image: "/prod-cabinfilter.png" },
-  { brand: "Brembo", name: "Front Brake Pad Set", sku: "BRM-P85020", price: 320, lowStock: true, image: "/prod-brakepads.png" },
-  { brand: "KYB", name: "Front Shock Absorber", sku: "KYB-334413", price: 410, image: "/prod-shock.png" },
-  { brand: "Mann-Filter", name: "Oil Filter", sku: "MNN-W610", price: 38, image: "/prod-oilfilter.png" },
-];
-
-function iconForProduct(name: string): LucideIcon {
-  const n = name.toLowerCase();
-  if (n.includes("sensor")) return Activity;
-  if (n.includes("spark")) return Zap;
-  if (n.includes("filter")) return Filter;
-  if (n.includes("brake")) return Disc;
-  if (n.includes("shock") || n.includes("suspension")) return Gauge;
-  return Cog;
-}
+import { useProducts } from "@/hooks/useProducts";
+import { useCartStore } from "@/store/useCartStore";
+import toast from "react-hot-toast";
 
 export function ProductCarousel() {
   const t = useTranslations("home.products");
+  const tToast = useTranslations("shop.toasts");
+  const locale = useLocale();
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const addToCart = useCartStore((state) => state.addItem);
+
+  const { data } = useProducts({ sort: "newest", per_page: 8 });
+  const products = data?.data || [];
 
   const scrollBy = (dir: 1 | -1) => {
     scrollerRef.current?.scrollBy({ left: dir * 300, behavior: "smooth" });
   };
+
+  const handleAddToCart = (e: React.MouseEvent, productId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(productId);
+    toast.success(tToast("addedToCart"));
+  };
+
+  if (products.length === 0) {
+    return null;
+  }
 
   return (
     <section className="bg-background py-14 md:py-28">
@@ -88,49 +71,61 @@ export function ProductCarousel() {
         className="flex gap-5 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-14"
         style={{ scrollSnapType: "x mandatory" }}
       >
-        {PRODUCTS.map((p) => {
-          const Icon = iconForProduct(p.name);
+        {products.map((p) => {
+          const name = locale === "ar" ? p.name_ar : p.name_en;
+          const brandName = p.brand ? (locale === "ar" ? p.brand.name_ar : p.brand.name_en) : "";
+          const isOutOfStock = p.stock === 0;
+          const isLowStock = !isOutOfStock && p.stock <= 10;
           return (
-            <div
-              key={p.sku}
+            <Link
+              key={p.id}
+              href={`/shop/product/${p.id}` as any}
               className="group w-[260px] flex-none overflow-hidden rounded-lg bg-card shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lifted"
               style={{ scrollSnapAlign: "start" }}
             >
-              <div
-                className="relative flex aspect-square items-center justify-center overflow-hidden bg-white bg-cover bg-center"
-                style={{ backgroundImage: `url('${p.image}')` }}
-              >
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#F5F6F8]">
                 <span
                   aria-hidden
-                  className="absolute start-4 top-4 h-3.5 w-3.5 border-s-2 border-t-2 border-foreground/15"
+                  className="absolute start-4 top-4 z-10 h-3.5 w-3.5 border-s-2 border-t-2 border-foreground/15"
+                />
+                <img
+                  src={p.images[0] || "/placeholder-product.svg"}
+                  alt={name}
+                  className={`h-full w-full object-contain p-6 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
                 />
                 <span
                   className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
-                    p.lowStock ? "border-primary text-primary" : "border-border text-foreground/62"
+                    isOutOfStock
+                      ? "border-destructive text-destructive"
+                      : isLowStock
+                        ? "border-primary text-primary"
+                        : "border-border text-foreground/62"
                   } bg-card`}
                 >
-                  {p.lowStock ? t("lowStock") : t("inStock")}
+                  {isOutOfStock ? t("outOfStock") : isLowStock ? t("lowStock") : t("inStock")}
                 </span>
-                <div className="absolute inset-x-3 bottom-3 translate-y-2 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-                  <Button size="sm" className="w-full">
-                    {t("addToCart")}
-                  </Button>
-                </div>
+                {!isOutOfStock && (
+                  <div className="absolute inset-x-3 bottom-3 translate-y-2 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                    <Button size="sm" className="w-full" onClick={(e) => handleAddToCart(e, p.id)}>
+                      {t("addToCart")}
+                    </Button>
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <div className="text-[11px] font-extrabold uppercase tracking-wide text-foreground/62">
-                  {p.brand}
+                  {brandName}
                 </div>
-                <div className="mt-1.5 text-[15px] font-bold leading-snug">{p.name}</div>
+                <div className="mt-1.5 line-clamp-1 text-[15px] font-bold leading-snug">{name}</div>
                 <div className="mt-1.5 font-mono text-[11px] tabular-nums text-foreground/62">{p.sku}</div>
                 <div className="mt-3.5 flex items-baseline justify-between">
                   <div className="text-lg font-extrabold text-foreground">
                     <span className="me-1 text-xs font-bold text-foreground/62">AED</span>
-                    {p.price}
+                    {p.price_aed.toLocaleString()}
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

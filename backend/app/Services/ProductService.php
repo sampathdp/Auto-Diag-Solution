@@ -49,6 +49,18 @@ class ProductService
         ];
     }
 
+    /** How many active products fit a given year/make/model — reuses the exact same
+     * fits_year/fits_make/fits_model matching as the storefront shop filter (see
+     * ProductRepository::buildPublicWhere), so the count a customer sees when adding a
+     * vehicle to their garage always agrees with what /shop actually shows them. */
+    public function countForVehicle(int $year, string $make, string $model): int
+    {
+        return $this->repo->publicCountFiltered(
+            ['fits_year' => $year, 'fits_make' => $make, 'fits_model' => $model],
+            ''
+        );
+    }
+
     public function publicFind(int $id): array
     {
         $product = $this->repo->findActiveById($id);
@@ -140,6 +152,7 @@ class ProductService
             ], $fitment),
             'rating' => round((float)$row['rating'], 1),
             'reviews' => (int)$row['review_count'],
+            'created_at' => $row['created_at'] ?? null,
             'updated_at' => $row['updated_at'] ?? null,
         ];
     }

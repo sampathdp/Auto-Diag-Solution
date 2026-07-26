@@ -7,6 +7,7 @@ import { Heart, Eye, Scale, Share2, CheckCircle2, AlertTriangle, Loader2, Check,
 import { useShopFilters } from "@/hooks/useShopFilters";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
 import { productFitsVehicle } from "@/lib/productFitment";
+import { isNewProduct } from "@/lib/productBadges";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
@@ -157,8 +158,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
   const hasDiscount = !!product.compare_at_price;
   const discountPercent = hasDiscount ? Math.round(((product.compare_at_price! - product.price_aed) / product.compare_at_price!) * 100) : 0;
   // Deterministic per-product "NEW" flag (stable across re-renders) instead of re-rolling on every render.
-  const idHash = product.id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  const isNew = idHash % 10 > 6;
+  const isNew = isNewProduct(product);
   const imageSrc = product.images[0] || "/placeholder-product.svg";
 
   return (

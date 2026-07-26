@@ -37,6 +37,7 @@ const REASONS = [
 export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [uploadingCount, setUploadingCount] = useState(0);
 
   const { register, handleSubmit, control, formState: { errors }, watch } = useForm<RefundForm>({
     resolver: zodResolver(refundSchema),
@@ -47,12 +48,26 @@ export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawer
     }
   });
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      // Mock upload - just create object URLs
-      const newPhotos = Array.from(e.target.files).map(f => URL.createObjectURL(f));
-      setPhotos(prev => [...prev, ...newPhotos]);
-    }
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    e.target.value = ""; // allow re-selecting the same file after removing it
+    if (files.length === 0) return;
+
+    setUploadingCount((c) => c + files.length);
+    await Promise.all(
+      files.map(async (file) => {
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await apiClient.post("/account/orders/refund-photos", formData);
+          setPhotos((prev) => [...prev, res.data.data.url]);
+        } catch {
+          toast.error(`Failed to upload ${file.name}`);
+        } finally {
+          setUploadingCount((c) => c - 1);
+        }
+      })
+    );
   };
 
   const removePhoto = (index: number) => {
@@ -62,7 +77,7 @@ export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawer
   const onSubmit = async (data: RefundForm) => {
     setLoading(true);
     try {
-      await apiClient.post(`/account/orders/${order.id}/refund`, data);
+      await apiClient.post(`/account/orders/${order.id}/refund`, { ...data, photos });
       toast.success("Refund request submitted successfully");
       onSuccess();
     } catch (err) {
@@ -137,6 +152,11 @@ export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawer
                 </button>
               </div>
             ))}
+            {uploadingCount > 0 && (
+              <div className="flex h-20 w-20 items-center justify-center rounded-md border border-dashed">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            )}
             <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed hover:bg-secondary/50">
               <UploadCloud className="h-5 w-5 text-muted-foreground" />
               <span className="text-[10px] font-medium text-muted-foreground">Upload</span>
@@ -146,7 +166,7 @@ export function RefundDrawer({ isOpen, onClose, order, onSuccess }: RefundDrawer
         </div>
 
         <div className="pt-4 border-t mt-auto">
-          <Button type="submit" disabled={loading} className="w-full">
+          <Button type="submit" disabled={loading || uploadingCount > 0} className="w-full">
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Request"}
           </Button>
         </div>

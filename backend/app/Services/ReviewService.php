@@ -24,6 +24,12 @@ class ReviewService
         ];
     }
 
+    /** Best approved, commented review for the storefront's public testimonial section — null if none yet. */
+    public function featured(): ?array
+    {
+        return $this->repo->findFeatured();
+    }
+
     public function find(int $id): array
     {
         $review = $this->repo->findWithDetails($id);

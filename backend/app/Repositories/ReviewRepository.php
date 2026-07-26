@@ -41,6 +41,21 @@ class ReviewRepository extends BaseRepository
         return (int) DatabaseManager::query($sql, $params)->fetch()['c'];
     }
 
+    /** Best approved, commented review — for the public storefront's testimonial section. */
+    public function findFeatured(): ?array
+    {
+        $row = DatabaseManager::query(
+            "SELECT r.rating, r.comment, u.name AS reviewer_name, p.name_en AS product_name_en, p.name_ar AS product_name_ar
+             FROM reviews r
+             LEFT JOIN users u ON u.id = r.user_id
+             LEFT JOIN products p ON p.id = r.product_id
+             WHERE r.is_approved = 1 AND r.comment IS NOT NULL AND r.comment != ''
+             ORDER BY r.rating DESC, r.created_at DESC
+             LIMIT 1"
+        )->fetch();
+        return $row ?: null;
+    }
+
     public function findWithDetails(int $id): ?array
     {
         $row = DatabaseManager::query(
