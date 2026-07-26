@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { Bold, Italic, List, ListOrdered, Undo, Redo } from "lucide-react";
@@ -27,6 +28,21 @@ export function RichTextEditor({ value, onChange, dir = "ltr" }: RichTextEditorP
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   });
+
+  // Tiptap only reads `content` once, at editor creation — an external write to the
+  // bound field (e.g. the "Translate" button doing setValue()) doesn't reach the editor
+  // on its own. Push it in here, but only when it didn't originate from the editor's own
+  // onUpdate (value === current HTML already), or every keystroke would re-set content
+  // and blow away the cursor position.
+  useEffect(() => {
+    if (!editor) return;
+    const current = editor.getHTML();
+    const next = value || "";
+    if (next !== current) {
+      editor.commands.setContent(next, { emitUpdate: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, editor]);
 
   if (!editor) {
     return <div className="h-[184px] animate-pulse rounded-sm border border-border bg-app" />;
