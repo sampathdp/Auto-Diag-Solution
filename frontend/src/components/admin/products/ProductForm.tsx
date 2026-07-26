@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/admin/ui/Button";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
@@ -66,7 +66,6 @@ function productToFormValues(product: Product): ProductFormValues {
 
 export function ProductForm({ mode, product }: { mode: "create" | "edit"; product?: Product }) {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [pendingIntent, setPendingIntent] = useState<"draft" | "publish" | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -102,16 +101,15 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
       mode === "edit" && product
         ? adminApi.put<Product>(`/products/${product.id}`, payload)
         : adminApi.post<Product>("/products", payload),
-    onSuccess: (saved) => {
+    onSuccess: () => {
       showSuccess(mode === "edit" ? "Product updated" : `Product ${pendingIntent === "draft" ? "saved as draft" : "created"}`);
-      // Write the server's response straight into the cache instead of just
-      // invalidating: invalidate only schedules a background refetch, and the
-      // router.push right below unmounts this page before that refetch can land,
-      // so React Query discards the result and the next visit to the edit page
-      // serves the pre-save (stale) product until a hard reload rebuilds the cache.
-      queryClient.setQueryData(adminQueryKeys.products.detail(saved.id), saved);
-      queryClient.invalidateQueries({ queryKey: adminQueryKeys.products.list() });
-      router.push("/admin/products");
+      // Full browser navigation, not router.push: a client-side route change keeps
+      // the existing React Query cache around, and re-editing this product soon
+      // after (from the products list) was serving that stale cached copy instead
+      // of the just-saved rows. A real navigation tears down the whole app —
+      // QueryClient included — so the next visit to any product's edit page always
+      // fetches fresh from the server, same as a manual refresh.
+      window.location.href = "/admin/products";
     },
     onError: (err) => showError(err instanceof ApiError ? err.message : "Could not save the product."),
     onSettled: () => setPendingIntent(null),
