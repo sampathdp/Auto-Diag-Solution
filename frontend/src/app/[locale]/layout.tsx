@@ -7,6 +7,7 @@ import { routing, isRtl } from "@/i18n/routing";
 import { AppProviders } from "@/app/providers";
 import { SplashPreloader } from "@/components/ui/SplashPreloader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
 import "../globals.css";
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -52,6 +53,7 @@ export default async function LocaleLayout({
           </div>
         </NextIntlClientProvider>
         <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
