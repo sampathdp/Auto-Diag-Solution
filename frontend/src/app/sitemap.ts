@@ -29,20 +29,26 @@ async function fetchAllActiveProducts(): Promise<PublicProductRow[]> {
   let totalPages = 1;
 
   do {
-    let res: Response;
+    // A single bad page must never fail the whole build — sitemap.xml is
+    // regenerated hourly (see `revalidate` above), so a backend that's briefly
+    // unreachable/misconfigured at build time should just mean fewer product URLs
+    // this cycle, not `next build` exiting non-zero and blocking every other page.
     try {
-      res = await fetch(`${API_BASE_URL}/products?page=${page}&per_page=60`, {
+      const res = await fetch(`${API_BASE_URL}/products?page=${page}&per_page=60`, {
         next: { revalidate },
       });
+      if (!res.ok) break;
+
+      const body = (await res.json()) as ProductListEnvelope;
+      products.push(...(body.data?.items ?? []));
+      totalPages = body.data?.total_pages ?? 1;
+      page += 1;
     } catch {
+      // Network failure, or a non-JSON 200 (e.g. an HTML error/placeholder page
+      // from a misconfigured API_BASE_URL) — res.json() throws a SyntaxError in
+      // that case, which is exactly as unrecoverable as a network failure here.
       break;
     }
-    if (!res.ok) break;
-
-    const body = (await res.json()) as ProductListEnvelope;
-    products.push(...(body.data?.items ?? []));
-    totalPages = body.data?.total_pages ?? 1;
-    page += 1;
   } while (page <= totalPages);
 
   return products;
