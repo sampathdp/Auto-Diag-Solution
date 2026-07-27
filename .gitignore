@@ -48,6 +48,7 @@ backend/public/uploads/*
 !backend/public/uploads/parts/
 !backend/public/uploads/parts/*
 backend/.env
+backend/.env copy
 .env
 .env.local
 .env.development.local

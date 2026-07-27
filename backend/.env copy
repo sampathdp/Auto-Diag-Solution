@@ -3,7 +3,7 @@ APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
-FRONTEND_URL=https://auto-diag-solution.vercel.app
+FRONTEND_URL=https://www.asilautoparts.ae
 DB_HOST=localhost
 DB_PORT=3306
 DB_DATABASE=autoparts_uae
