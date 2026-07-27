@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { routing, isRtl } from "@/i18n/routing";
 import { AppProviders } from "@/app/providers";
 import { SplashPreloader } from "@/components/ui/SplashPreloader";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "../globals.css";
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -50,6 +51,7 @@ export default async function LocaleLayout({
             <AppProviders>{children}</AppProviders>
           </div>
         </NextIntlClientProvider>
+        <SpeedInsights />
       </body>
     </html>
   );

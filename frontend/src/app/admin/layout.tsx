@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AdminProviders } from "@/components/admin/providers/AdminProviders";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "../globals.css";
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -22,6 +23,7 @@ export default function AdminRootLayout({ children }: { children: React.ReactNod
     <html lang="en" dir="ltr" className={fontSans.variable}>
       <body>
         <AdminProviders>{children}</AdminProviders>
+        <SpeedInsights />
       </body>
     </html>
   );
