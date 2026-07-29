@@ -255,6 +255,24 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 ))}
               </div>
             )}
+
+            <div className="mt-6">
+              <CheckFitmentWidget product={product} />
+            </div>
+
+            {/* Trust badges */}
+            <div
+              className="mt-6 grid divide-x divide-border rounded-lg border text-center rtl:divide-x-reverse"
+              style={{ gridTemplateColumns: `repeat(${trustItems.length}, minmax(0, 1fr))` }}
+            >
+              {trustItems.map(({ icon: Icon, title, note }) => (
+                <div key={title} className="flex flex-col items-center gap-1.5 px-2 py-4">
+                  <Icon className="h-5 w-5 text-primary" strokeWidth={1.75} />
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-foreground">{title}</span>
+                  <span className="text-[11px] text-muted-foreground">{note}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Details */}
@@ -322,10 +340,6 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 </div>
               ))}
             </dl>
-
-            <div className="mb-6">
-              <CheckFitmentWidget product={product} />
-            </div>
 
             {/* Add to Cart Area */}
             <div className="mb-8 flex flex-col gap-3">
@@ -400,20 +414,6 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 <MessageCircle className="h-5 w-5" />
                 {t("askWhatsApp")}
               </a>
-            </div>
-
-            {/* Trust badges */}
-            <div
-              className="grid divide-x divide-border rounded-lg border text-center rtl:divide-x-reverse"
-              style={{ gridTemplateColumns: `repeat(${trustItems.length}, minmax(0, 1fr))` }}
-            >
-              {trustItems.map(({ icon: Icon, title, note }) => (
-                <div key={title} className="flex flex-col items-center gap-1.5 px-2 py-4">
-                  <Icon className="h-5 w-5 text-primary" strokeWidth={1.75} />
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-foreground">{title}</span>
-                  <span className="text-[11px] text-muted-foreground">{note}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
