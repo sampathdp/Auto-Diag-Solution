@@ -67,6 +67,25 @@ class OrderRepository extends BaseRepository
         return $row ?: null;
     }
 
+    /** Guest-safe order lookup for the emailed tracking link — matches on the order_number
+     * shown to the customer plus the hash of the token from their link, never on user_id. */
+    public function findByOrderNumberAndTokenHash(string $orderNumber, string $tokenHash): ?array
+    {
+        $row = DatabaseManager::query(
+            "SELECT * FROM orders WHERE order_number = :order_number AND tracking_token_hash = :token_hash",
+            ['order_number' => $orderNumber, 'token_hash' => $tokenHash]
+        )->fetch();
+        return $row ?: null;
+    }
+
+    public function setTrackingTokenHash(int $id, string $tokenHash): void
+    {
+        DatabaseManager::query(
+            "UPDATE orders SET tracking_token_hash = :token_hash WHERE id = :id",
+            ['token_hash' => $tokenHash, 'id' => $id]
+        );
+    }
+
     public function findWithCustomer(int $id): ?array
     {
         $row = DatabaseManager::query(
@@ -84,6 +103,33 @@ class OrderRepository extends BaseRepository
             "SELECT * FROM order_items WHERE order_id = :id ORDER BY id ASC",
             ['id' => $orderId]
         )->fetchAll();
+    }
+
+    /** Bulk item lookup for a page of orders (e.g. reports), keyed by order_id — one query instead of N. */
+    public function itemsForOrderIds(array $orderIds): array
+    {
+        if (empty($orderIds)) {
+            return [];
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach (array_values($orderIds) as $i => $id) {
+            $key = "id{$i}";
+            $placeholders[] = ":{$key}";
+            $params[$key] = $id;
+        }
+
+        $rows = DatabaseManager::query(
+            "SELECT * FROM order_items WHERE order_id IN (" . implode(',', $placeholders) . ") ORDER BY id ASC",
+            $params
+        )->fetchAll();
+
+        $byOrderId = [];
+        foreach ($rows as $row) {
+            $byOrderId[(int)$row['order_id']][] = $row;
+        }
+        return $byOrderId;
     }
 
     public function statusHistory(int $orderId): array

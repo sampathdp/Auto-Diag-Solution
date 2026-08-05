@@ -331,7 +331,7 @@ export default function AdminOrderDetailPage() {
             </CardHeader>
             <CardBody className="p-0">
               <div className="p-5 pt-0">
-                <DataTable columns={itemColumns} data={order.items} />
+                <DataTable columns={itemColumns} data={order.items ?? []} />
               </div>
             </CardBody>
           </Card>

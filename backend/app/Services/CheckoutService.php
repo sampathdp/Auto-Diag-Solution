@@ -239,12 +239,43 @@ class CheckoutService
             throw $e;
         }
 
+        $this->sendConfirmationEmail($userId, $orderId, $orderNumber, $total, $lineItems);
+
         // Deliberately does NOT push to Fulfillor here: the order sits in
         // 'pending_vin_verification' until an admin manually checks the vehicle
         // model/VIN in the admin panel and clicks "Approve & Send to 3PL"
         // (OrderService::approveForFulfillment), to catch mismatches before they
         // become returns.
         return $this->accountOrders->show($userId, $orderId);
+    }
+
+    /**
+     * Generates the guest-viewable tracking link and emails the confirmation — for both
+     * guest and logged-in checkouts, since $userId always resolves to a real users row
+     * with a name/email (see resolveGuestUserId) either way.
+     *
+     * @param array<int, array{name_en:string,sku:string,quantity:int,unit_price:float,line_total:float}> $lineItems
+     */
+    private function sendConfirmationEmail(int $userId, int $orderId, string $orderNumber, float $total, array $lineItems): void
+    {
+        $user = $this->users->find($userId);
+        if (!$user || empty($user['email'])) {
+            return;
+        }
+
+        $rawToken = bin2hex(random_bytes(32));
+        $this->orders->setTrackingTokenHash($orderId, hash('sha256', $rawToken));
+
+        $frontendUrl = rtrim((string)($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000'), '/');
+        $trackingUrl = "{$frontendUrl}/en/track-order?order=" . urlencode($orderNumber) . '&token=' . urlencode($rawToken);
+
+        OrderMailService::sendOrderConfirmation(
+            ['order_number' => $orderNumber, 'currency' => 'AED', 'total' => $total],
+            $lineItems,
+            (string)$user['name'],
+            (string)$user['email'],
+            $trackingUrl
+        );
     }
 
     /**

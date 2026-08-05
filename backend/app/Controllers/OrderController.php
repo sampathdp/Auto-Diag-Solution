@@ -34,7 +34,9 @@ class OrderController extends BaseController
             $filters['user_id'] = (int)$request->input('user_id');
         }
 
-        $result = $this->service->list($filters, $search, $sortBy, $sortDir, $page, $perPage);
+        $withItems = filter_var($request->input('with_items') ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $result = $this->service->list($filters, $search, $sortBy, $sortDir, $page, $perPage, $withItems);
 
         $this->success([
             'items' => $result['items'],

@@ -16,7 +16,7 @@ import type { Order } from "@/mocks/admin/db";
 export function SalesByDateReport({ orders, range }: { orders: Order[]; range: DateRange }) {
   const billable = orders.filter((o) => o.status !== "cancelled" && o.status !== "refunded");
   const totalRevenue = billable.reduce((sum, o) => sum + o.total, 0);
-  const itemsSold = billable.reduce((sum, o) => sum + o.items.reduce((s, it) => s + it.quantity, 0), 0);
+  const itemsSold = billable.reduce((sum, o) => sum + (o.items ?? []).reduce((s, it) => s + it.quantity, 0), 0);
   const avgOrderValue = billable.length > 0 ? totalRevenue / billable.length : 0;
 
   const dailyRevenue = useMemo(() => {

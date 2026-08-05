@@ -161,7 +161,9 @@ export interface Order {
   /** Set when an admin clicks "Refund" — the real refund still happens in Stripe, this just flags intent.
    *  Mock-only field; the documented schema's payment_status enum has no equivalent state yet. */
   refund_requested_at: string | null;
-  items: OrderItem[];
+  /** Full item rows — always present on the single-order endpoint; on the list endpoint only
+   *  when requested via `with_items=true` (e.g. reports), otherwise undefined. */
+  items?: OrderItem[];
   /** Only present on the admin order list endpoint (a cheap SUM, not the full item rows). */
   items_count?: number;
   subtotal: number;

@@ -45,9 +45,9 @@ export default function AdminReportsPage() {
   const [range, setRange] = useState<DateRange>(defaultRange);
 
   const ordersQuery = useAdminQuery<PaginatedResponse<Order>>(
-    adminQueryKeys.orders.list({ per_page: 500 }),
+    adminQueryKeys.orders.list({ per_page: 500, with_items: true }),
     "/orders",
-    { per_page: 500 }
+    { per_page: 500, with_items: true }
   );
   const productsQuery = useAdminQuery<PaginatedResponse<Product>>(
     adminQueryKeys.products.list({ per_page: 200 }),

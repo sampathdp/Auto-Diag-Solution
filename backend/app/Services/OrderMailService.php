@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services;
+
+/** Sends the order-confirmation email once an order is placed (see CheckoutService::createOrder).
+ * Transport is whatever SMTP_HOST is configured with — including Resend's SMTP relay
+ * (smtp.resend.com, username "resend", password = API key) — since SimpleSmtpMailer
+ * already speaks plain SMTP and doesn't care which provider is on the other end. */
+class OrderMailService
+{
+    /**
+     * @param array<int, array{name_en:string,sku:string,quantity:int,unit_price:float,line_total:float}> $items
+     */
+    public static function sendOrderConfirmation(
+        array $order,
+        array $items,
+        string $customerName,
+        string $customerEmail,
+        string $trackingUrl
+    ): void {
+        $smtpHost = trim((string)($_ENV['SMTP_HOST'] ?? ''));
+        if ($smtpHost === '' || $customerEmail === '') {
+            // Not configured yet (or no email to send to, e.g. malformed guest data that
+            // somehow got past validation) — checkout must never fail because of this.
+            return;
+        }
+
+        try {
+            SimpleSmtpMailer::send(
+                $smtpHost,
+                (int)($_ENV['SMTP_PORT'] ?? 587),
+                $_ENV['SMTP_ENCRYPTION'] ?? 'tls',
+                $_ENV['SMTP_USER'] ?? null,
+                $_ENV['SMTP_PASS'] ?? null,
+                (string)($_ENV['SMTP_FROM_ADDRESS'] ?? 'no-reply@example.com'),
+                (string)($_ENV['SMTP_FROM_NAME'] ?? 'Auto Parts UAE'),
+                $customerEmail,
+                "Order Confirmed — {$order['order_number']}",
+                self::buildHtml($order, $items, $customerName, $trackingUrl)
+            );
+        } catch (\Throwable $e) {
+            // A failed email must never roll back or fail an already-placed order —
+            // the order is the source of truth, the email is a courtesy notification.
+            error_log('Order confirmation email failed for ' . $order['order_number'] . ': ' . $e->getMessage());
+        }
+    }
+
+    private static function buildHtml(array $order, array $items, string $customerName, string $trackingUrl): string
+    {
+        $safeName = htmlspecialchars($customerName, ENT_QUOTES, 'UTF-8');
+        $orderNumber = htmlspecialchars((string)$order['order_number'], ENT_QUOTES, 'UTF-8');
+        $currency = htmlspecialchars((string)($order['currency'] ?? 'AED'), ENT_QUOTES, 'UTF-8');
+        $safeUrl = htmlspecialchars($trackingUrl, ENT_QUOTES, 'UTF-8');
+
+        $rows = '';
+        foreach ($items as $item) {
+            $name = htmlspecialchars((string)$item['name_en'], ENT_QUOTES, 'UTF-8');
+            $qty = (int)$item['quantity'];
+            $lineTotal = number_format((float)$item['line_total'], 2);
+            $rows .= "<tr>"
+                . "<td style=\"padding:8px 0;border-bottom:1px solid #eee;\">{$name}<br><span style=\"color:#888;font-size:12px;\">Qty: {$qty}</span></td>"
+                . "<td style=\"padding:8px 0;border-bottom:1px solid #eee;text-align:right;\">{$currency} {$lineTotal}</td>"
+                . "</tr>";
+        }
+
+        $total = number_format((float)$order['total'], 2);
+
+        return <<<HTML
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;color:#222;">
+                <h2 style="margin-bottom:4px;">Thanks for your order, {$safeName}!</h2>
+                <p style="color:#555;margin-top:0;">Order #{$orderNumber} has been placed and payment confirmed.</p>
+                <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+                    {$rows}
+                    <tr>
+                        <td style="padding:12px 0 0;font-weight:bold;">Total</td>
+                        <td style="padding:12px 0 0;font-weight:bold;text-align:right;">{$currency} {$total}</td>
+                    </tr>
+                </table>
+                <p style="text-align:center;margin:28px 0;">
+                    <a href="{$safeUrl}" style="background:#111;color:#fff;text-decoration:none;padding:12px 24px;border-radius:6px;display:inline-block;font-weight:bold;">
+                        Track Your Order
+                    </a>
+                </p>
+                <p style="color:#888;font-size:12px;">Or copy this link into your browser:<br>{$safeUrl}</p>
+            </div>
+            HTML;
+    }
+}

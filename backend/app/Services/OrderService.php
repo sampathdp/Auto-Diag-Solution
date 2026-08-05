@@ -29,10 +29,20 @@ class OrderService
         $this->fulfillment = new FulfillmentService();
     }
 
-    public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
+    public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage, bool $withItems = false): array
     {
+        $orders = $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage);
+
+        if ($withItems) {
+            $itemsByOrderId = $this->repo->itemsForOrderIds(array_column($orders, 'id'));
+            foreach ($orders as &$order) {
+                $order['items'] = $itemsByOrderId[$order['id']] ?? [];
+            }
+            unset($order);
+        }
+
         return [
-            'items' => $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage),
+            'items' => $orders,
             'total' => $this->repo->countFiltered($filters, $search),
         ];
     }

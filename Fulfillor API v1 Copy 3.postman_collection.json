@@ -1,0 +1,811 @@
+{
+	"info": {
+		"_postman_id": "63ed7ffc-a70a-4b79-a87d-16c6eccd72d2",
+		"name": "Fulfillor API v1 Copy 3",
+		"description": "Public REST API surface for Fulfillor — Login, Product CRUD, Order CRUD.\n\nFlow: run **Auth → Login** first. The test script captures the token into the `api_Key` collection variable, and a collection-level pre-request script injects it as an `api_key` HEADER on every subsequent request — no Postman Authorization-tab config needed.\n\nVariables to set under the collection's Variables tab before use:\n\n- `baseUrl` — e.g. `http://localhost:8080`\n    \n- `username`, `password` — your API user credentials (the user must be in the `FULFILLOR_API` user group)\n    \n- `productId`, `orderId`, `storeId`, `orgId`, `upc` — fixtures for path/body params\n    \n\nAuth model: a single `FULFILLOR_API` user group covers every `/api/v1/\\*` path. Authn = `api_key:` header. Authz uses the existing Moqui `ArtifactAuthz` mechanism. Audit logging falls back to Moqui's built-in `UserAccountHistory` and entity audit-log (no Fulfillor-specific audit entity).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "56676757",
+		"_collection_link": "https://divyanshu-pichunia.postman.co/workspace/Divyashu-Pichunia-Workspace~5fc969d3-372d-43c2-8bb1-81174aea06b6/collection/28528660-63ed7ffc-a70a-4b79-a87d-16c6eccd72d2?action=share&source=collection_link&creator=56676757"
+	},
+	"item": [
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "List Products",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/products?countLimit=10&ownerPartyId={{orgId}}&pageIndex=0",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"products"
+							],
+							"query": [
+								{
+									"key": "countLimit",
+									"value": "10"
+								},
+								{
+									"key": "name",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "sku",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "upc",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "ownerPartyId",
+									"value": "{{orgId}}"
+								},
+								{
+									"key": "pageIndex",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/products/101377?ownerPartyId={{orgId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"products",
+								"101377"
+							],
+							"query": [
+								{
+									"key": "ownerPartyId",
+									"value": "{{orgId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const json = pm.response.json();",
+									"if (json && json.productId) pm.collectionVariables.set('productId', json.productId);",
+									"pm.test('returns 200', () => pm.response.to.have.status(200));",
+									"pm.test('productId present', () => pm.expect(json.productId).to.be.a('string').and.not.empty);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ownerPartyId\": \"{{orgId}}\",\n  \"productName\": \"Sample Product\",\n  \"description\": \"Created via POST /products\",\n  \"price\": 99.99,\n  \"currency\": \"USD\",\n  \"weight\": 2.5,\n  \"weightUom\": \"kg\",\n  \"identifications\": [\n    { \"idType\": \"Sku\",  \"idValue\": \"SKU12345\" },\n    { \"idType\": \"Upca\", \"idValue\": \"123456789012\" },\n    { \"idType\": \"Gtin\", \"idValue\": \"01234567890128\" }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/products",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"products"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"productName\": \"Sample Product (updated)\",\n  \"description\": \"Updated via PUT /products/{productId}\",\n  \"price\": 109.99,\n  \"currency\": \"USD\",\n  \"weight\": 2.7,\n  \"weightUom\": \"kg\",\n  \"identifications\": [\n    { \"idType\": \"Sku\", \"idValue\": \"SKU12345-V2\" }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/products/{{productId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"products",
+								"{{productId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "List Orders",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/orders?storeId={{storeId}}&startDate=2026-01-01 00:00:00&countLimit=20&pageIndex=0&pageLimit=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "storeId",
+									"value": "{{storeId}}"
+								},
+								{
+									"key": "startDate",
+									"value": "2026-01-01 00:00:00"
+								},
+								{
+									"key": "countLimit",
+									"value": "20"
+								},
+								{
+									"key": "pageIndex",
+									"value": "0"
+								},
+								{
+									"key": "pageLimit",
+									"value": "50"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "placedDate",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "orderDisplayId",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const json = pm.response.json();",
+									"// json.orderId is the base id (e.g. \"100765\") — this is what both",
+									"// GET /orders/{id} and PUT /orders/{id} accept. json.displayId does not",
+									"// exist on this response; the old displayId+'-'+orderPartSeqId composite",
+									"// was always \"undefined-01\" and broke chained requests.",
+									"if (json && json.orderId) {",
+									"    pm.collectionVariables.set('orderId', json.orderId);",
+									"}",
+									"pm.test('returns 200', () => pm.response.to.have.status(200));",
+									"pm.test('orderId present', () => pm.expect(json.orderId).to.be.a('string').and.not.empty);",
+									"pm.test('customerPartyId resolved', () => pm.expect(json.customerPartyId).to.be.a('string').and.not.empty);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"ownerPartyId\": \"{{orgId}}\",\n  \"customer\": {\n    \"email\": \"customer@example.com\",\n    \"name\": \"John Doe\",\n    \"phone\": \"+1234567890\",\n    \"address1\": \"123 Main Street\",\n    \"address2\": \"Apt 4B\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"country\": \"US\",\n    \"postalCode\": \"10001\"\n  },\n  \"productStoreId\": \"{{storeId}}\",\n  \"currencyUomId\": \"USD\",\n  \"externalId\": \"EXT-ORDER-001\",\n  \"orderName\": \"V1 Sample Order\",\n  \"salesChannelEnumId\": \"ScWeb\",\n  \"shipCarrier\": \"FedEx\",\n  \"shipMethod\": \"ShMthGround\",\n  \"shippingFeeAmount\": 12.50,\n  \"items\": [\n    { \"productId\": \"{{productId}}\", \"quantity\": 2, \"unitAmount\": 100.00 },\n    { \"productId\": \"P_002\",         \"quantity\": 1, \"unitAmount\": 50.00  }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text",
+								"disabled": true
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"statusId\": \"OrderApproved\",\n  \"shipCarrier\": \"USPS\",\n  \"shipMethod\": \"ShMthPriority\",\n  \"shippingFeeAmount\": 14.00,\n  \"orderMessage\": \"Updated via PUT /orders/{orderId}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"orders",
+								"{{orderId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Inventory",
+			"item": [
+				{
+					"name": "Get Inventory / Stock Levels",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/inventory?orgId={{orgId}}&facilityId=FO_MAIN_FACILITY&productIds=100153&statusId=AstAvailable",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"inventory"
+							],
+							"query": [
+								{
+									"key": "orgId",
+									"value": "{{orgId}}"
+								},
+								{
+									"key": "facilityId",
+									"value": "FO_MAIN_FACILITY"
+								},
+								{
+									"key": "productIds",
+									"value": "100153",
+									"description": "Comma-separated productId list"
+								},
+								{
+									"key": "statusId",
+									"value": "AstAvailable"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Incoming Shipments",
+			"item": [
+				{
+					"name": "List Incoming Shipments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/incomingShipment?pageIndex=0&pagesize=50&ownerPartyId={{orgId}}&productStoreIdList={{storeId}}&monthStartDate=2026-05-01&monthEndDate=2026-07-01",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"incomingShipment"
+							],
+							"query": [
+								{
+									"key": "pageIndex",
+									"value": "0"
+								},
+								{
+									"key": "pagesize",
+									"value": "50"
+								},
+								{
+									"key": "id",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "shipmentExternalId",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "poNumber",
+									"value": "PO-123456",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "shipDeliveredDate",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "ownerPartyId",
+									"value": "{{orgId}}"
+								},
+								{
+									"key": "productStoreIdList",
+									"value": "{{storeId}}"
+								},
+								{
+									"key": "monthStartDate",
+									"value": "2026-05-01"
+								},
+								{
+									"key": "monthEndDate",
+									"value": "2026-07-01"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Incoming Shipment",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							},
+							{
+								"key": "",
+								"value": "",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/incomingShipment/103826?ownerPartyId={{orgId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"incomingShipment",
+								"103826"
+							],
+							"query": [
+								{
+									"key": "ownerPartyId",
+									"value": "{{orgId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Incoming Shipment",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const json = pm.response.json();",
+									"// Actual response is {\"shipmentId\": \"...\"} - there is no requestId field.",
+									"if (json && json.shipmentId) pm.collectionVariables.set('shipmentId', json.shipmentId);",
+									"pm.test('returns 200', () => pm.response.to.have.status(200));",
+									"pm.test('shipmentId present', () => pm.expect(json.shipmentId).to.be.a('string').and.not.empty);"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"from\": {\n    \"externalId\": \"PO-94ebb73c19\",\n    \"fullName\": \"TrackStar.\",\n    \"firstName\": \"TrackStar\",\n    \"lastName\": \"Supplier\",\n    \"address1\": \"123 Main St\",\n    \"address2\": \"Apt 4 San Francisco\",\n    \"city\": \"Atlanta\",\n    \"province\": \"\",\n    \"stateCode\": \"CA \",\n    \"postalCode\": \"94105\",\n    \"phone\": \"+14045551212\",\n    \"countryGeoId\": \"USA\"\n  },\n  \"to\": {\n    \"partyId\": \"{{orgId}}\",\n    \"destinationFacilityId\": \"FO_MAIN_FACILITY\"\n  },\n  \"estimatedArrivalDate\": \"2026-06-01 12:00:00\",\n  \"externalId\": \"PO-94ebb73c19\",\n  \"poNumber\": \"PO-94ebb73c19\",\n  \"shippingNote\": \"Handle with care\",\n  \"shippingCarrier\": \"OTHER\",\n  \"shippingMethod\": \"ShMthFTL\",\n  \"billOfLading\": \"BOL-987654\",\n  \"items\": [\n    {\n      \"itemSeqId\": \"01\",\n      \"quantity\": 24,\n       \"productId\": \"101377\",\n      \"lot\": \"LOT-A0\",\n      \"serialNumber\": \"\",\n      \"manufacturedDate\": \"2026-04-01\",\n      \"expirationDate\": \"2028-04-01\"\n    }\n  ],\n  \"packages\": [\n    {\n      \"packageSeqId\": \"01\",\n      \"weight\": 12.5,\n      \"uom\": \"lbs\",\n      \"trackingCode\": \"1Z999AA10123456784\",\n      \"sscc\": \"00012345678901234560\",\n      \"items\": [\n        {\n          \"quantity\": 24,\n          \"productId\": \"101377\"\n        }\n      ]\n      \n    }\n  ]\n}\n"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/incomingShipment",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"incomingShipment"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Inbound shipments / ASNs / purchase orders. The same resource covers all three — externally typed via `poNumber` and `shipmentExternalId`. Active organization is taken from the authenticated user's `ACTIVE_ORGANIZATION` preference."
+		},
+		{
+			"name": "Organization",
+			"item": [
+				{
+					"name": "Get Organization Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "api_Key",
+								"value": "{{api_Key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/rest/s1/api/v1/organizations/101181",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"rest",
+								"s1",
+								"api",
+								"v1",
+								"organizations",
+								"101181"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Inject api_key header on every request that has a captured key.",
+					"// Login is skipped (api_Key empty) so the framework treats it as anonymous.",
+					"const key = pm.collectionVariables.get('api_Key');",
+					"if (key && key.length > 0) {",
+					"    pm.request.headers.upsert({ key: 'api_key', value: key });",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://dev-aeroxone-admin.fulfillor.com"
+		},
+		{
+			"key": "api_Key",
+			"value": "rsXuWr4-10u-XGD7Iwj2KkMDfqPoT6cVhTU1BsOw\n"
+		},
+		{
+			"key": "orgId",
+			"value": "100000"
+		},
+		{
+			"key": "storeId",
+			"value": "100000"
+		},
+		{
+			"key": "productId",
+			"value": ""
+		},
+		{
+			"key": "orderId",
+			"value": "100461"
+		},
+		{
+			"key": "productStoreIdList",
+			"value": ""
+		},
+		{
+			"key": "facilityId",
+			"value": ""
+		},
+		{
+			"key": "productIds",
+			"value": ""
+		},
+		{
+			"key": "shipmentId",
+			"value": ""
+		}
+	]
+}

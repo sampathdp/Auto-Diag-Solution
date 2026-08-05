@@ -34,7 +34,7 @@ export function SalesByCategoryReport({
   const rows: CategoryRow[] = useMemo(() => {
     const map = new Map<number, { ordersIds: Set<number>; unitsSold: number; revenue: number }>();
     for (const o of billable) {
-      for (const item of o.items) {
+      for (const item of o.items ?? []) {
         const product = productById.get(item.product_id);
         if (!product) continue;
         if (!map.has(product.category_id)) map.set(product.category_id, { ordersIds: new Set(), unitsSold: 0, revenue: 0 });

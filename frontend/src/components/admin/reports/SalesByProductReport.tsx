@@ -26,7 +26,7 @@ export function SalesByProductReport({ orders, products }: { orders: Order[]; pr
   const rows: ProductRow[] = useMemo(() => {
     const map = new Map<number, { unitsSold: number; revenue: number }>();
     for (const o of billable) {
-      for (const item of o.items) {
+      for (const item of o.items ?? []) {
         if (!map.has(item.product_id)) map.set(item.product_id, { unitsSold: 0, revenue: 0 });
         const entry = map.get(item.product_id)!;
         entry.unitsSold += item.quantity;

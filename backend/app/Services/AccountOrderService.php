@@ -50,6 +50,18 @@ class AccountOrderService
         return $this->shape($order, $this->repo->items($id));
     }
 
+    /** Public order-tracking lookup for the emailed confirmation link — no JWT/user_id
+     * involved, ownership is proven by knowing the order_number and the token from the link. */
+    public function showByTrackingToken(string $orderNumber, string $token): array
+    {
+        $tokenHash = hash('sha256', $token);
+        $order = $this->repo->findByOrderNumberAndTokenHash($orderNumber, $tokenHash);
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        return $this->shape($order, $this->repo->items((int)$order['id']));
+    }
+
     public function cancel(int $userId, int $id, ?string $reason): array
     {
         $order = $this->repo->findForUser($id, $userId);

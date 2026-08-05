@@ -26,6 +26,7 @@ use App\Controllers\AccountWishlistController;
 use App\Controllers\AccountOrderController;
 use App\Controllers\AccountNotificationController;
 use App\Controllers\CheckoutController;
+use App\Controllers\OrderTrackingController;
 use App\Controllers\ShippingController;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\RoleMiddleware;
@@ -63,6 +64,11 @@ $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
 // /account/checkout above (still requires AuthMiddleware for saved-address checkout).
 $router->post("$v1/checkout/guest", [CheckoutController::class, 'guestStore']);
+
+// Order-confirmation-email tracking link — unauthenticated, guarded by the token in the
+// URL instead of a JWT (see OrderTrackingController) since guest customers have no
+// session to authenticate with.
+$router->get("$v1/orders/track/{orderNumber}", [OrderTrackingController::class, 'show']);
 
 // Public contact form — no login required.
 $router->post("$v1/contact", [App\Controllers\ContactMessageController::class, 'store']);
