@@ -17,6 +17,7 @@ use App\Controllers\AboutPageController;
 use App\Controllers\SeoMetaController;
 use App\Controllers\SupplierController;
 use App\Controllers\OrderController;
+use App\Controllers\CustomerController;
 use App\Controllers\ReviewController;
 use App\Controllers\DashboardController;
 use App\Controllers\AccountController;
@@ -248,6 +249,13 @@ $router->group([
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
     $router->post('/orders/{id}/approve-fulfillment', [OrderController::class, 'approveFulfillment']);
     $router->post('/orders/{id}/sync-fulfillment', [OrderController::class, 'syncFulfillment']);
+
+    // --- Customers (users with role = 'customer') ---
+    $router->get('/customers', [CustomerController::class, 'index']);
+    $router->get('/customers/{id}', [CustomerController::class, 'show']);
+    $router->put('/customers/{id}', [CustomerController::class, 'update']);
+    $router->get('/customers/{id}/addresses', [CustomerController::class, 'addresses']);
+    $router->post('/customers/{id}/notes', [CustomerController::class, 'addNote']);
 
     // --- Review moderation ---
     $router->get('/reviews', [ReviewController::class, 'index']);

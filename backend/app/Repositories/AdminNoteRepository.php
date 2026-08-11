@@ -15,7 +15,7 @@ class AdminNoteRepository
     public function forEntity(string $entityType, int $entityId): array
     {
         return DatabaseManager::query(
-            "SELECT n.*, u.name AS admin_name
+            "SELECT n.id, n.note AS text, u.name AS author, n.created_at
              FROM admin_notes n
              LEFT JOIN users u ON u.id = n.admin_id
              WHERE n.entity_type = :entity_type AND n.entity_id = :entity_id
