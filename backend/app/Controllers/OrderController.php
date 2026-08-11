@@ -30,8 +30,11 @@ class OrderController extends BaseController
                 $filters[$key] = (string)$request->input($key);
             }
         }
-        if ($request->input('user_id') !== null) {
-            $filters['user_id'] = (int)$request->input('user_id');
+        // Admin order list filters by 'user_id'; the customer detail page's order tab
+        // sends 'customer_id' instead — same column, accept either.
+        $userId = $request->input('user_id') ?? $request->input('customer_id');
+        if ($userId !== null) {
+            $filters['user_id'] = (int)$userId;
         }
 
         $withItems = filter_var($request->input('with_items') ?? false, FILTER_VALIDATE_BOOLEAN);
