@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Search, ShoppingCart, Eye } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
@@ -51,11 +52,14 @@ const columns: ColumnDef<Order, any>[] = [
   {
     id: "__actions",
     header: "",
-    cell: () => (
-      <span className="inline-flex items-center gap-1 text-caption font-semibold text-primary">
+    cell: ({ row }) => (
+      <Link
+        href={`/admin/orders/${row.original.id}`}
+        className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+      >
         <Eye className="h-3.5 w-3.5" />
         View
-      </span>
+      </Link>
     ),
   },
 ];
