@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -39,7 +40,7 @@ export function ProductCarousel() {
       <div className="mx-auto max-w-wrap px-6 md:px-14">
         <div className="mb-11 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+            <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
               <span className="block h-0.5 w-6 bg-primary" />
               {t("eyebrow")}
             </div>
@@ -88,17 +89,20 @@ export function ProductCarousel() {
                   aria-hidden
                   className="absolute start-4 top-4 z-10 h-3.5 w-3.5 border-s-2 border-t-2 border-foreground/15"
                 />
-                <img
+                <Image
                   src={p.images[0] || "/placeholder-product.svg"}
                   alt={name}
-                  className={`h-full w-full object-contain p-6 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
+                  fill
+                  sizes="260px"
+                  loading="lazy"
+                  className={`object-contain p-6 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
                 />
                 <span
                   className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
                     isOutOfStock
                       ? "border-destructive text-destructive"
                       : isLowStock
-                        ? "border-primary text-primary"
+                        ? "border-primary-accessible text-primary-accessible"
                         : "border-border text-foreground/62"
                   } bg-card`}
                 >

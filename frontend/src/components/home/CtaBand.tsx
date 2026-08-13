@@ -5,7 +5,7 @@ export async function CtaBand() {
   const t = await getTranslations("home.cta");
 
   return (
-    <section className="bg-primary text-primary-foreground">
+    <section className="bg-primary-accessible text-primary-foreground">
       <div className="mx-auto flex max-w-wrap flex-wrap items-center justify-between gap-7 px-6 py-14 md:px-14">
         <h2 className="max-w-[560px] text-2xl font-extrabold text-balance sm:text-4xl">
           {t("title")}

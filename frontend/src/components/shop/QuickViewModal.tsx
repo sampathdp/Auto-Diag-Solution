@@ -209,7 +209,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                     ref={buttonRef}
                     disabled={isOutOfStock}
                     onClick={handleAddToCart}
-                    className="flex h-14 flex-1 items-center justify-center gap-2 rounded-md bg-primary text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lifted disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 sm:text-[13px]"
+                    className="flex h-14 flex-1 items-center justify-center gap-2 rounded-md bg-primary-accessible text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary-accessible/90 hover:shadow-lifted disabled:opacity-50 disabled:shadow-none disabled:hover:translate-y-0 sm:text-[13px]"
                   >
                     <ShoppingCart className="h-5 w-5" />
                     {isOutOfStock ? t("outOfStock") : t("addToCart")}

@@ -192,6 +192,30 @@ class OrderService
         return $this->find($id);
     }
 
+    /**
+     * Flags an order for refund without changing payment_status — the actual money
+     * movement still happens manually in the payment provider's dashboard until a real
+     * gateway integration exists (see CheckoutService's docblock). This just gives the
+     * admin panel's "Refund" button a real endpoint to call and a timestamped record of
+     * the request, separate from `updatePaymentStatus('refunded')`, which is reserved
+     * for confirming the refund actually completed.
+     */
+    public function requestRefund(int $id, int $adminId): array
+    {
+        $order = $this->repo->find($id);
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        if ($order['refund_requested_at'] !== null || $order['payment_status'] === 'refunded') {
+            throw new DomainException('A refund has already been requested for this order', 409);
+        }
+
+        $this->repo->update($id, ['refund_requested_at' => date('Y-m-d H:i:s')]);
+        $this->notes->create('order', $id, $adminId, 'Refund requested — process the actual refund in the payment provider dashboard.');
+
+        return $this->find($id);
+    }
+
     public function addNote(int $id, string $note, int $adminId): array
     {
         if (!$this->repo->find($id)) {

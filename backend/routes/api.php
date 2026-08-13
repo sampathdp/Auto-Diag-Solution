@@ -246,6 +246,7 @@ $router->group([
     $router->get('/orders/{id}', [OrderController::class, 'show']);
     $router->put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
     $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+    $router->post('/orders/{id}/refund-request', [OrderController::class, 'requestRefund']);
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
     $router->post('/orders/{id}/approve-fulfillment', [OrderController::class, 'approveFulfillment']);
     $router->post('/orders/{id}/sync-fulfillment', [OrderController::class, 'syncFulfillment']);

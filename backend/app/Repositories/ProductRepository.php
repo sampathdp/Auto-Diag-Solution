@@ -23,6 +23,30 @@ class ProductRepository extends BaseRepository
     }
 
     /**
+     * Atomically decrements stock, guarded by the same WHERE clause that checks
+     * sufficiency — so two concurrent checkouts racing for the last unit can't both
+     * succeed (the second one's UPDATE simply matches zero rows). Returns false when
+     * the guard fails, meaning the caller lost the race and must abort the order.
+     *
+     * `stock_status` is assigned before `stock_quantity` deliberately: MySQL evaluates
+     * a single-table UPDATE's SET clauses left-to-right, with each expression seeing
+     * any earlier assignment in the same statement. Computing stock_status first means
+     * its `stock_quantity - :qty` still reads the original (pre-decrement) value.
+     */
+    public function decrementStock(int $productId, int $quantity): bool
+    {
+        $stmt = DatabaseManager::query(
+            "UPDATE products
+             SET stock_status = CASE WHEN stock_quantity - :qty <= 0 THEN 'out_of_stock' ELSE stock_status END,
+                 stock_quantity = stock_quantity - :qty
+             WHERE id = :id AND track_inventory = 1 AND stock_quantity >= :qty",
+            ['qty' => $quantity, 'id' => $productId]
+        );
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
      * Paginated list with category/brand display names joined in — avoids a separate
      * lookup per row in the admin product table UI.
      */

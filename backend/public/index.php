@@ -47,6 +47,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
+
+// --- CSRF protection: verify Origin on state-changing requests ----------------
+// Auth cookies are SameSite=None (required because the frontend and backend are
+// different origins), so SameSite alone can't stop a cross-site <form> POST from
+// carrying the cookie along. A legitimate browser call to this API is cross-site by
+// construction and always sends Origin — reject state-changing requests whose Origin
+// isn't one we already trust for CORS above. The Fulfillor webhook is exempt: it's a
+// server-to-server call with no browser Origin header, guarded by its own shared
+// secret instead (see FulfillorWebhookController).
+$isStateChanging = in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'], true);
+$isWebhookPath = str_ends_with(strtok($_SERVER['REQUEST_URI'] ?? '/', '?'), '/webhooks/fulfillor');
+
+if ($isStateChanging && !$isWebhookPath) {
+    $originIsTrusted = in_array($requestOrigin, $allowedOrigins, true)
+        || $isLocalOrigin
+        || ($isLocal && $requestOrigin === ''); // non-browser tools (Postman) in dev only
+
+    if (!$originIsTrusted) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'data'    => null,
+            'error'   => 'origin_not_allowed',
+            'message' => 'Request origin not allowed.',
+        ]);
+        exit;
+    }
+}
 // ──────────────────────────────────────────────────────────────────────────────
 
 try {

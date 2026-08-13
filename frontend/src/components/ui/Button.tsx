@@ -10,7 +10,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary text-primary-foreground shadow-cta hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lifted",
+          "bg-primary-accessible text-primary-foreground shadow-cta hover:-translate-y-0.5 hover:bg-primary-accessible/90 hover:shadow-lifted",
         secondary:
           "border border-border bg-card text-foreground shadow-soft hover:bg-secondary",
         outlineLight: "border border-white/55 text-white hover:border-white hover:bg-white/10",
@@ -18,7 +18,7 @@ const buttonVariants = cva(
           "border border-foreground text-foreground hover:bg-foreground hover:text-background",
         danger: "bg-destructive text-destructive-foreground shadow-soft hover:bg-destructive/90",
         ghost: "normal-case tracking-normal hover:bg-secondary hover:text-foreground",
-        link: "normal-case tracking-normal text-primary underline-offset-4 hover:underline",
+        link: "normal-case tracking-normal text-primary-accessible underline-offset-4 hover:underline",
       },
       size: {
         default: "h-11 px-5",

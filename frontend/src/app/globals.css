@@ -24,6 +24,13 @@
     --primary: 26 81% 52%;            /* amber — the one CTA accent color */
     --primary-foreground: 0 0% 100%;  /* white */
 
+    /* Same amber hue/saturation, darkened — for any spot where text sits ON or IN
+       this color (button labels, badges, eyebrow labels). The brand amber at 52%
+       lightness only reaches ~2.96:1 contrast against white, short of WCAG AA's
+       4.5:1 for text. This variant measures ~5:1. Decorative-only uses (accent
+       bars, borders, icons with no adjacent text) keep --primary unchanged. */
+    --primary-accessible: 26 81% 38%;
+
     --navy: 221 48% 17%;              /* navy — dark sections, header-on-scroll, footer */
     --navy-foreground: 0 0% 100%;     /* white */
 

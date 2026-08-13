@@ -15,7 +15,7 @@ export async function WhyUs() {
     <section className="bg-background py-14 md:py-28">
       <div className="mx-auto max-w-wrap px-6 md:px-14">
         <div className="mb-11">
-          <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+          <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
             <span className="block h-0.5 w-6 bg-primary" />
             {t("eyebrow")}
           </div>

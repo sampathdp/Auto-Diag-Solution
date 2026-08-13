@@ -81,6 +81,15 @@ class OrderController extends BaseController
         $this->success($order, 'Order payment status updated successfully');
     }
 
+    public function requestRefund(Request $request): void
+    {
+        $order = $this->service->requestRefund(
+            (int)$request->getParam('id'),
+            (int)$request->user->id
+        );
+        $this->success($order, 'Refund requested successfully');
+    }
+
     public function addNote(Request $request): void
     {
         $order = $this->service->addNote(

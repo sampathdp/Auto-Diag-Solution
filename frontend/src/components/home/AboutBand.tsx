@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 export async function AboutBand() {
   const t = await getTranslations("home.about");
@@ -9,14 +10,14 @@ export async function AboutBand() {
     <section className="bg-secondary py-14 md:py-28">
       <div className="mx-auto grid max-w-wrap gap-12 px-6 md:grid-cols-2 md:gap-20 md:px-14 md:items-center">
         <div>
-          <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+          <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
             <span className="block h-0.5 w-6 bg-primary" />
             {t("eyebrow")}
           </div>
           <h2 className="mt-4 text-[30px] font-extrabold tracking-tight text-balance sm:text-[44px]">
             {t("title")}
           </h2>
-          <p className="mt-5 max-w-[52ch] text-base leading-relaxed text-foreground/62">
+          <p className="mt-5 max-w-[52ch] text-base leading-relaxed text-foreground/75">
             {t("body")}
           </p>
           <Link
@@ -29,9 +30,13 @@ export async function AboutBand() {
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted">
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/about-warehouse.png')" }}
+          <Image
+            src="/about-warehouse.png"
+            alt=""
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            loading="lazy"
+            className="object-cover object-center"
           />
           <div className="absolute inset-0 bg-navy/20 mix-blend-multiply" />
           <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10" />

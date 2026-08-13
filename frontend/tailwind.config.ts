@@ -18,6 +18,9 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          // WCAG-AA-safe variant for text/labels sitting on or in the brand amber —
+          // see the --primary-accessible comment in globals.css for why.
+          accessible: "hsl(var(--primary-accessible))",
         },
         navy: {
           DEFAULT: "hsl(var(--navy))",

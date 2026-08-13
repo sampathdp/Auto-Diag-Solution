@@ -60,12 +60,16 @@ class SimpleSmtpMailer
         $to          = self::stripHeaderInjection($to);
         $subject     = self::stripHeaderInjection($subject);
 
+        // Verify the SMTP server's TLS certificate — otherwise a network-position
+        // attacker can MITM the session and capture the SMTP credential (and any
+        // password-reset links) in plaintext. Real providers (Resend, Gmail, etc.)
+        // present valid certificates, so there's no reason to skip verification.
         $timeout = 15;
         $context = stream_context_create([
             'ssl' => [
-                'verify_peer'       => false,
-                'verify_peer_name'  => false,
-                'allow_self_signed' => true,
+                'verify_peer'       => true,
+                'verify_peer_name'  => true,
+                'allow_self_signed' => false,
             ],
         ]);
 

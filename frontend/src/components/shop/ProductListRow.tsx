@@ -297,7 +297,7 @@ export function ProductListRow({ product }: { product: Product }) {
                 ref={buttonRef}
                 disabled={isOutOfStock}
                 onClick={handleAddToCart}
-                className="mt-6 flex w-full h-11 items-center justify-center gap-2 rounded-md bg-primary py-3 text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lifted disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 overflow-hidden sm:text-[13px]"
+                className="mt-6 flex w-full h-11 items-center justify-center gap-2 rounded-md bg-primary-accessible py-3 text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary-accessible/90 hover:shadow-lifted disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 overflow-hidden sm:text-[13px]"
               >
                 <AnimatePresence mode="wait">
                   {cartState === "idle" && (

@@ -16,9 +16,9 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
+          <h3 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
             {t("shop")}
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-3">
             <li><Link href="/shop" className="hover:text-navy-foreground">{t("shopEngine")}</Link></li>
             <li><Link href="/shop" className="hover:text-navy-foreground">{t("shopBrakes")}</Link></li>
@@ -28,9 +28,9 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
+          <h3 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
             {t("company")}
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-3">
             <li><Link href="/about" className="hover:text-navy-foreground">{nav("about")}</Link></li>
             <li><Link href="/contact" className="hover:text-navy-foreground">{nav("contact")}</Link></li>
@@ -41,9 +41,9 @@ export function SiteFooter() {
         </div>
 
         <div>
-          <h4 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
+          <h3 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-navy-foreground">
             {t("contact")}
-          </h4>
+          </h3>
           <ul className="flex flex-col gap-3.5">
             <li className="flex items-start gap-2.5">
               <MapPin className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />

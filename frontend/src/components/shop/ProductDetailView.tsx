@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -218,10 +219,13 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 aria-hidden
                 className="pointer-events-none absolute start-4 top-4 z-10 h-4 w-4 border-s-2 border-t-2 border-foreground/10"
               />
-              <img
+              <Image
                 src={product.images[activeImage] || "/placeholder-product.svg"}
                 alt={name}
-                className={`h-full w-full object-contain p-10 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                priority
+                className={`object-contain p-10 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
               />
               {isOutOfStock && (
                 <span className="absolute left-4 top-4 rounded bg-destructive px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive-foreground rtl:left-auto rtl:right-4">
@@ -234,7 +238,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 </span>
               )}
               {!isOutOfStock && !hasDiscount && isNew && (
-                <span className="absolute left-4 top-4 rounded bg-primary px-2.5 py-1 text-[10px] font-bold tracking-wider text-primary-foreground shadow-sm rtl:left-auto rtl:right-4">
+                <span className="absolute left-4 top-4 rounded bg-primary-accessible px-2.5 py-1 text-[10px] font-bold tracking-wider text-primary-foreground shadow-sm rtl:left-auto rtl:right-4">
                   NEW
                 </span>
               )}
@@ -250,7 +254,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                       activeImage === idx ? "border-primary" : "border-transparent hover:border-border"
                     }`}
                   >
-                    <img src={img} alt="" className="h-full w-full object-contain" />
+                    <Image src={img} alt="" fill sizes="80px" loading="lazy" className="object-contain" />
                   </button>
                 ))}
               </div>
@@ -360,7 +364,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                   ref={buttonRef}
                   disabled={isOutOfStock}
                   onClick={handleAddToCart}
-                  className="flex h-14 flex-1 items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lifted disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0 sm:text-[13px]"
+                  className="flex h-14 flex-1 items-center justify-center gap-2 overflow-hidden rounded-md bg-primary-accessible text-xs font-bold uppercase tracking-wide text-primary-foreground shadow-cta transition-all hover:-translate-y-0.5 hover:bg-primary-accessible/90 hover:shadow-lifted disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:translate-y-0 sm:text-[13px]"
                 >
                   {cartState === "idle" && (
                     <>
@@ -389,7 +393,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                   aria-label={isCompared ? "Remove from compare" : "Add to compare"}
                   aria-pressed={isCompared}
                   className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-md border shadow-soft transition-colors ${
-                    isCompared ? "bg-primary text-primary-foreground border-primary" : "bg-background text-foreground hover:text-primary"
+                    isCompared ? "bg-primary-accessible text-primary-foreground border-primary" : "bg-background text-foreground hover:text-primary-accessible"
                   }`}
                 >
                   <Scale className="h-5 w-5" />

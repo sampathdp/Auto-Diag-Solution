@@ -212,7 +212,16 @@ class CheckoutService
             }
 
             foreach ($stockUpdates as $productId => $update) {
-                $this->products->update($productId, $update);
+                // Atomic, guarded decrement — closes the race where two concurrent
+                // checkouts both read stock as sufficient and both proceed to buy the
+                // last unit. If we lose the race, abort the whole order (transaction
+                // rolls back the order/items/payment rows already staged above).
+                if (!$this->products->decrementStock($productId, $update['quantity'])) {
+                    throw new DomainException(
+                        "{$update['name_en']} sold out while we were placing your order — please remove it and try again",
+                        409
+                    );
+                }
             }
 
             $this->paymentTransactions->create([
@@ -318,10 +327,12 @@ class CheckoutService
             ];
 
             if (!empty($product['track_inventory'])) {
-                $newQuantity = max(0, (int)$product['stock_quantity'] - $quantity);
+                // Just the quantity to decrement, not a precomputed new value — the
+                // actual write happens atomically in decrementStock() inside the
+                // transaction, so a concurrent order can't be silently overwritten.
                 $stockUpdates[$productId] = [
-                    'stock_quantity' => $newQuantity,
-                    'stock_status' => $newQuantity === 0 ? 'out_of_stock' : $product['stock_status'],
+                    'quantity' => $quantity,
+                    'name_en' => $product['name_en'],
                 ];
             }
         }

@@ -29,7 +29,7 @@ export function ShopPagination({
           onClick={() => onPageChange(p)}
           className={`flex h-10 w-10 items-center justify-center rounded-md text-sm font-medium transition-colors ${
             currentPage === p
-              ? "bg-primary text-primary-foreground shadow-cta"
+              ? "bg-primary-accessible text-primary-foreground shadow-cta"
               : "border bg-card hover:bg-secondary text-foreground"
           }`}
         >

@@ -18,9 +18,12 @@ class StorageController extends BaseController
         'invoices',
     ];
 
-    // Allowed MIME types to prevent serving unexpected file formats
+    // Allowed MIME types to prevent serving unexpected file formats. SVG is deliberately
+    // excluded even though FileUploader doesn't currently accept SVG uploads either —
+    // this list is what decides what gets served inline with no sanitization, and an
+    // SVG can carry an embedded <script> that executes when opened directly.
     private const ALLOWED_MIME_TYPES = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'application/pdf',
     ];
 

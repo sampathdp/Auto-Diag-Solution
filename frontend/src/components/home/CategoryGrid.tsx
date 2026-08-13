@@ -1,6 +1,7 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight, Cog, Disc, Filter, Zap, CarFront, Armchair, type LucideIcon } from "lucide-react";
+import Image from "next/image";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -55,7 +56,7 @@ export async function CategoryGrid() {
       <div className="mx-auto max-w-wrap px-6 md:px-14">
         <div className="mb-11 flex flex-wrap items-end justify-between gap-6">
           <div>
-            <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+            <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
               <span className="block h-0.5 w-6 bg-primary" />
               {t("eyebrow")}
             </div>
@@ -83,9 +84,13 @@ export async function CategoryGrid() {
                 className="group relative aspect-[3/4] overflow-hidden rounded-xl bg-navy shadow-soft transition-all duration-300 hover:-translate-y-1.5 hover:shadow-lifted"
               >
                 {cat.image ? (
-                  <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                    style={{ backgroundImage: `url('${cat.image}')` }}
+                  <Image
+                    src={cat.image}
+                    alt=""
+                    fill
+                    sizes="(min-width: 768px) 33vw, 50vw"
+                    loading="lazy"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
                   <div className={`absolute inset-0 bg-gradient-to-br ${TINTS[i % TINTS.length]} to-navy`} />

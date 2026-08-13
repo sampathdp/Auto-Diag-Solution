@@ -342,7 +342,7 @@ export function ShopView({ initialCategory, hideCategoryFilter = false }: { init
                 <button onClick={clearFilters} className="font-semibold text-foreground underline">
                   {t("mobileFilters.clearAll")}
                 </button>
-                <button onClick={() => setMobileFiltersOpen(false)} className="rounded-md bg-primary px-8 py-3 font-bold text-primary-foreground shadow-sm transition-all active:scale-95">
+                <button onClick={() => setMobileFiltersOpen(false)} className="rounded-md bg-primary-accessible px-8 py-3 font-bold text-primary-foreground shadow-sm transition-all active:scale-95">
                   {t("mobileFilters.showResults", { count: data?.total ?? 0 })}
                 </button>
               </div>

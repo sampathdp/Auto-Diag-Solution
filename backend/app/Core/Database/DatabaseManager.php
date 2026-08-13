@@ -20,11 +20,17 @@ class DatabaseManager
             return self::$connection;
         }
 
+        // No fallback for DB_DATABASE: a leftover default here would let a missing env
+        // var silently connect to the wrong database instead of failing loudly.
+        if (empty($_ENV['DB_DATABASE'])) {
+            throw new Exception('DB_DATABASE is not set in the environment.');
+        }
+
         try {
             $config = [
                 'host' => $_ENV['DB_HOST'] ?? '127.0.0.1',
                 'port' => $_ENV['DB_PORT'] ?? '3306',
-                'dbname' => $_ENV['DB_DATABASE'] ?? 'salon_saas',
+                'dbname' => $_ENV['DB_DATABASE'],
                 'user' => $_ENV['DB_USERNAME'] ?? 'root',
                 'pass' => $_ENV['DB_PASSWORD'] ?? '',
             ];

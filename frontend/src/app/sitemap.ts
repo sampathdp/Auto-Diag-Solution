@@ -23,6 +23,27 @@ interface ProductListEnvelope {
   };
 }
 
+interface PublicCategoryRow {
+  slug: string;
+}
+
+interface CategoryListEnvelope {
+  data: {
+    items: PublicCategoryRow[];
+  };
+}
+
+async function fetchAllCategories(): Promise<PublicCategoryRow[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/categories`, { next: { revalidate } });
+    if (!res.ok) return [];
+    const body = (await res.json()) as CategoryListEnvelope;
+    return body.data?.items ?? [];
+  } catch {
+    return [];
+  }
+}
+
 async function fetchAllActiveProducts(): Promise<PublicProductRow[]> {
   const products: PublicProductRow[] = [];
   let page = 1;
@@ -55,7 +76,7 @@ async function fetchAllActiveProducts(): Promise<PublicProductRow[]> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await fetchAllActiveProducts();
+  const [products, categories] = await Promise.all([fetchAllActiveProducts(), fetchAllCategories()]);
   const entries: MetadataRoute.Sitemap = [];
 
   for (const locale of routing.locales) {
@@ -64,6 +85,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         url: `${SITE_URL}/${locale}${path}`,
         changeFrequency: "daily",
         priority: path === "" ? 1 : 0.7,
+      });
+    }
+
+    for (const category of categories) {
+      entries.push({
+        url: `${SITE_URL}/${locale}/shop/${category.slug}`,
+        changeFrequency: "daily",
+        priority: 0.7,
       });
     }
 

@@ -34,7 +34,7 @@ export async function BrandsStrip() {
     <section className="bg-background py-14 text-center md:py-28">
       <div className="mx-auto max-w-wrap px-6 md:px-14">
         <div className="mb-11">
-          <div className="mb-4 inline-flex items-center justify-center rounded-full bg-primary/10 px-3.5 py-1 text-[13px] font-bold text-primary uppercase tracking-widest">
+          <div className="mb-4 inline-flex items-center justify-center rounded-full bg-primary/10 px-3.5 py-1 text-[13px] font-bold text-primary-accessible uppercase tracking-widest">
             {t("eyebrow")}
           </div>
           <h2 className="text-3xl font-extrabold tracking-tight text-balance text-foreground sm:text-[40px]">
@@ -44,7 +44,7 @@ export async function BrandsStrip() {
 
         <BrandsMarquee brands={brands} locale={locale} />
 
-        <p className="mx-auto mt-14 max-w-2xl text-[15px] leading-relaxed text-foreground/60">
+        <p className="mx-auto mt-14 max-w-2xl text-[15px] leading-relaxed text-foreground/75">
           {t.rich("description", {
             br: () => <br className="hidden sm:block" />,
           })}
@@ -53,7 +53,7 @@ export async function BrandsStrip() {
         <div className="mt-8">
           <Link 
             href="/brands" 
-            className="inline-flex items-center gap-1.5 text-[15px] font-bold text-primary transition-colors hover:text-primary/80"
+            className="inline-flex items-center gap-1.5 text-[15px] font-bold text-primary-accessible transition-colors hover:text-primary-accessible/80"
           >
             {t("link")}
             <ArrowRight className="h-4 w-4 rtl:rotate-180" strokeWidth={2.5} />

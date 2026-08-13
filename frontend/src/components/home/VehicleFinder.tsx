@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useVehicleFilters } from "@/hooks/useVehicleFilters";
 
 function SelectField({
+  id,
   label,
   placeholder,
   value,
@@ -15,6 +16,7 @@ function SelectField({
   disabled,
   loading,
 }: {
+  id: string;
   label: string;
   placeholder: string;
   value: string;
@@ -25,11 +27,12 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-white/70">
+      <label htmlFor={id} className="mb-2 block text-[11px] font-bold uppercase tracking-wider text-white/70">
         {label}
       </label>
       <div className="relative">
         <select
+          id={id}
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
@@ -132,6 +135,7 @@ export function VehicleFinder() {
         {isAuthenticated && savedVehicles.length > 0 && (
           <div className="relative">
             <select
+              aria-label="Use one of my saved vehicles"
               onChange={(e) => handleSavedVehicleSelect(e.target.value)}
               className="appearance-none rounded border border-white/20 bg-white/10 px-3 py-1.5 pr-8 text-xs font-semibold text-white focus:outline-none focus:ring-1 focus:ring-primary"
             >
@@ -148,6 +152,7 @@ export function VehicleFinder() {
       </div>
       <div className="grid grid-cols-1 gap-3.5 md:grid-cols-[1fr_1fr_1fr_auto]">
         <SelectField
+          id="vehicle-finder-year"
           label={t("year")}
           placeholder={t("yearPlaceholder")}
           value={year}
@@ -161,6 +166,7 @@ export function VehicleFinder() {
           loading={isLoadingOptions && years.length === 0}
         />
         <SelectField
+          id="vehicle-finder-make"
           label={t("make")}
           placeholder={t("makePlaceholder")}
           value={make}
@@ -172,6 +178,7 @@ export function VehicleFinder() {
           disabled={!year}
         />
         <SelectField
+          id="vehicle-finder-model"
           label={t("model")}
           placeholder={t("modelPlaceholder")}
           value={model}

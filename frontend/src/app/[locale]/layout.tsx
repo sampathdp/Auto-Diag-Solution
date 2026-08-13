@@ -8,7 +8,11 @@ import { AppProviders } from "@/app/providers";
 import { SplashPreloader } from "@/components/ui/SplashPreloader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { localeAlternates } from "@/lib/seo/alternates";
 import "../globals.css";
+
+const SITE_NAME = "ASIL Auto Parts Hub";
+const SITE_DESCRIPTION = "Genuine auto parts, delivered across the UAE.";
 
 const fontSans = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const fontArabic = IBM_Plex_Sans_Arabic({
@@ -19,8 +23,20 @@ const fontArabic = IBM_Plex_Sans_Arabic({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: "ASIL Auto Parts Hub",
-  description: "Genuine auto parts, delivered across the UAE.",
+  title: SITE_NAME,
+  description: SITE_DESCRIPTION,
+  alternates: { languages: localeAlternates("") },
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export function generateStaticParams() {

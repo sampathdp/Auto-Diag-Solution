@@ -114,7 +114,7 @@ export default function AdminOrderDetailPage() {
   const requestRefund = useMutation({
     mutationFn: () => adminApi.post(`/orders/${id}/refund-request`),
     onSuccess: () => {
-      showSuccess("Refund requested — process the actual refund in Stripe.");
+      showSuccess("Refund requested — process the actual refund with your payment provider.");
       invalidate();
       setRefundOpen(false);
     },
@@ -436,7 +436,7 @@ export default function AdminOrderDetailPage() {
         onConfirm={() => requestRefund.mutate()}
         itemName={order.order_number}
         itemLabel="order for refund"
-        extraWarning="This only flags the order — process the actual refund in the Stripe dashboard."
+        extraWarning="This only flags the order — process the actual refund with your payment provider."
         loading={requestRefund.isPending}
       />
 

@@ -10,12 +10,17 @@ import { productFitsVehicle } from "@/lib/productFitment";
 import { isNewProduct } from "@/lib/productBadges";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import Image from "next/image";
 import { QuickViewModal } from "./QuickViewModal";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
 import { useVehicleStore } from "@/store/useVehicleStore";
 import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
+
+// Defined once at module scope — recreating this on every render would remount the
+// image (and drop its layout animation) on every re-render of ProductCard.
+const MotionImage = motion(Image);
 
 function ParticleBurst() {
   const particles = Array.from({ length: 5 }).map((_, i) => ({
@@ -181,22 +186,28 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               className="pointer-events-none absolute start-4 top-4 z-10 h-4 w-4 border-s-2 border-t-2 border-foreground/10"
             />
             {/* Main Image with layoutId for QuickView */}
-            <motion.img
+            <MotionImage
               layoutId={`product-img-${product.id}`}
               src={imageSrc}
               alt={name}
+              fill
+              sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw"
+              loading="lazy"
               variants={shouldReduceMotion ? {} : { hover: { opacity: product.images[1] ? 0 : 1 } }}
               transition={{ duration: 0.3 }}
-              className={`absolute inset-0 h-full w-full object-contain p-6 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
+              className={`object-contain p-6 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
             />
             {/* Hover Image */}
             {!shouldReduceMotion && product.images[1] && (
-              <motion.img
+              <MotionImage
                 src={product.images[1]}
                 alt={name}
+                fill
+                sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw"
+                loading="lazy"
                 variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
                 transition={{ duration: 0.3 }}
-                className={`absolute inset-0 h-full w-full object-contain p-6 ${isOutOfStock ? 'grayscale' : ''}`}
+                className={`object-contain p-6 ${isOutOfStock ? 'grayscale' : ''}`}
               />
             )}
 
@@ -213,7 +224,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                 </span>
               )}
               {!isOutOfStock && isNew && (
-                <span className="rounded bg-primary px-2 py-1 text-[10px] font-bold tracking-wider text-primary-foreground shadow-sm">
+                <span className="rounded bg-primary-accessible px-2 py-1 text-[10px] font-bold tracking-wider text-primary-foreground shadow-sm">
                   NEW
                 </span>
               )}
@@ -264,7 +275,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                 aria-pressed={isCompared}
                 variants={shouldReduceMotion ? {} : { rest: { opacity: isCompared ? 1 : 0, y: isCompared ? 0 : -8 }, hover: { opacity: 1, y: 0 } }}
                 transition={{ duration: 0.2 }}
-                className={`absolute right-3 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-soft backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rtl:left-3 rtl:right-auto transition-colors ${isCompared ? "bg-primary text-primary-foreground" : "bg-background/90 text-muted-foreground hover:text-foreground"}`}
+                className={`absolute right-3 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-full shadow-soft backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rtl:left-3 rtl:right-auto transition-colors ${isCompared ? "bg-primary-accessible text-primary-foreground" : "bg-background/90 text-muted-foreground hover:text-foreground"}`}
               >
                 <Scale className="h-3.5 w-3.5" />
               </motion.button>
@@ -301,7 +312,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                 ref={buttonRef}
                 disabled={isOutOfStock}
                 onClick={handleAddToCart}
-                className="flex-1 bg-primary py-3 flex items-center justify-center text-[11px] font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:py-3.5 sm:text-[13px]"
+                className="flex-1 bg-primary-accessible py-3 flex items-center justify-center text-[11px] font-bold uppercase tracking-wide text-primary-foreground disabled:bg-muted disabled:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-background focus-visible:ring-inset sm:py-3.5 sm:text-[13px]"
               >
                 <AnimatePresence mode="wait">
                   {cartState === "idle" && (
