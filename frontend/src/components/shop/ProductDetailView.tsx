@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -219,13 +218,11 @@ export function ProductDetailView({ productId }: { productId: string }) {
                 aria-hidden
                 className="pointer-events-none absolute start-4 top-4 z-10 h-4 w-4 border-s-2 border-t-2 border-foreground/10"
               />
-              <Image
+              <img
                 src={product.images[activeImage] || "/placeholder-product.svg"}
                 alt={name}
-                fill
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                priority
-                className={`object-contain p-10 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
+                fetchPriority="high"
+                className={`absolute inset-0 h-full w-full object-contain p-10 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
               />
               {isOutOfStock && (
                 <span className="absolute left-4 top-4 rounded bg-destructive px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive-foreground rtl:left-auto rtl:right-4">
@@ -254,7 +251,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
                       activeImage === idx ? "border-primary" : "border-transparent hover:border-border"
                     }`}
                   >
-                    <Image src={img} alt="" fill sizes="80px" loading="lazy" className="object-contain" />
+                    <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-contain" />
                   </button>
                 ))}
               </div>

@@ -10,7 +10,6 @@ import { productFitsVehicle } from "@/lib/productFitment";
 import { isNewProduct } from "@/lib/productBadges";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import Image from "next/image";
 import { QuickViewModal } from "./QuickViewModal";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
@@ -19,8 +18,10 @@ import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
 
 // Defined once at module scope — recreating this on every render would remount the
-// image (and drop its layout animation) on every re-render of ProductCard.
-const MotionImage = motion(Image);
+// image (and drop its layout animation) on every re-render of ProductCard. Plain
+// <img>, not next/image: next/image's remotePatterns allowlist makes it fragile
+// against arbitrary backend hosts (see ProductListRow.tsx for the same tradeoff).
+const MotionImage = motion.img;
 
 function ParticleBurst() {
   const particles = Array.from({ length: 5 }).map((_, i) => ({
@@ -190,24 +191,20 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
               layoutId={`product-img-${product.id}`}
               src={imageSrc}
               alt={name}
-              fill
-              sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw"
               loading="lazy"
               variants={shouldReduceMotion ? {} : { hover: { opacity: product.images[1] ? 0 : 1 } }}
               transition={{ duration: 0.3 }}
-              className={`object-contain p-6 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
+              className={`absolute inset-0 h-full w-full object-contain p-6 ${isOutOfStock ? 'opacity-50 grayscale' : ''}`}
             />
             {/* Hover Image */}
             {!shouldReduceMotion && product.images[1] && (
               <MotionImage
                 src={product.images[1]}
                 alt={name}
-                fill
-                sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw"
                 loading="lazy"
                 variants={{ rest: { opacity: 0 }, hover: { opacity: 1 } }}
                 transition={{ duration: 0.3 }}
-                className={`object-contain p-6 ${isOutOfStock ? 'grayscale' : ''}`}
+                className={`absolute inset-0 h-full w-full object-contain p-6 ${isOutOfStock ? 'grayscale' : ''}`}
               />
             )}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef } from "react";
-import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
@@ -89,13 +88,11 @@ export function ProductCarousel() {
                   aria-hidden
                   className="absolute start-4 top-4 z-10 h-3.5 w-3.5 border-s-2 border-t-2 border-foreground/15"
                 />
-                <Image
+                <img
                   src={p.images[0] || "/placeholder-product.svg"}
                   alt={name}
-                  fill
-                  sizes="260px"
                   loading="lazy"
-                  className={`object-contain p-6 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
+                  className={`absolute inset-0 h-full w-full object-contain p-6 ${isOutOfStock ? "opacity-50 grayscale" : ""}`}
                 />
                 <span
                   className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
