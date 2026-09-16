@@ -373,6 +373,59 @@ export default function AdminOrderDetailPage() {
             </CardBody>
           </Card>
 
+          {order.promo_code && (
+            <Card>
+              <CardHeader>
+                <h2 className="text-h4 font-bold text-ink">Promo & Referral Information</h2>
+              </CardHeader>
+              <CardBody>
+                <dl className="space-y-2 text-body">
+                  <div className="flex justify-between">
+                    <dt className="text-ink-muted">Promo Code</dt>
+                    <dd className="font-mono text-ink">{order.promo_code}</dd>
+                  </div>
+                  {order.sales_rep_name && (
+                    <div className="flex justify-between">
+                      <dt className="text-ink-muted">Sales Representative</dt>
+                      <dd>
+                        {order.sales_rep_id ? (
+                          <Link
+                            href={`/admin/marketing/sales-representatives/${order.sales_rep_id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {order.sales_rep_name}
+                          </Link>
+                        ) : (
+                          <span className="text-ink">{order.sales_rep_name}</span>
+                        )}
+                      </dd>
+                    </div>
+                  )}
+                  {order.discount_type && order.discount_value != null && (
+                    <div className="flex justify-between">
+                      <dt className="text-ink-muted">Customer Discount</dt>
+                      <dd className="text-ink">
+                        {order.discount_type === "percentage" ? `${order.discount_value}%` : formatAED(order.discount_value)}
+                        {" "}
+                        <span className="text-danger">(-{formatAED(order.discount_amount)})</span>
+                      </dd>
+                    </div>
+                  )}
+                  {order.commission_type && order.commission_value != null && (
+                    <div className="flex justify-between border-t border-border pt-2">
+                      <dt className="text-ink-muted">Commission</dt>
+                      <dd className="text-ink">
+                        {order.commission_type === "percentage" ? `${order.commission_value}%` : formatAED(order.commission_value)}
+                        {" — "}
+                        {formatAED(order.commission_amount ?? 0)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </CardBody>
+            </Card>
+          )}
+
           {(order.fulfillor_order_id || order.fulfillor_sync_error) && (
             <Card>
               <CardHeader className="flex items-center justify-between py-3">

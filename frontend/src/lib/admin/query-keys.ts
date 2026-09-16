@@ -61,4 +61,20 @@ export const adminQueryKeys = {
     allDistricts: ["admin", "shipping", "districts", "all"] as const,
     rates: (filters: Record<string, unknown> = {}) => ["admin", "shipping", "rates", filters] as const,
   },
+  salesReps: {
+    all: ["admin", "sales-reps"] as const,
+    list: (filters: Record<string, unknown> = {}) => ["admin", "sales-reps", "list", filters] as const,
+    detail: (id: number) => ["admin", "sales-reps", "detail", id] as const,
+  },
+  promoCodes: {
+    all: ["admin", "promo-codes"] as const,
+    list: (filters: Record<string, unknown> = {}) => ["admin", "promo-codes", "list", filters] as const,
+    detail: (id: number) => ["admin", "promo-codes", "detail", id] as const,
+    report: (id: number, filters: Record<string, unknown> = {}) => ["admin", "promo-codes", "report", id, filters] as const,
+  },
+  commissions: {
+    all: ["admin", "commissions"] as const,
+    list: (filters: Record<string, unknown> = {}) => ["admin", "commissions", "list", filters] as const,
+    dashboard: ["admin", "commissions", "dashboard"] as const,
+  },
 };

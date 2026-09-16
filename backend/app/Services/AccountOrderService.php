@@ -14,11 +14,13 @@ class AccountOrderService
 
     private OrderRepository $repo;
     private ProductService $products;
+    private CommissionService $commissions;
 
     public function __construct()
     {
         $this->repo = new OrderRepository();
         $this->products = new ProductService();
+        $this->commissions = new CommissionService();
     }
 
     public function list(int $userId, string $status, string $dateRange, string $search, int $page, int $perPage): array
@@ -76,6 +78,7 @@ class AccountOrderService
             'status' => 'cancelled',
             'cancellation_reason' => trim((string)$reason) ?: null,
         ]);
+        $this->commissions->cancelForOrder($id);
 
         return $this->show($userId, $id);
     }
@@ -99,6 +102,7 @@ class AccountOrderService
             'refund_requested_at' => date('Y-m-d H:i:s'),
             'notes' => trim(($order['notes'] ?? '') . "\n" . $note),
         ]);
+        $this->commissions->cancelForOrder($id);
 
         return $this->show($userId, $id);
     }

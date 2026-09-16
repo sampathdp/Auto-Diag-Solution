@@ -18,15 +18,21 @@ class OrderService
     // Once an order reaches one of these, it's done — no further status changes.
     private const TERMINAL_STATUSES = ['delivered', 'cancelled', 'refunded'];
 
+    // The order status that marks a promo-linked order "complete" for commission
+    // purposes — matches the existing terminal-state 'delivered' status/delivered_at hook.
+    private const COMMISSION_COMPLETION_STATUS = 'delivered';
+
     private OrderRepository $repo;
     private AdminNoteRepository $notes;
     private FulfillmentService $fulfillment;
+    private CommissionService $commissions;
 
     public function __construct()
     {
         $this->repo = new OrderRepository();
         $this->notes = new AdminNoteRepository();
         $this->fulfillment = new FulfillmentService();
+        $this->commissions = new CommissionService();
     }
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage, bool $withItems = false): array
@@ -128,6 +134,15 @@ class OrderService
 
         $this->repo->update($id, $data);
         $this->repo->addStatusHistory($id, $newStatus, $note, $adminId);
+
+        // Promo-linked commission follows the order's own status, not a separate admin
+        // click — see CommissionService::approveForOrder/cancelForOrder (both no-op if
+        // this order never had a promo code, or its commission already moved past pending).
+        if ($newStatus === self::COMMISSION_COMPLETION_STATUS) {
+            $this->commissions->approveForOrder($id);
+        } elseif (in_array($newStatus, ['cancelled', 'refunded'], true)) {
+            $this->commissions->cancelForOrder($id);
+        }
 
         return $this->find($id);
     }

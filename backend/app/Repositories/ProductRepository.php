@@ -35,12 +35,15 @@ class ProductRepository extends BaseRepository
      */
     public function decrementStock(int $productId, int $quantity): bool
     {
+        // Native MySQL prepared statements (PDO::ATTR_EMULATE_PREPARES=false) reject a
+        // named placeholder used more than once in the same query (SQLSTATE HY093) —
+        // unlike emulated mode, which silently allowed it. Same value, distinct names.
         $stmt = DatabaseManager::query(
             "UPDATE products
-             SET stock_status = CASE WHEN stock_quantity - :qty <= 0 THEN 'out_of_stock' ELSE stock_status END,
-                 stock_quantity = stock_quantity - :qty
-             WHERE id = :id AND track_inventory = 1 AND stock_quantity >= :qty",
-            ['qty' => $quantity, 'id' => $productId]
+             SET stock_status = CASE WHEN stock_quantity - :qty1 <= 0 THEN 'out_of_stock' ELSE stock_status END,
+                 stock_quantity = stock_quantity - :qty2
+             WHERE id = :id AND track_inventory = 1 AND stock_quantity >= :qty3",
+            ['qty1' => $quantity, 'qty2' => $quantity, 'qty3' => $quantity, 'id' => $productId]
         );
 
         return $stmt->rowCount() > 0;

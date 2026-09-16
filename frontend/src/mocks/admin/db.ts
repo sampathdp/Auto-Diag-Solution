@@ -171,6 +171,15 @@ export interface Order {
   vat_amount: number;
   shipping_amount: number;
   discount_amount: number;
+  /** Promo/commission snapshot — only set on orders placed with a promo code (see backend/database/migrations/2026_09_16_000003*). */
+  promo_code?: string | null;
+  sales_rep_id?: number | null;
+  sales_rep_name?: string | null;
+  discount_type?: "percentage" | "fixed_amount" | null;
+  discount_value?: number | null;
+  commission_type?: "percentage" | "fixed_amount" | null;
+  commission_value?: number | null;
+  commission_amount?: number;
   total: number;
   payment_reference: string;
   /** Snapshotted at checkout — matches AddressService::shape(), not the raw customer_addresses row. */

@@ -89,8 +89,10 @@ class OrderRepository extends BaseRepository
     public function findWithCustomer(int $id): ?array
     {
         $row = DatabaseManager::query(
-            "SELECT o.*, u.name AS customer_name, u.email AS customer_email
-             FROM orders o LEFT JOIN users u ON u.id = o.user_id
+            "SELECT o.*, u.name AS customer_name, u.email AS customer_email, r.name AS sales_rep_name
+             FROM orders o
+             LEFT JOIN users u ON u.id = o.user_id
+             LEFT JOIN sales_representatives r ON r.id = o.sales_rep_id
              WHERE o.id = :id",
             ['id' => $id]
         )->fetch();

@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter, Link } from "@/i18n/navigation";
-import { CheckCircle2, Loader2, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, ShieldCheck, ShoppingBag, Tag, X } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProductsByIds } from "@/hooks/useProductsByIds";
@@ -47,6 +47,12 @@ interface Address {
   is_default: boolean;
 }
 
+interface AppliedPromo {
+  code: string;
+  salesRepName: string;
+  discountAmount: number;
+}
+
 function CheckoutPageContent() {
   const locale = useLocale();
   const router = useRouter();
@@ -69,6 +75,9 @@ function CheckoutPageContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [guest, setGuest] = useState<GuestDetailsValue>(EMPTY_GUEST);
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -161,6 +170,36 @@ function CheckoutPageContent() {
     return true;
   };
 
+  // Preview only — the backend independently re-validates the code and recalculates
+  // the discount/commission from scratch at order placement (CheckoutService), so a
+  // stale or manipulated preview here can never change what's actually charged.
+  const handleApplyPromo = async () => {
+    const code = promoCodeInput.trim();
+    if (!code) return;
+
+    setApplyingPromo(true);
+    try {
+      const res = await apiClient.post("/promo-codes/validate", { code, cart_total: subtotal });
+      const data = res.data.data;
+      setAppliedPromo({
+        code: data.promo_code,
+        salesRepName: data.sales_rep?.name ?? "",
+        discountAmount: data.discount.amount,
+      });
+      toast.success(`Promo code ${data.promo_code} applied`);
+    } catch (error: any) {
+      setAppliedPromo(null);
+      toast.error(error?.response?.data?.message || "Invalid promo code");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoCodeInput("");
+  };
+
   const handlePlaceOrder = async () => {
     if (isAuthenticated) {
       if (!selectedAddressId) {
@@ -179,6 +218,7 @@ function CheckoutPageContent() {
         ? await apiClient.post("/account/checkout", {
             shipping_address_id: selectedAddressId,
             items: payloadItems,
+            promo_code: appliedPromo?.code,
           })
         : await apiClient.post("/checkout/guest", {
             customer: {
@@ -196,6 +236,7 @@ function CheckoutPageContent() {
               instructions: guest.instructions.trim() || undefined,
             },
             items: payloadItems,
+            promo_code: appliedPromo?.code,
           });
 
       const order = res.data.data;
@@ -372,11 +413,54 @@ function CheckoutPageContent() {
               <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 Order Summary
               </h3>
+
+              <div className="mb-4">
+                {appliedPromo ? (
+                  <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
+                    <span className="flex items-center gap-1.5 font-semibold text-primary">
+                      <Tag className="h-3.5 w-3.5" />
+                      {appliedPromo.code}
+                    </span>
+                    <button
+                      onClick={handleRemovePromo}
+                      aria-label="Remove promo code"
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCodeInput}
+                      onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
+                      placeholder="Promo code"
+                      className="min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm uppercase focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleApplyPromo}
+                      disabled={applyingPromo || !promoCodeInput.trim()}
+                    >
+                      {applyingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex flex-col gap-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="font-semibold text-foreground">AED {subtotal.toLocaleString()}</span>
                 </div>
+                {appliedPromo && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-semibold text-primary">-AED {appliedPromo.discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="font-semibold text-foreground">
@@ -392,7 +476,9 @@ function CheckoutPageContent() {
               </div>
               <div className="mt-4 flex items-baseline justify-between border-t pt-4">
                 <span className="text-sm font-bold text-foreground">Total</span>
-                <span className="text-2xl font-extrabold text-foreground">AED {total.toLocaleString()}</span>
+                <span className="text-2xl font-extrabold text-foreground">
+                  AED {(total - (appliedPromo?.discountAmount ?? 0)).toLocaleString()}
+                </span>
               </div>
               <Button
                 onClick={handlePlaceOrder}

@@ -7,6 +7,7 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   paid: "success",
   pending: "warning",
   pending_vin_verification: "warning",
+  approved: "info",
   processing: "info",
   shipped: "info",
   draft: "neutral",

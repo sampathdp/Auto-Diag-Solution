@@ -29,6 +29,8 @@ class CheckoutService
     private AccountOrderService $accountOrders;
     private UserRepository $users;
     private ShippingService $shipping;
+    private PromoCodeService $promoCodes;
+    private CommissionService $commissions;
 
     public function __construct()
     {
@@ -39,9 +41,11 @@ class CheckoutService
         $this->accountOrders = new AccountOrderService();
         $this->users = new UserRepository();
         $this->shipping = new ShippingService();
+        $this->promoCodes = new PromoCodeService();
+        $this->commissions = new CommissionService();
     }
 
-    public function placeOrder(int $userId, int $shippingAddressId, array $items): array
+    public function placeOrder(int $userId, int $shippingAddressId, array $items, ?string $promoCode = null): array
     {
         if (!$items) {
             throw new DomainException('Your cart is empty', 422);
@@ -50,7 +54,7 @@ class CheckoutService
         // Throws DomainException(404) if the address doesn't exist / isn't owned by this user.
         $address = $this->addresses->find($userId, $shippingAddressId);
 
-        return $this->createOrder($userId, $shippingAddressId, $address, $items);
+        return $this->createOrder($userId, $shippingAddressId, $address, $items, $promoCode);
     }
 
     /**
@@ -64,7 +68,7 @@ class CheckoutService
      * keyed on orders.user_id keeps working unchanged instead of needing a parallel
      * "guest order" code path.
      */
-    public function placeGuestOrder(array $customer, array $shippingInput, array $items): array
+    public function placeGuestOrder(array $customer, array $shippingInput, array $items, ?string $promoCode = null): array
     {
         if (!$items) {
             throw new DomainException('Your cart is empty', 422);
@@ -84,7 +88,7 @@ class CheckoutService
         $userId = $this->resolveGuestUserId($name, $email, $phone);
         $address = $this->buildGuestAddress($name, $phone, $shippingInput);
 
-        return $this->createOrder($userId, null, $address, $items);
+        return $this->createOrder($userId, null, $address, $items, $promoCode);
     }
 
     private function resolveGuestUserId(string $name, string $email, string $phone): int
@@ -132,7 +136,7 @@ class CheckoutService
         ];
     }
 
-    private function createOrder(int $userId, ?int $shippingAddressId, array $address, array $items): array
+    private function createOrder(int $userId, ?int $shippingAddressId, array $address, array $items, ?string $promoCode = null): array
     {
         [$lineItems, $stockUpdates] = $this->resolveLineItems($items);
 
@@ -169,7 +173,31 @@ class CheckoutService
         if ($shipping > 0) {
             $vatAmount = round($vatAmount + ($shipping * (self::VAT_RATE / 100)), 2);
         }
-        $total = round($subtotal + $shipping + $vatAmount, 2);
+
+        // Promo code discount/commission — resolved and re-validated entirely server-side
+        // from the code string alone; the frontend never supplies a discount/commission
+        // amount or a sales_rep_id. Discount is taken off the pre-tax product subtotal
+        // (VAT here is computed on the undiscounted line prices — adjusting VAT itself for
+        // a discount is out of scope for this pass). Uses the atomic incrementUsage() guard
+        // below so two simultaneous checkouts can't both consume the last remaining use.
+        $promo = null;
+        $salesRep = null;
+        $discountAmount = 0.0;
+        $commissionAmount = 0.0;
+        if ($promoCode !== null && trim($promoCode) !== '') {
+            $result = $this->promoCodes->validateForCheckout($promoCode, $subtotal);
+            $promo = $result['promo'];
+            $salesRep = $result['sales_rep'];
+            $discountAmount = $result['discount_amount'];
+        }
+
+        $discountedSubtotal = round($subtotal - $discountAmount, 2);
+        $total = round($discountedSubtotal + $shipping + $vatAmount, 2);
+
+        if ($promo !== null) {
+            $baseAmount = $this->promoCodes->resolveCommissionBaseAmount($promo, $subtotal, $discountedSubtotal, $total);
+            $commissionAmount = $this->promoCodes->calculateCommission($promo, $baseAmount);
+        }
 
         $orderNumber = $this->generateOrderNumber();
         $paymentReference = 'MOCK-' . strtoupper(bin2hex(random_bytes(6)));
@@ -187,12 +215,39 @@ class CheckoutService
                 'vat_rate' => self::VAT_RATE,
                 'vat_amount' => $vatAmount,
                 'shipping_amount' => $shipping,
-                'discount_amount' => 0,
+                'discount_amount' => $discountAmount,
+                'promo_code_id' => $promo !== null ? (int)$promo['id'] : null,
+                'promo_code' => $promo !== null ? $promo['code'] : null,
+                'sales_rep_id' => $salesRep !== null ? (int)$salesRep['id'] : null,
+                'discount_type' => $promo !== null ? $promo['discount_type'] : null,
+                'discount_value' => $promo !== null ? $promo['discount_value'] : null,
+                'commission_type' => $promo !== null ? $promo['commission_type'] : null,
+                'commission_value' => $promo !== null ? $promo['commission_value'] : null,
+                'commission_amount' => $commissionAmount,
                 'total' => $total,
                 'currency' => 'AED',
                 'shipping_address_id' => $shippingAddressId,
                 'shipping_snapshot' => json_encode($address, JSON_UNESCAPED_UNICODE),
             ]);
+
+            if ($promo !== null) {
+                // Atomic, guarded increment — same race-closing pattern as the stock
+                // decrement below. If another checkout consumed the last remaining use
+                // between validateForCheckout() above and here, abort the whole order.
+                if (!$this->promoCodes->consumeUsage((int)$promo['id'])) {
+                    throw new DomainException('This promo code just reached its usage limit — please remove it and try again', 409);
+                }
+                $this->commissions->createForOrder(
+                    $orderId,
+                    (int)$salesRep['id'],
+                    (int)$promo['id'],
+                    $promo['commission_type'],
+                    (float)$promo['commission_value'],
+                    $promo['commission_base'],
+                    $baseAmount,
+                    $commissionAmount
+                );
+            }
 
             foreach ($lineItems as $item) {
                 DatabaseManager::query(

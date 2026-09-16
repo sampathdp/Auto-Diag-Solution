@@ -13,6 +13,9 @@ import {
   Settings,
   BarChart3,
   Truck,
+  Percent,
+  UserCheck,
+  Wallet,
 } from "lucide-react";
 
 export interface NavLeaf {
@@ -49,6 +52,15 @@ export const NAV_ITEMS: NavEntry[] = [
       { label: "About Us Page", href: "/admin/content/about", icon: FileText },
       { label: "Pages", href: "/admin/content/pages", icon: FileText },
       { label: "SEO", href: "/admin/content/seo", icon: Search },
+    ],
+  },
+  {
+    label: "Marketing",
+    icon: Percent,
+    children: [
+      { label: "Promo Codes", href: "/admin/marketing/promo-codes", icon: Percent },
+      { label: "Sales Representatives", href: "/admin/marketing/sales-representatives", icon: UserCheck },
+      { label: "Commissions", href: "/admin/marketing/commissions", icon: Wallet },
     ],
   },
   { label: "Media", href: "/admin/media", icon: ImageIcon },

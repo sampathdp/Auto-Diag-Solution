@@ -20,6 +20,9 @@ use App\Controllers\OrderController;
 use App\Controllers\CustomerController;
 use App\Controllers\ReviewController;
 use App\Controllers\DashboardController;
+use App\Controllers\SalesRepController;
+use App\Controllers\PromoCodeController;
+use App\Controllers\CommissionController;
 use App\Controllers\AccountController;
 use App\Controllers\AccountAddressController;
 use App\Controllers\AccountVehicleController;
@@ -73,6 +76,10 @@ $router->get("$v1/orders/track/{orderNumber}", [OrderTrackingController::class, 
 
 // Public contact form — no login required.
 $router->post("$v1/contact", [App\Controllers\ContactMessageController::class, 'store']);
+
+// Checkout-time promo code preview — never trusted for the actual order. CheckoutService
+// independently re-validates and recalculates everything server-side at order placement.
+$router->post("$v1/promo-codes/validate", [PromoCodeController::class, 'validatePublic']);
 
 // Fulfillor order-status webhook — necessarily unauthenticated (Fulfillor's server
 // calls this, not a logged-in browser); gated by a shared secret header instead of a
@@ -267,4 +274,29 @@ $router->group([
 
     // --- Dashboard ---
     $router->get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // --- Sales Representatives ---
+    $router->get('/sales-representatives', [SalesRepController::class, 'index']);
+    $router->post('/sales-representatives', [SalesRepController::class, 'store']);
+    $router->get('/sales-representatives/{id}', [SalesRepController::class, 'show']);
+    $router->put('/sales-representatives/{id}', [SalesRepController::class, 'update']);
+    $router->delete('/sales-representatives/{id}', [SalesRepController::class, 'destroy']);
+
+    // --- Promo Codes ---
+    // /promo-codes/{id}/report is registered before the plain {id} routes below — same
+    // "literal before wildcard" convention as /vehicles/filters above (both are GET, so
+    // it would otherwise be swallowed by GET /promo-codes/{id}).
+    $router->get('/promo-codes/{id}/report', [PromoCodeController::class, 'report']);
+    $router->get('/promo-codes', [PromoCodeController::class, 'index']);
+    $router->post('/promo-codes', [PromoCodeController::class, 'store']);
+    $router->get('/promo-codes/{id}', [PromoCodeController::class, 'show']);
+    $router->put('/promo-codes/{id}', [PromoCodeController::class, 'update']);
+    $router->delete('/promo-codes/{id}', [PromoCodeController::class, 'destroy']);
+
+    // --- Commissions ---
+    $router->get('/commissions/dashboard', [CommissionController::class, 'dashboard']);
+    $router->get('/commissions', [CommissionController::class, 'index']);
+    $router->get('/commissions/{id}', [CommissionController::class, 'show']);
+    $router->post('/commissions/{id}/approve', [CommissionController::class, 'approve']);
+    $router->post('/commissions/{id}/pay', [CommissionController::class, 'pay']);
 });

@@ -30,10 +30,12 @@ class CheckoutController extends BaseController
             throw new DomainException('Cart items are required', 422);
         }
 
+        $promoCode = $request->input('promo_code');
         $order = $this->service->placeOrder(
             (int)$request->user->id,
             (int)$request->input('shipping_address_id'),
-            $items
+            $items,
+            $promoCode !== null ? (string)$promoCode : null
         );
 
         $this->success($order, 'Order placed successfully', 201);
@@ -53,10 +55,12 @@ class CheckoutController extends BaseController
             throw new DomainException('Cart items are required', 422);
         }
 
+        $promoCode = $request->input('promo_code');
         $order = $this->service->placeGuestOrder(
             (array)$request->input('customer'),
             (array)$request->input('shipping'),
-            $items
+            $items,
+            $promoCode !== null ? (string)$promoCode : null
         );
 
         $this->success($order, 'Order placed successfully', 201);
