@@ -1,15 +1,25 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getHomeContent, cms } from "@/lib/home-content";
 import { ShieldCheck, Truck, MessageCircle, RotateCcw } from "lucide-react";
 
 export async function WhyUs() {
   const t = await getTranslations("home.why");
+  const locale = await getLocale();
+  const home = await getHomeContent();
+  const cmsItems = home?.why?.items;
 
-  const items = [
+  const icons = { ShieldCheck, Truck, MessageCircle, RotateCcw };
+  const defaults = [
     { icon: ShieldCheck, title: t("genuineTitle"), body: t("genuineBody") },
     { icon: Truck, title: t("deliveryTitle"), body: t("deliveryBody") },
     { icon: MessageCircle, title: t("supportTitle"), body: t("supportBody") },
     { icon: RotateCcw, title: t("returnsTitle"), body: t("returnsBody") },
   ];
+  const items = defaults.map((d, i) => ({
+    icon: icons[cmsItems?.[i]?.icon as keyof typeof icons] ?? d.icon,
+    title: cms(cmsItems?.[i], "title", locale, d.title),
+    body: cms(cmsItems?.[i], "body", locale, d.body),
+  }));
 
   return (
     <section className="bg-background py-14 md:py-28">
@@ -17,16 +27,16 @@ export async function WhyUs() {
         <div className="mb-11">
           <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
             <span className="block h-0.5 w-6 bg-primary" />
-            {t("eyebrow")}
+            {cms(home?.why, "eyebrow", locale, t("eyebrow"))}
           </div>
           <h2 className="mt-4 max-w-[640px] text-[28px] font-extrabold tracking-tight text-balance sm:text-[40px]">
-            {t("title")}
+            {cms(home?.why, "title", locale, t("title"))}
           </h2>
         </div>
 
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
           {items.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-card p-7">
+            <div key={`${title}-${body}`} className="bg-card p-7">
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-md bg-secondary text-primary">
                 <Icon className="h-6 w-6" strokeWidth={1.75} />
               </div>

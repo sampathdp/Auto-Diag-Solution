@@ -14,6 +14,7 @@ use App\Controllers\ProductController;
 use App\Controllers\SettingController;
 use App\Controllers\PageController;
 use App\Controllers\AboutPageController;
+use App\Controllers\HomePageController;
 use App\Controllers\SeoMetaController;
 use App\Controllers\SupplierController;
 use App\Controllers\OrderController;
@@ -63,6 +64,7 @@ $router->get("$v1/products", [ProductController::class, 'publicIndex']);
 $router->get("$v1/products/{id}", [ProductController::class, 'publicShow']);
 $router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
 $router->get("$v1/about-page", [AboutPageController::class, 'show']);
+$router->get("$v1/home-page", [HomePageController::class, 'show']);
 
 // Guest checkout — no login required, customer + shipping details are typed in at
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
@@ -233,6 +235,10 @@ $router->group([
     // --- About Us page (singleton) ---
     $router->get('/about-page', [AboutPageController::class, 'show']);
     $router->put('/about-page', [AboutPageController::class, 'update']);
+
+    // --- Home page (singleton) ---
+    $router->get('/home-page', [HomePageController::class, 'show']);
+    $router->put('/home-page', [HomePageController::class, 'update']);
 
     // --- SEO Meta ---
     $router->get('/seo', [SeoMetaController::class, 'index']);

@@ -7,8 +7,12 @@ import { BrandsStrip } from "@/components/home/BrandsStrip";
 import { WhyUs } from "@/components/home/WhyUs";
 import { Testimonial } from "@/components/home/Testimonial";
 import { CtaBand } from "@/components/home/CtaBand";
+import { getLocale } from "next-intl/server";
+import { getHomeContent, cms } from "@/lib/home-content";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const locale = await getLocale();
+  const home = await getHomeContent();
   return (
     <main>
       <Hero />
@@ -16,7 +20,10 @@ export default function HomePage() {
       <BrandsStrip />
       <AboutBand />
       <CategoryGrid />
-      <ProductCarousel />
+      <ProductCarousel
+        eyebrow={cms(home?.products, "eyebrow", locale, "")}
+        title={cms(home?.products, "title", locale, "")}
+      />
       <WhyUs />
       <Testimonial />
       <CtaBand />

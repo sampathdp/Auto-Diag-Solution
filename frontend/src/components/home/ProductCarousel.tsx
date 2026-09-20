@@ -9,7 +9,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
 
-export function ProductCarousel() {
+export function ProductCarousel({ eyebrow, title }: { eyebrow?: string; title?: string }) {
   const t = useTranslations("home.products");
   const tToast = useTranslations("shop.toasts");
   const locale = useLocale();
@@ -41,10 +41,10 @@ export function ProductCarousel() {
           <div>
             <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
               <span className="block h-0.5 w-6 bg-primary" />
-              {t("eyebrow")}
+              {eyebrow || t("eyebrow")}
             </div>
             <h2 className="mt-4 text-[28px] font-extrabold tracking-tight text-balance sm:text-[40px]">
-              {t("title")}
+              {title || t("title")}
             </h2>
           </div>
           <div className="flex gap-2.5">

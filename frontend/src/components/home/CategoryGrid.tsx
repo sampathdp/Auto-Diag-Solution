@@ -1,4 +1,5 @@
 import { getTranslations, getLocale } from "next-intl/server";
+import { getHomeContent, cms } from "@/lib/home-content";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight, Cog, Disc, Filter, Zap, CarFront, Armchair, type LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -45,6 +46,7 @@ async function getActiveCategories(): Promise<Category[]> {
 export async function CategoryGrid() {
   const t = await getTranslations("home.categories");
   const locale = await getLocale();
+  const home = await getHomeContent();
   const categories = (await getActiveCategories()).slice(0, 6);
 
   if (categories.length === 0) {
@@ -58,10 +60,10 @@ export async function CategoryGrid() {
           <div>
             <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.16em] text-primary-accessible">
               <span className="block h-0.5 w-6 bg-primary" />
-              {t("eyebrow")}
+              {cms(home?.categories, "eyebrow", locale, t("eyebrow"))}
             </div>
             <h2 className="mt-4 max-w-[640px] text-[28px] font-extrabold tracking-tight text-balance sm:text-[40px]">
-              {t("title")}
+              {cms(home?.categories, "title", locale, t("title"))}
             </h2>
           </div>
           <Link
