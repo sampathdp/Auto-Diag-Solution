@@ -38,6 +38,8 @@ class HomePageService
         'why' => ['count' => 4, 'bilingual' => ['title', 'body'], 'plain' => ['icon']],
     ];
 
+    private const MAX_ABOUT_IMAGES = 3;
+
     private HomePageRepository $repo;
 
     public function __construct()
@@ -86,6 +88,13 @@ class HomePageService
                     $current[$section][$field] = trim((string)$input[$section][$field]);
                 }
             }
+        }
+
+        // About band image carousel — up to MAX_ABOUT_IMAGES uploaded image URLs.
+        if (isset($input['about']['images'])) {
+            $images = is_array($input['about']['images']) ? $input['about']['images'] : [];
+            $images = array_values(array_filter(array_map(fn($u) => trim((string)$u), $images), fn($u) => $u !== ''));
+            $current['about']['images'] = array_slice($images, 0, self::MAX_ABOUT_IMAGES);
         }
 
         foreach (self::ITEMS as $section => $spec) {

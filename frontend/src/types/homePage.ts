@@ -22,7 +22,7 @@ export interface HomeWhyItem {
 export interface HomePage {
   hero: Fields;
   stats: { items: HomeStatItem[] };
-  about: Fields;
+  about: Fields & { images?: string[] };
   categories: Fields;
   products: Fields;
   brands: Fields;

@@ -2,14 +2,15 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { getHomeContent, cms } from "@/lib/home-content";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
+import { AboutImageCarousel } from "@/components/home/AboutImageCarousel";
 
 export async function AboutBand() {
   const t = await getTranslations("home.about");
   const locale = await getLocale();
   const home = await getHomeContent();
   const c = (key: string, fallback: string) => cms(home?.about, key, locale, fallback);
-  const imageUrl = home?.about?.image_url || "/about-warehouse.png";
+  const uploaded = (home?.about?.images ?? []).filter(Boolean).slice(0, 3);
+  const images = uploaded.length > 0 ? uploaded : [home?.about?.image_url || "/about-warehouse.png"];
 
   return (
     <section className="bg-secondary py-14 md:py-28">
@@ -35,14 +36,7 @@ export async function AboutBand() {
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted">
-          <Image
-            src={imageUrl}
-            alt=""
-            fill
-            sizes="(min-width: 768px) 50vw, 100vw"
-            loading="lazy"
-            className="object-cover object-center"
-          />
+          <AboutImageCarousel images={images} />
           <div className="absolute inset-0 bg-navy/20 mix-blend-multiply" />
           <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10" />
           <div className="absolute bottom-6 start-6 text-xs font-bold uppercase tracking-wider text-white/75">

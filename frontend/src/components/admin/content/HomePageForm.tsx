@@ -110,7 +110,11 @@ function toFormValues(page: HomePage): HomePageFormValues {
   return {
     hero: page.hero,
     stats: page.stats,
-    about: page.about,
+    // Fall back to the legacy single image so existing content shows up as slot 1.
+    about: {
+      ...page.about,
+      images: page.about.images?.length ? page.about.images : page.about.image_url ? [page.about.image_url] : [],
+    },
     categories: page.categories,
     products: page.products,
     brands: page.brands,
@@ -213,16 +217,27 @@ export function HomePageForm({ page }: { page: HomePage }) {
         {/* Image, icons and phone number are language-neutral, shown once regardless of the active tab below */}
         <Card>
           <CardHeader>
-            <h2 className="text-h4 font-bold text-ink">About Band — Image</h2>
+            <h2 className="text-h4 font-bold text-ink">About Band — Image Carousel (up to 3)</h2>
           </CardHeader>
-          <CardBody>
-            <FormField label="Image">
-              <Controller
-                name="about.image_url"
-                control={control}
-                render={({ field }) => <SingleImageUpload value={field.value} onChange={(url) => field.onChange(url ?? "")} />}
-              />
-            </FormField>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <FormField key={i} label={`Image ${i + 1}`}>
+                <Controller
+                  name="about.images"
+                  control={control}
+                  render={({ field }) => (
+                    <SingleImageUpload
+                      value={field.value?.[i]}
+                      onChange={(url) => {
+                        const slots = [0, 1, 2].map((n) => field.value?.[n] ?? "");
+                        slots[i] = url ?? "";
+                        field.onChange(slots.filter(Boolean));
+                      }}
+                    />
+                  )}
+                />
+              </FormField>
+            ))}
           </CardBody>
         </Card>
 

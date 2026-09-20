@@ -21,7 +21,7 @@ const whyItemSchema = z.object({
 export const HomePageFormSchema = z.object({
   hero: text,
   stats: z.object({ items: z.array(statItemSchema).length(4) }),
-  about: text,
+  about: z.object({ images: z.array(z.string()).max(3).optional() }).passthrough(),
   categories: text,
   products: text,
   brands: text,
