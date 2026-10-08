@@ -43,15 +43,65 @@ async function getActiveCategories(): Promise<Category[]> {
   }
 }
 
+const FALLBACK_CATEGORIES: Category[] = [
+  {
+    id: 9001,
+    slug: "brakes",
+    name_en: "Brake System",
+    name_ar: "نظام الفرامل",
+    image: "/cat-brakes.png",
+    products_count: 1420,
+  },
+  {
+    id: 9002,
+    slug: "engine",
+    name_en: "Engine & Drivetrain",
+    name_ar: "المحرك وناقل الحركة",
+    image: "/cat-engine.png",
+    products_count: 3250,
+  },
+  {
+    id: 9003,
+    slug: "filters",
+    name_en: "Filters & Oils",
+    name_ar: "الفلاتر والزيوت",
+    image: "/cat-filters.png",
+    products_count: 980,
+  },
+  {
+    id: 9004,
+    slug: "electrical",
+    name_en: "Electrical & Lighting",
+    name_ar: "الكهرباء والإضاءة",
+    image: "/cat-electrical.png",
+    products_count: 2100,
+  },
+  {
+    id: 9005,
+    slug: "body",
+    name_en: "Body & Steering",
+    name_ar: "الهيكل والتوجيه",
+    image: "/cat-body.png",
+    products_count: 1850,
+  },
+  {
+    id: 9006,
+    slug: "interior",
+    name_en: "Interior & Accessories",
+    name_ar: "المقصورة والإكسسوارات",
+    image: "/cat-interior.png",
+    products_count: 760,
+  },
+];
+
 export async function CategoryGrid() {
   const t = await getTranslations("home.categories");
   const locale = await getLocale();
   const home = await getHomeContent();
-  const categories = (await getActiveCategories()).slice(0, 6);
-
-  if (categories.length === 0) {
-    return null;
-  }
+  const fetched = await getActiveCategories();
+  const existingSlugs = new Set(fetched.map((c) => c.slug.toLowerCase()));
+  const extra = FALLBACK_CATEGORIES.filter((c) => !existingSlugs.has(c.slug.toLowerCase()));
+  const categories = [...fetched, ...extra].slice(0, 6);
 
   return (
     <section id="categories" className="bg-background py-14 md:py-28">

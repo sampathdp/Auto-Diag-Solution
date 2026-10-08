@@ -9,8 +9,23 @@ export async function AboutBand() {
   const locale = await getLocale();
   const home = await getHomeContent();
   const c = (key: string, fallback: string) => cms(home?.about, key, locale, fallback);
-  const uploaded = (home?.about?.images ?? []).filter(Boolean).slice(0, 3);
-  const images = uploaded.length > 0 ? uploaded : [home?.about?.image_url || "/about-warehouse.png"];
+  const uploaded = (home?.about?.images ?? []).filter(Boolean).slice(0, 5);
+  const defaultImages = [
+    "/about-warehouse.png",
+    "/about-warehouse-2.jpg",
+    "/about-warehouse-3.jpg",
+  ];
+
+  let images: string[] = [];
+  if (uploaded.length >= 2) {
+    images = uploaded;
+  } else if (uploaded.length === 1) {
+    images = [uploaded[0], ...defaultImages.filter((img) => img !== uploaded[0])];
+  } else if (home?.about?.image_url) {
+    images = [home.about.image_url, ...defaultImages.filter((img) => img !== home.about.image_url)];
+  } else {
+    images = defaultImages;
+  }
 
   return (
     <section className="bg-secondary py-14 md:py-28">
@@ -35,13 +50,11 @@ export async function AboutBand() {
           </Link>
         </div>
 
-        <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted">
-          <AboutImageCarousel images={images} />
-          <div className="absolute inset-0 bg-navy/20 mix-blend-multiply" />
-          <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10" />
-          <div className="absolute bottom-6 start-6 text-xs font-bold uppercase tracking-wider text-white/75">
-            {c("image_tag", t("imageTag"))}
-          </div>
+        <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted group">
+          <AboutImageCarousel
+            images={images}
+            imageTag={c("image_tag", t("imageTag"))}
+          />
         </div>
       </div>
     </section>

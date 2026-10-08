@@ -11,9 +11,11 @@ export async function Hero() {
   const home = await getHomeContent();
   const c = (key: string, fallback: string) => cms(home?.hero, key, locale, fallback);
 
+  const heroUploaded = (home?.hero?.images ?? []).filter(Boolean);
+
   return (
     <section className="relative min-h-screen overflow-hidden bg-gradient-to-b from-navy via-[#1E2530] to-[#141a24] pb-36 pt-24 text-navy-foreground">
-      <HeroCarouselBg />
+      <HeroCarouselBg customImages={heroUploaded.length > 0 ? heroUploaded : undefined} />
       <div
         aria-hidden
         className="absolute inset-y-0 end-0 z-[1] w-[60%] max-w-[720px] opacity-50 blur-3xl"

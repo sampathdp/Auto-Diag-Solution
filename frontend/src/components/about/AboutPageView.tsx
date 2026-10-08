@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ChevronRight, ShieldCheck, Target, PackageCheck, MessageCircle, Loader2, type LucideIcon } from "lucide-react";
 import { useAboutPage } from "@/hooks/useAboutPage";
+import { AboutImageCarousel } from "@/components/home/AboutImageCarousel";
 import type { AboutValueItem } from "@/types/aboutPage";
 
 const VALUE_ICONS: Record<AboutValueItem["icon"], LucideIcon> = {
@@ -108,20 +109,15 @@ export function AboutPageView({ statsStrip, testimonial, ctaBand }: AboutPageVie
             </p>
           </div>
 
-          <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url('${page.story.image_url || "/about-warehouse.png"}')` }}
+          <div className="relative aspect-[4/3] overflow-hidden rounded-xl shadow-lifted group">
+            <AboutImageCarousel
+              images={[
+                page.story.image_url || "/about-warehouse.png",
+                "/about-warehouse-2.jpg",
+                "/about-warehouse-3.jpg",
+              ]}
+              imageTag={pick(page.story.image_tag_en, page.story.image_tag_ar)}
             />
-            <div className="absolute inset-0 bg-navy/20 mix-blend-multiply" />
-            <span
-              aria-hidden
-              className="absolute start-4 top-4 h-4 w-4 border-s-2 border-t-2 border-white/25"
-            />
-            <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10" />
-            <div className="absolute bottom-6 start-6 text-xs font-bold uppercase tracking-wider text-white/75">
-              {pick(page.story.image_tag_en, page.story.image_tag_ar)}
-            </div>
           </div>
         </div>
       </section>
