@@ -19,7 +19,7 @@ const whyItemSchema = z.object({
 });
 
 export const HomePageFormSchema = z.object({
-  hero: text,
+  hero: z.object({ images: z.array(z.string()).max(3).optional() }).passthrough(),
   stats: z.object({ items: z.array(statItemSchema).length(4) }),
   about: z.object({ images: z.array(z.string()).max(3).optional() }).passthrough(),
   categories: text,

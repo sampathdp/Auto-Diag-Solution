@@ -108,7 +108,10 @@ const WHY_LABELS = ["Card 1", "Card 2", "Card 3", "Card 4"];
 
 function toFormValues(page: HomePage): HomePageFormValues {
   return {
-    hero: page.hero,
+    hero: {
+      ...page.hero,
+      images: page.hero?.images?.length ? page.hero.images : [],
+    },
     stats: page.stats,
     // Fall back to the legacy single image so existing content shows up as slot 1.
     about: {
@@ -215,6 +218,32 @@ export function HomePageForm({ page }: { page: HomePage }) {
     <form onSubmit={(e) => e.preventDefault()}>
       <div className="space-y-6">
         {/* Image, icons and phone number are language-neutral, shown once regardless of the active tab below */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-h4 font-bold text-ink">Hero Section — Background Images (up to 3)</h2>
+          </CardHeader>
+          <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <FormField key={i} label={`Hero Image ${i + 1}`}>
+                <Controller
+                  name="hero.images"
+                  control={control}
+                  render={({ field }) => (
+                    <SingleImageUpload
+                      value={field.value?.[i]}
+                      onChange={(url) => {
+                        const slots = [0, 1, 2].map((n) => field.value?.[n] ?? "");
+                        slots[i] = url ?? "";
+                        field.onChange(slots.filter(Boolean));
+                      }}
+                    />
+                  )}
+                />
+              </FormField>
+            ))}
+          </CardBody>
+        </Card>
+
         <Card>
           <CardHeader>
             <h2 className="text-h4 font-bold text-ink">About Band — Image Carousel (up to 3)</h2>

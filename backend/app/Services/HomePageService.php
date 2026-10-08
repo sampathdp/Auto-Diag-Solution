@@ -38,6 +38,7 @@ class HomePageService
         'why' => ['count' => 4, 'bilingual' => ['title', 'body'], 'plain' => ['icon']],
     ];
 
+    private const MAX_HERO_IMAGES = 3;
     private const MAX_ABOUT_IMAGES = 3;
 
     private HomePageRepository $repo;
@@ -88,6 +89,13 @@ class HomePageService
                     $current[$section][$field] = trim((string)$input[$section][$field]);
                 }
             }
+        }
+
+        // Hero section background image carousel — up to MAX_HERO_IMAGES uploaded image URLs.
+        if (isset($input['hero']['images'])) {
+            $images = is_array($input['hero']['images']) ? $input['hero']['images'] : [];
+            $images = array_values(array_filter(array_map(fn($u) => trim((string)$u), $images), fn($u) => $u !== ''));
+            $current['hero']['images'] = array_slice($images, 0, self::MAX_HERO_IMAGES);
         }
 
         // About band image carousel — up to MAX_ABOUT_IMAGES uploaded image URLs.
