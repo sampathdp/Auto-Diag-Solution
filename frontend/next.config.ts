@@ -3,6 +3,23 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// Also allow whatever host NEXT_PUBLIC_API_BASE_URL points at, so a changed API
+// domain doesn't silently break next/image again.
+const apiPattern = (() => {
+  try {
+    const u = new URL(process.env.NEXT_PUBLIC_API_BASE_URL ?? "");
+    return [
+      {
+        protocol: u.protocol.replace(":", "") as "http" | "https",
+        hostname: u.hostname,
+        ...(u.port ? { port: u.port } : {}),
+      },
+    ];
+  } catch {
+    return [];
+  }
+})();
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
@@ -14,6 +31,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "http", hostname: "localhost", port: "8000" },
       { protocol: "http", hostname: "127.0.0.1", port: "8000" },
+      { protocol: "https", hostname: "auto-diag-api.salonflow.cloud" },
+      ...apiPattern,
     ],
     formats: ["image/avif", "image/webp"],
   },
