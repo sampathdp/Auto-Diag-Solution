@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ChevronRight, ShieldCheck, Target, PackageCheck, MessageCircle, Loader2, type LucideIcon } from "lucide-react";
 import { useAboutPage } from "@/hooks/useAboutPage";
@@ -28,6 +28,7 @@ interface AboutPageViewProps {
 
 export function AboutPageView({ statsStrip, testimonial, ctaBand }: AboutPageViewProps) {
   const locale = useLocale();
+  const t = useTranslations("about.story");
   const isAr = locale === "ar";
   const { data: page, isLoading, isError } = useAboutPage();
 
@@ -117,6 +118,7 @@ export function AboutPageView({ statsStrip, testimonial, ctaBand }: AboutPageVie
                 "/about-warehouse-3.jpg",
               ]}
               imageTag={pick(page.story.image_tag_en, page.story.image_tag_ar)}
+              imageTags={t.raw("imageTags") as string[]}
             />
           </div>
         </div>

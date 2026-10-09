@@ -53,7 +53,8 @@
       "title": "Built for the UAE Driver.",
       "body": "ASIL sources genuine and OEM-equivalent parts from certified manufacturers across Asia, Europe and the US, then stocks them locally in Dubai — so you're not waiting weeks for a part that should take a day. From daily maintenance to full rebuilds, our catalogue is matched precisely to what's actually on UAE roads.",
       "link": "Learn More About ASIL",
-      "imageTag": "ASIL · Dubai Distribution Centre"
+      "imageTag": "ASIL · Dubai Distribution Centre",
+      "imageTags": ["ASIL · Dubai Distribution Centre", "ASIL · Ajman Distribution Centre", "ASIL · Sharjah Distribution Centre"]
     },
     "categories": {
       "eyebrow": "Shop By Category",
@@ -108,7 +109,8 @@
       "title": "We started with one frustration: waiting weeks for a part that should take a day.",
       "body1": "ASIL was founded in Dubai in 2015 after our own team spent too many afternoons chasing down a single brake caliper that sat in a customs warehouse for three weeks. We built the company we wished existed — one that actually stocks the parts UAE drivers need, in the UAE, ready to move.",
       "body2": "Today that means over 10,000 SKUs held locally across engine, brake, filtration and electrical systems, sourced directly from certified manufacturers and matched precisely to what's on the road here — from daily runabouts to full workshop rebuilds.",
-      "imageTag": "ASIL · Dubai Distribution Centre"
+      "imageTag": "ASIL · Dubai Distribution Centre",
+      "imageTags": ["ASIL · Dubai Distribution Centre", "ASIL · Ajman Distribution Centre", "ASIL · Sharjah Distribution Centre"]
     },
     "values": {
       "eyebrow": "How We Work",

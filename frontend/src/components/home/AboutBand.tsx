@@ -26,6 +26,7 @@ export async function AboutBand() {
   } else {
     images = defaultImages;
   }
+  const usingDefaults = images === defaultImages;
 
   return (
     <section className="bg-secondary py-14 md:py-28">
@@ -54,6 +55,7 @@ export async function AboutBand() {
           <AboutImageCarousel
             images={images}
             imageTag={c("image_tag", t("imageTag"))}
+            imageTags={usingDefaults ? (t.raw("imageTags") as string[]) : undefined}
           />
         </div>
       </div>

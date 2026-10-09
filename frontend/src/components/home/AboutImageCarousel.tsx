@@ -6,12 +6,14 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 interface AboutImageCarouselProps {
   images: string[];
   imageTag?: string;
+  imageTags?: string[];
   autoPlayInterval?: number;
 }
 
 export function AboutImageCarousel({
   images,
   imageTag,
+  imageTags,
   autoPlayInterval = 4000,
 }: AboutImageCarouselProps) {
   const [current, setCurrent] = useState(0);
@@ -106,9 +108,9 @@ export function AboutImageCarousel({
       <div className="absolute -bottom-16 -end-16 h-72 w-72 rounded-full border-[22px] border-white/10 z-10 pointer-events-none" />
 
       {/* Image tag label if provided */}
-      {imageTag && (
+      {(imageTags?.[current] ?? imageTag) && (
         <div className="absolute bottom-5 start-5 z-20 text-xs font-bold uppercase tracking-wider text-white/90 bg-black/40 backdrop-blur-md px-3.5 py-1.5 rounded-lg border border-white/15 shadow-sm">
-          {imageTag}
+          {imageTags?.[current] ?? imageTag}
         </div>
       )}
 
