@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/admin/ui/
 import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { PageRichTextEditor } from "./PageRichTextEditor";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatDateTime } from "@/lib/admin/utils";
@@ -63,10 +64,15 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
   };
 
   const save = useMutation({
-    mutationFn: (payload: PageFormValues) =>
-      mode === "edit" && page
+    mutationFn: async (input: PageFormValues) => {
+      const payload = await syncArabic(input, page ?? null, [
+        { en: "title_en", ar: "title_ar" },
+        { en: "content_en", ar: "content_ar", html: true },
+      ]).then(notifyArabic);
+      return mode === "edit" && page
         ? adminApi.put<Page>(`/pages/${page.id}`, payload)
-        : adminApi.post<Page>("/pages", payload),
+        : adminApi.post<Page>("/pages", payload);
+    },
     onSuccess: () => {
       showSuccess(mode === "edit" ? "Page updated" : "Page created");
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.pages.all });

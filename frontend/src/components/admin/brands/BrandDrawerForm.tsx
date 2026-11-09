@@ -13,6 +13,7 @@ import { Switch } from "@/components/admin/ui/Switch";
 import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { SingleImageUpload } from "@/components/admin/ui/SingleImageUpload";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { slugify } from "@/lib/admin/utils";
@@ -67,8 +68,13 @@ export function BrandDrawerForm({
   }, [open, brand, reset]);
 
   const save = useMutation({
-    mutationFn: (values: BrandFormValues) =>
-      isEdit && brand ? adminApi.put(`/brands/${brand.id}`, values) : adminApi.post("/brands", values),
+    mutationFn: async (input: BrandFormValues) => {
+      const values = await syncArabic(input, brand ?? null, [
+        { en: "name_en", ar: "name_ar" },
+        { en: "description_en", ar: "description_ar" },
+      ]).then(notifyArabic);
+      return isEdit && brand ? adminApi.put(`/brands/${brand.id}`, values) : adminApi.post("/brands", values);
+    },
     onSuccess: () => {
       showSuccess(isEdit ? "Brand updated" : "Brand created");
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.brands.all });

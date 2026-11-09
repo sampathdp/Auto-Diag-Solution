@@ -13,6 +13,7 @@ import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { MediaLibraryPickerModal } from "@/components/admin/media/MediaLibraryPickerModal";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { useTranslate } from "@/lib/admin/hooks/useTranslate";
@@ -75,15 +76,23 @@ export function SeoDrawerForm({
   // row once someone customizes it, so most rows start with no `overrideId` and
   // must be created (POST); only already-customized rows are updated (PUT/{id}).
   const save = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      const synced = await syncArabic(
+        { title_en: titleEn, title_ar: titleAr, description_en: descEn, description_ar: descAr },
+        row ? { title_en: row.title_en, title_ar: row.title_ar, description_en: row.description_en, description_ar: row.description_ar } : null,
+        [
+          { en: "title_en", ar: "title_ar" },
+          { en: "description_en", ar: "description_ar" },
+        ]
+      ).then(notifyArabic);
       const payload = {
         path: row?.path,
         page_type: row?.page_type,
         reference_id: row?.reference_id,
         meta_title_en: titleEn,
-        meta_title_ar: titleAr,
+        meta_title_ar: synced.title_ar,
         meta_description_en: descEn,
-        meta_description_ar: descAr,
+        meta_description_ar: synced.description_ar,
         og_image: ogImage,
       };
       return row?.overrideId

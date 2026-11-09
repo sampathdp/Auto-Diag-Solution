@@ -9,6 +9,7 @@ import { Eye } from "lucide-react";
 import { Button } from "@/components/admin/ui/Button";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { ProductFormSchema, PRODUCT_FORM_DEFAULTS, type ProductFormValues } from "@/lib/admin/schemas/productSchema";
@@ -97,10 +98,16 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
   );
 
   const save = useMutation({
-    mutationFn: (payload: Record<string, unknown>) =>
-      mode === "edit" && product
+    mutationFn: async (input: Record<string, unknown>) => {
+      const payload = await syncArabic(input, product ?? null, [
+        { en: "name_en", ar: "name_ar" },
+        { en: "short_description_en", ar: "short_description_ar" },
+        { en: "description_en", ar: "description_ar", html: true },
+      ]).then(notifyArabic);
+      return mode === "edit" && product
         ? adminApi.put<Product>(`/products/${product.id}`, payload)
-        : adminApi.post<Product>("/products", payload),
+        : adminApi.post<Product>("/products", payload);
+    },
     onSuccess: () => {
       showSuccess(mode === "edit" ? "Product updated" : `Product ${pendingIntent === "draft" ? "saved as draft" : "created"}`);
       // Full browser navigation, not router.push: a client-side route change keeps

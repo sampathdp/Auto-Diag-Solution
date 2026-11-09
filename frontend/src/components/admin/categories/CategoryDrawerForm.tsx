@@ -14,6 +14,7 @@ import { Switch } from "@/components/admin/ui/Switch";
 import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { SingleImageUpload } from "@/components/admin/ui/SingleImageUpload";
 import { showError, showSuccess } from "@/components/admin/ui/toast";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { slugify } from "@/lib/admin/utils";
@@ -75,7 +76,11 @@ export function CategoryDrawerForm({
   }, [open, category, reset]);
 
   const save = useMutation({
-    mutationFn: (values: CategoryFormValues) => {
+    mutationFn: async (input: CategoryFormValues) => {
+      const values = await syncArabic(input, category ?? null, [
+        { en: "name_en", ar: "name_ar" },
+        { en: "description_en", ar: "description_ar" },
+      ]).then(notifyArabic);
       const payload = { ...values, parent_id: values.parent_id || null };
       return isEdit && category
         ? adminApi.put(`/categories/${category.id}`, payload)

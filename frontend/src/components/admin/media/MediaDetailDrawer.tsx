@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { TranslateLabel } from "@/components/admin/ui/TranslateLabel";
 import { showSuccess } from "@/components/admin/ui/toast";
 import { MediaThumbnail } from "./MediaThumbnail";
+import { syncArabic, notifyArabic } from "@/lib/admin/translate";
 import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatDateTime } from "@/lib/admin/utils";
@@ -50,8 +51,17 @@ export function MediaDetailDrawer({
     // Backend column is `original_filename`, not `filename` — MediaItem.filename is
     // the frontend-adapted name (see mediaAdapter.ts), so a rename sends that key
     // explicitly rather than the adapted shape.
-    mutationFn: (payload: Partial<MediaItem> & { original_filename?: string }) =>
-      adminApi.put(`/media/${item!.id}`, payload),
+    mutationFn: async (input: Partial<MediaItem> & { original_filename?: string }) => {
+      const payload =
+        "alt_text_en" in input
+          ? await syncArabic(
+              input as Record<string, unknown>,
+              { alt_text_en: item?.alt_text_en, alt_text_ar: item?.alt_text_ar },
+              [{ en: "alt_text_en", ar: "alt_text_ar" }]
+            ).then(notifyArabic)
+          : input;
+      return adminApi.put(`/media/${item!.id}`, payload);
+    },
     onSuccess: () => {
       showSuccess("Media updated");
       invalidate();
