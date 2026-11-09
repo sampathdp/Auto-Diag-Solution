@@ -1,11 +1,24 @@
-import { useTranslations } from "next-intl";
+import { getTranslations, getLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Linkedin } from "lucide-react";
+import { getContactInfo, getFooterPageLinks } from "@/lib/site-info";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 
-export function SiteFooter() {
-  const t = useTranslations("footer");
-  const nav = useTranslations("nav");
+export async function SiteFooter() {
+  const t = await getTranslations("footer");
+  const nav = await getTranslations("nav");
+  const locale = await getLocale();
+  const legal = await getFooterPageLinks(locale, {
+    terms: { href: "/terms-and-conditions", label: t("terms") },
+    refund: { href: "/refund-policy", label: t("refund") },
+    privacy: { href: "/privacy-policy", label: t("privacy") },
+  });
+  const contact = await getContactInfo(locale, {
+    address: t("address"),
+    phone: "+971 4 123 4567",
+    email: "parts@asil.ae",
+    hours: t("hours"),
+  });
 
   return (
     <footer className="bg-navy text-navy-soft text-sm">
@@ -34,9 +47,9 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-3">
             <li><Link href="/about" className="hover:text-navy-foreground">{nav("about")}</Link></li>
             <li><Link href="/contact" className="hover:text-navy-foreground">{nav("contact")}</Link></li>
-            <li><Link href="/terms-and-conditions" className="hover:text-navy-foreground">{t("terms")}</Link></li>
-            <li><Link href="/refund-policy" className="hover:text-navy-foreground">{t("refund")}</Link></li>
-            <li><Link href="/privacy-policy" className="hover:text-navy-foreground">{t("privacy")}</Link></li>
+            <li><Link href={legal.terms.href} className="hover:text-navy-foreground">{legal.terms.label}</Link></li>
+            <li><Link href={legal.refund.href} className="hover:text-navy-foreground">{legal.refund.label}</Link></li>
+            <li><Link href={legal.privacy.href} className="hover:text-navy-foreground">{legal.privacy.label}</Link></li>
           </ul>
         </div>
 
@@ -47,19 +60,19 @@ export function SiteFooter() {
           <ul className="flex flex-col gap-3.5">
             <li className="flex items-start gap-2.5">
               <MapPin className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />
-              <span>{t("address")}</span>
+              <span>{contact.address}</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Phone className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />
-              <span className="font-mono tabular-nums">+971 4 123 4567</span>
+              <span className="font-mono tabular-nums">{contact.phone}</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Mail className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />
-              <span>parts@asil.ae</span>
+              <span>{contact.email}</span>
             </li>
             <li className="flex items-start gap-2.5">
               <Clock className="mt-0.5 h-4 w-4 flex-none text-primary" strokeWidth={2} />
-              <span>{t("hours")}</span>
+              <span>{contact.hours}</span>
             </li>
           </ul>
         </div>

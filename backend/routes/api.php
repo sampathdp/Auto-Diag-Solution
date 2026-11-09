@@ -62,6 +62,7 @@ $router->get("$v1/reviews/featured", [ReviewController::class, 'featured']);
 // by the {id} wildcard (mirrors the /vehicles/filters-before-{id} ordering below).
 $router->get("$v1/products", [ProductController::class, 'publicIndex']);
 $router->get("$v1/products/{id}", [ProductController::class, 'publicShow']);
+$router->get("$v1/footer-pages", [PageController::class, 'footerPages']);
 $router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
 $router->get("$v1/announcement", [SettingController::class, 'publicAnnouncement']);
 $router->get("$v1/about-page", [AboutPageController::class, 'show']);

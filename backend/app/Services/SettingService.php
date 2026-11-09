@@ -18,12 +18,21 @@ class SettingService
         'vat_rate', 'currency', 'site_name', 'support_email',
         'whatsapp_number', 'ga_tracking_id', 'stripe_publishable_key',
         'announcement_en', 'announcement_ar',
+        'contact_address_en', 'contact_address_ar', 'contact_phone', 'contact_email',
+        'contact_hours_en', 'contact_hours_ar',
     ];
 
     // Storefront announcement bar text. **double asterisks** render bold.
+    // Also holds the footer / contact-page details (group 'contact').
     private const ANNOUNCEMENT_DEFAULTS = [
         'announcement_en' => 'Free UAE-wide delivery on orders over **AED 500**',
         'announcement_ar' => 'توصيل مجاني لجميع أنحاء الإمارات للطلبات فوق **500 درهم**',
+        'contact_address_en' => 'Warehouse 14, Al Quoz Industrial Area 3, Dubai, UAE',
+        'contact_address_ar' => 'مستودع 14، المنطقة الصناعية 3 – القوز، دبي، الإمارات',
+        'contact_phone' => '+971 4 123 4567',
+        'contact_email' => 'parts@asil.ae',
+        'contact_hours_en' => 'Sat–Thu, 8:00–20:00 GST',
+        'contact_hours_ar' => 'السبت–الخميس، 8:00–20:00 بتوقيت الخليج',
     ];
 
     private SettingRepository $repo;
@@ -43,7 +52,7 @@ class SettingService
                     'key' => $key,
                     'value' => $value,
                     'type' => 'string',
-                    'group_name' => 'general',
+                    'group_name' => str_starts_with($key, 'contact_') ? 'contact' : 'general',
                 ]);
             }
         }

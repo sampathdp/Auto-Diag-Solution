@@ -24,6 +24,12 @@ export interface Setting {
 export const SETTING_LABELS: Record<string, { label: string; helperText?: string }> = {
   announcement_en: { label: "Top Bar Message (English)", helperText: "Shown in the bar at the top of the website. Wrap text in **double asterisks** to make it bold." },
   announcement_ar: { label: "Top Bar Message (Arabic)", helperText: "Arabic version of the top bar message. Use **double asterisks** for bold." },
+  contact_address_en: { label: "Address (English)", helperText: "Shown in the website footer and Contact page." },
+  contact_address_ar: { label: "Address (Arabic)" },
+  contact_phone: { label: "Phone Number", helperText: "Shown in the website footer and Contact page." },
+  contact_email: { label: "Contact Email", helperText: "Shown in the website footer and Contact page." },
+  contact_hours_en: { label: "Opening Hours (English)" },
+  contact_hours_ar: { label: "Opening Hours (Arabic)" },
   vat_rate: { label: "VAT Rate (%)", helperText: "Applied to all orders at checkout." },
   currency: { label: "Currency", helperText: "3-letter currency code, e.g. AED." },
   site_name: { label: "Site Name" },
@@ -35,6 +41,7 @@ export const SETTING_LABELS: Record<string, { label: string; helperText?: string
 
 export const GROUP_LABELS: Record<string, string> = {
   general: "General",
+  contact: "Contact Info",
   tax: "Tax & VAT",
   integrations: "Integrations",
   payments: "Payments",

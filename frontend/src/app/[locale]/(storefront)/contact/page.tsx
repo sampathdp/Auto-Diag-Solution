@@ -1,4 +1,5 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getContactInfo } from "@/lib/site-info";
 import { Link } from "@/i18n/navigation";
 import { ChevronRight, MapPin, Phone, Mail, Clock } from "lucide-react";
 import { ContactForm } from "@/components/contact/ContactForm";
@@ -10,11 +11,18 @@ export default async function ContactPage() {
   const t = await getTranslations("contact");
   const tFooter = await getTranslations("footer");
 
+  const contact = await getContactInfo(await getLocale(), {
+    address: tFooter("address"),
+    phone: "+971 4 123 4567",
+    email: "parts@asil.ae",
+    hours: tFooter("hours"),
+  });
+
   const infoItems = [
-    { icon: MapPin, label: t("info.addressLabel"), value: tFooter("address") },
-    { icon: Phone, label: t("info.phoneLabel"), value: "+971 4 123 4567", mono: true },
-    { icon: Mail, label: t("info.emailLabel"), value: "parts@asil.ae" },
-    { icon: Clock, label: t("info.hoursLabel"), value: tFooter("hours") },
+    { icon: MapPin, label: t("info.addressLabel"), value: contact.address },
+    { icon: Phone, label: t("info.phoneLabel"), value: contact.phone, mono: true },
+    { icon: Mail, label: t("info.emailLabel"), value: contact.email },
+    { icon: Clock, label: t("info.hoursLabel"), value: contact.hours },
   ];
 
   return (

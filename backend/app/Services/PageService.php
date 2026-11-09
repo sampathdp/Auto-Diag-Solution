@@ -69,6 +69,22 @@ class PageService
         return Arr::boolify($page, self::BOOLEAN_FIELDS);
     }
 
+    // Footer legal links: for each system page, the live slug + titles (published only).
+    public function footerPages(): array
+    {
+        $map = ['terms' => 'terms-and-conditions', 'refund' => 'refund-policy', 'privacy' => 'privacy-policy'];
+        $out = [];
+        foreach ($map as $key => $slug) {
+            try {
+                $p = $this->findPublishedBySlug($slug);
+                $out[$key] = ['slug' => $p['slug'], 'title_en' => $p['title_en'], 'title_ar' => $p['title_ar']];
+            } catch (DomainException $e) {
+                // unpublished/missing: footer keeps its built-in label and link
+            }
+        }
+        return $out;
+    }
+
     public function create(array $input): array
     {
         $data = $this->validate($input, null);
