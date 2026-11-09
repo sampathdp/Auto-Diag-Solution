@@ -14,6 +14,13 @@ class PageService
 
     // Slugs the storefront footer links to directly. Renaming or deleting them
     // breaks those links (404), so they are locked.
+    // Footer slug => other slugs an admin may have used for the same page.
+    private const SLUG_ALIASES = [
+        'refund-policy' => ['refund-return-policy', 'return-policy', 'returns-policy', 'refund-and-return-policy'],
+        'terms-and-conditions' => ['terms-conditions', 'terms', 'terms-of-service'],
+        'privacy-policy' => ['privacy'],
+    ];
+
     public const SYSTEM_SLUGS = ['terms-and-conditions', 'refund-policy', 'privacy-policy'];
 
     private PageRepository $repo;
@@ -48,6 +55,14 @@ class PageService
     public function findPublishedBySlug(string $slug): array
     {
         $page = $this->repo->findBy('slug', $slug);
+        if (!$page) {
+            foreach (self::SLUG_ALIASES[$slug] ?? [] as $alias) {
+                $page = $this->repo->findBy('slug', $alias);
+                if ($page) {
+                    break;
+                }
+            }
+        }
         if (!$page || !(bool)$page['is_published']) {
             throw new DomainException('Page not found', 404);
         }
