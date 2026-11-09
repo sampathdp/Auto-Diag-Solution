@@ -55,3 +55,6 @@ backend/.env copy
 .env.test.local
 .env.production.local
 
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

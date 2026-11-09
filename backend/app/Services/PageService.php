@@ -12,6 +12,10 @@ class PageService
 {
     private const BOOLEAN_FIELDS = ['is_published'];
 
+    // Slugs the storefront footer links to directly. Renaming or deleting them
+    // breaks those links (404), so they are locked.
+    public const SYSTEM_SLUGS = ['terms-and-conditions', 'refund-policy', 'privacy-policy'];
+
     private PageRepository $repo;
 
     public function __construct()
@@ -59,8 +63,12 @@ class PageService
 
     public function update(int $id, array $input): array
     {
-        if (!$this->repo->find($id)) {
+        $existing = $this->repo->find($id);
+        if (!$existing) {
             throw new DomainException('Page not found', 404);
+        }
+        if (in_array($existing['slug'], self::SYSTEM_SLUGS, true)) {
+            unset($input['slug']);
         }
         $data = $this->validate($input, $id);
         if (!empty($data)) {
@@ -71,8 +79,12 @@ class PageService
 
     public function delete(int $id): void
     {
-        if (!$this->repo->find($id)) {
+        $existing = $this->repo->find($id);
+        if (!$existing) {
             throw new DomainException('Page not found', 404);
+        }
+        if (in_array($existing['slug'], self::SYSTEM_SLUGS, true)) {
+            throw new DomainException('This page is linked from the storefront and cannot be deleted', 422);
         }
         $this->repo->delete($id);
     }

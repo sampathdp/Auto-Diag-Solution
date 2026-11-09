@@ -35,6 +35,9 @@ function pageToFormValues(page: Page): PageFormValues {
   };
 }
 
+// Mirrors PageService::SYSTEM_SLUGS — footer links to these, so the slug is locked.
+const SYSTEM_SLUGS = ["terms-and-conditions", "refund-policy", "privacy-policy"];
+
 export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -85,7 +88,14 @@ export function PageForm({ mode, page }: { mode: "create" | "edit"; page?: Page 
           <Card>
             <CardBody>
               <FormField label="URL Slug" htmlFor="slug" error={errors.slug?.message} required>
-                <Input id="slug" {...register("slug")} />
+                <Input
+                  id="slug"
+                  {...register("slug")}
+                  readOnly={mode === "edit" && !!page && SYSTEM_SLUGS.includes(page.slug)}
+                />
+                {mode === "edit" && !!page && SYSTEM_SLUGS.includes(page.slug) && (
+                  <p className="mt-1 text-caption text-ink-muted">Locked: the website footer links to this URL.</p>
+                )}
               </FormField>
             </CardBody>
           </Card>
