@@ -22,6 +22,8 @@ export interface Setting {
  * its raw key as the label), so this never blocks new settings created via the API.
  */
 export const SETTING_LABELS: Record<string, { label: string; helperText?: string }> = {
+  announcement_en: { label: "Top Bar Message (English)", helperText: "Shown in the bar at the top of the website. Wrap text in **double asterisks** to make it bold." },
+  announcement_ar: { label: "Top Bar Message (Arabic)", helperText: "Arabic version of the top bar message. Use **double asterisks** for bold." },
   vat_rate: { label: "VAT Rate (%)", helperText: "Applied to all orders at checkout." },
   currency: { label: "Currency", helperText: "3-letter currency code, e.g. AED." },
   site_name: { label: "Site Name" },

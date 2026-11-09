@@ -17,6 +17,13 @@ class SettingService
     private const PROTECTED_KEYS = [
         'vat_rate', 'currency', 'site_name', 'support_email',
         'whatsapp_number', 'ga_tracking_id', 'stripe_publishable_key',
+        'announcement_en', 'announcement_ar',
+    ];
+
+    // Storefront announcement bar text. **double asterisks** render bold.
+    private const ANNOUNCEMENT_DEFAULTS = [
+        'announcement_en' => 'Free UAE-wide delivery on orders over **AED 500**',
+        'announcement_ar' => 'توصيل مجاني لجميع أنحاء الإمارات للطلبات فوق **500 درهم**',
     ];
 
     private SettingRepository $repo;
@@ -26,8 +33,37 @@ class SettingService
         $this->repo = new SettingRepository();
     }
 
+    // Creates the announcement rows on first use so they show up in the admin
+    // Settings page without a manual seeder run.
+    private function ensureAnnouncementRows(): void
+    {
+        foreach (self::ANNOUNCEMENT_DEFAULTS as $key => $value) {
+            if (!$this->repo->findByKey($key)) {
+                $this->repo->create([
+                    'key' => $key,
+                    'value' => $value,
+                    'type' => 'string',
+                    'group_name' => 'general',
+                ]);
+            }
+        }
+    }
+
+    public function publicAnnouncement(): array
+    {
+        $this->ensureAnnouncementRows();
+        $out = [];
+        foreach (self::ANNOUNCEMENT_DEFAULTS as $key => $default) {
+            $row = $this->repo->findByKey($key);
+            $value = trim((string)($row['value'] ?? ''));
+            $out[$key] = $value !== '' ? $value : $default;
+        }
+        return $out;
+    }
+
     public function list(): array
     {
+        $this->ensureAnnouncementRows();
         return $this->repo->allGrouped();
     }
 

@@ -3,20 +3,41 @@
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { storefrontApi } from "@/lib/api/storefront-client";
+
+function renderBold(text: string) {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-mono font-bold text-navy-foreground">{part}</strong>
+    ) : (
+      part
+    )
+  );
+}
 
 export function AnnouncementBar() {
   const t = useTranslations("announce");
   const pathname = usePathname();
   const params = useParams();
   const currentLocale = params.locale as string;
+  const { data } = useQuery({
+    queryKey: ["announcement"],
+    queryFn: () => storefrontApi.get<{ announcement_en: string; announcement_ar: string }>("/announcement"),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const custom = currentLocale === "ar" ? data?.announcement_ar : data?.announcement_en;
 
   return (
     <div className="bg-navy text-navy-foreground text-[13px]">
       <div className="mx-auto flex h-9 max-w-wrap items-center justify-between px-6 md:px-14">
         <p className="text-navy-soft">
-          {t.rich("message", {
-            strong: (chunks) => <strong className="font-mono font-bold text-navy-foreground">{chunks}</strong>,
-          })}
+          {custom
+            ? renderBold(custom)
+            : t.rich("message", {
+                strong: (chunks) => <strong className="font-mono font-bold text-navy-foreground">{chunks}</strong>,
+              })}
         </p>
         <div className="flex items-center gap-2 font-bold">
           <Link

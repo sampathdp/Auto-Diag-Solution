@@ -21,6 +21,11 @@ class SettingController extends BaseController
         $this->success($this->service->list());
     }
 
+    public function publicAnnouncement(Request $request): void
+    {
+        $this->success($this->service->publicAnnouncement());
+    }
+
     public function show(Request $request): void
     {
         $this->success($this->service->find((string)$request->getParam('key')));
