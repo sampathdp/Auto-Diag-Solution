@@ -98,12 +98,13 @@ export interface ArabicPair {
  * `original` is the record as loaded (null when creating).
  * Never blocks saving: if translation fails the values are returned as-is.
  */
-export async function syncArabic<T extends Record<string, unknown>>(
+export async function syncArabic<T extends object>(
   values: T,
-  original: Record<string, unknown> | null,
+  original: object | null,
   pairs: ArabicPair[]
 ): Promise<{ values: T; fixed: string[]; failed: string[] }> {
   const next = { ...values } as Record<string, unknown>;
+  const orig = original as Record<string, unknown> | null;
   const fixed: string[] = [];
   const failed: string[] = [];
 
@@ -111,8 +112,8 @@ export async function syncArabic<T extends Record<string, unknown>>(
     const enVal = String(next[en] ?? "");
     if (!enVal.trim()) continue;
     const arVal = String(next[ar] ?? "");
-    const enChanged = !original || String(original[en] ?? "") !== enVal;
-    const arChanged = !!original && String(original[ar] ?? "") !== arVal;
+    const enChanged = !orig || String(orig[en] ?? "") !== enVal;
+    const arChanged = !!orig && String(orig[ar] ?? "") !== arVal;
 
     const needs = !arVal.trim() || (enChanged && !arChanged);
     if (!needs) continue;
@@ -126,7 +127,7 @@ export async function syncArabic<T extends Record<string, unknown>>(
     }
   }
 
-  return { values: next as T, fixed, failed };
+  return { values: next as unknown as T, fixed, failed };
 }
 
 /** Pipe `syncArabic(...)` through this to toast the outcome and unwrap the values. */
