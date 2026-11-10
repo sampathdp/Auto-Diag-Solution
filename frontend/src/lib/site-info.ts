@@ -7,6 +7,8 @@ export interface ContactInfo {
   phone: string;
   email: string;
   hours: string;
+  blurb?: string;
+  whatsapp?: string;
 }
 
 // Admin-editable contact details (Admin > Settings > Contact Info). Each value falls
@@ -23,6 +25,8 @@ export const getContactInfo = cache(async (locale: string, fallback: ContactInfo
       phone: pick(d.contact_phone, fallback.phone),
       email: pick(d.contact_email, fallback.email),
       hours: pick(d[`contact_hours_${l}`], fallback.hours),
+      blurb: pick(d[`contact_blurb_${l}`], fallback.blurb || ""),
+      whatsapp: pick(d.whatsapp_number, fallback.whatsapp || ""),
     };
   } catch {
     return fallback;

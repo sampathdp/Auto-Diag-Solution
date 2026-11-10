@@ -29,15 +29,16 @@ import { useCompareStore } from "@/store/useCompareStore";
 import { useCartStore } from "@/store/useCartStore";
 import { useRecentlyViewedStore } from "@/store/useRecentlyViewedStore";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
+import { useContactInfo } from "@/hooks/useContactInfo";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import toast from "react-hot-toast";
-
-const WHATSAPP_NUMBER = "971501234567";
 
 export function ProductDetailView({ productId }: { productId: string }) {
   const locale = useLocale();
   const router = useRouter();
   const t = useTranslations("shop.quickView");
   const tToast = useTranslations("shop.toasts");
+  const { data: siteInfo } = useContactInfo();
 
   const { data: product, isLoading } = useProduct(productId);
 
@@ -186,9 +187,10 @@ export function ProductDetailView({ productId }: { productId: string }) {
     router.push(`/checkout?buyNow=${product.id}&qty=${quantity}` as any);
   };
 
-  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  const whatsappHref = buildWhatsAppUrl(
+    siteInfo?.whatsapp_number,
     `Hi, I'd like to ask about ${name} (SKU: ${product.sku})`
-  )}`;
+  );
 
   return (
     <div className="bg-background">

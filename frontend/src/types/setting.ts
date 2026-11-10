@@ -30,6 +30,8 @@ export const SETTING_LABELS: Record<string, { label: string; helperText?: string
   contact_email: { label: "Contact Email", helperText: "Shown in the website footer and Contact page." },
   contact_hours_en: { label: "Opening Hours (English)" },
   contact_hours_ar: { label: "Opening Hours (Arabic)" },
+  contact_blurb_en: { label: "Footer Description (English)", helperText: "Short company description shown under the logo in the website footer." },
+  contact_blurb_ar: { label: "Footer Description (Arabic)" },
   vat_rate: { label: "VAT Rate (%)", helperText: "Applied to all orders at checkout." },
   currency: { label: "Currency", helperText: "3-letter currency code, e.g. AED." },
   site_name: { label: "Site Name" },

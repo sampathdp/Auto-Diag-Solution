@@ -9,16 +9,17 @@ import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { Button } from "@/components/ui/Button";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useContactInfo } from "@/hooks/useContactInfo";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import type { Order } from "@/types/order";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-
-const WHATSAPP_NUMBER = "971501234567";
 
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const { isAuthenticated } = useAuthStore();
+  const { data: siteInfo } = useContactInfo();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,9 +64,10 @@ function CheckoutSuccessContent() {
   // order_number, not the raw internal id — it's the reference already shown
   // everywhere else in the app ("Order #ORD-...") and the one our team looks up.
   const whatsappHref = order
-    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+    ? buildWhatsAppUrl(
+        siteInfo?.whatsapp_number,
         `Hi, I just placed Order #${order.order_number}. Here is my VIN/Mulkiya photo for verification.`
-      )}`
+      )
     : null;
 
   return (

@@ -20,6 +20,7 @@ class SettingService
         'announcement_en', 'announcement_ar',
         'contact_address_en', 'contact_address_ar', 'contact_phone', 'contact_email',
         'contact_hours_en', 'contact_hours_ar',
+        'contact_blurb_en', 'contact_blurb_ar',
     ];
 
     // Storefront announcement bar text. **double asterisks** render bold.
@@ -33,6 +34,9 @@ class SettingService
         'contact_email' => 'parts@asil.ae',
         'contact_hours_en' => 'Sat–Thu, 8:00–20:00 GST',
         'contact_hours_ar' => 'السبت–الخميس، 8:00–20:00 بتوقيت الخليج',
+        'contact_blurb_en' => 'Genuine and OEM auto parts, sourced globally and distributed across the UAE from our Dubai facility since 2015.',
+        'contact_blurb_ar' => 'قطع غيار أصلية ومعادلة للأصلية، مصدرها عالمي وموزعة في جميع أنحاء الإمارات من مرفقنا في دبي منذ 2015.',
+        'whatsapp_number' => '+971 50 123 4567',
     ];
 
     private SettingRepository $repo;
@@ -47,13 +51,16 @@ class SettingService
     private function ensureAnnouncementRows(): void
     {
         foreach (self::ANNOUNCEMENT_DEFAULTS as $key => $value) {
-            if (!$this->repo->findByKey($key)) {
+            $existing = $this->repo->findByKey($key);
+            if (!$existing) {
                 $this->repo->create([
                     'key' => $key,
                     'value' => $value,
                     'type' => 'string',
-                    'group_name' => str_starts_with($key, 'contact_') ? 'contact' : 'general',
+                    'group_name' => (str_starts_with($key, 'contact_') || $key === 'whatsapp_number') ? 'contact' : 'general',
                 ]);
+            } elseif ($key === 'whatsapp_number' && ($existing['group_name'] ?? '') !== 'contact') {
+                DatabaseManager::query("UPDATE settings SET group_name = 'contact' WHERE `key` = 'whatsapp_number'");
             }
         }
     }

@@ -18,6 +18,7 @@ export async function SiteFooter() {
     phone: "+971 4 123 4567",
     email: "parts@asil.ae",
     hours: t("hours"),
+    blurb: t("blurb"),
   });
 
   return (
@@ -25,7 +26,7 @@ export async function SiteFooter() {
       <div className="mx-auto grid max-w-wrap grid-cols-1 gap-11 px-6 pb-14 pt-16 md:grid-cols-[1.4fr_1fr_1fr_1.2fr] md:px-14 md:pb-14 md:pt-20">
         <div>
           <BrandLogo variant="header" className="h-12" />
-          <p className="mt-4 max-w-[34ch] leading-relaxed">{t("blurb")}</p>
+          <p className="mt-4 max-w-[34ch] leading-relaxed">{contact.blurb}</p>
         </div>
 
         <div>
@@ -92,7 +93,7 @@ export async function SiteFooter() {
             <a href="#" aria-label="Instagram" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
               <Instagram className="h-3.5 w-3.5" strokeWidth={2} />
             </a>
-            <a href="#" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
+            <a href="https://www.facebook.com/share/1EYF3YyEJv/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
               <Facebook className="h-3.5 w-3.5" strokeWidth={2} />
             </a>
             <a href="#" aria-label="LinkedIn" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">

@@ -1,12 +1,18 @@
 import { getTranslations, getLocale } from "next-intl/server";
 import { getHomeContent, cms } from "@/lib/home-content";
+import { getContactInfo } from "@/lib/site-info";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export async function CtaBand() {
   const t = await getTranslations("home.cta");
   const locale = await getLocale();
-  const home = await getHomeContent();
-  const whatsapp = (home?.cta?.whatsapp_number || "971501234567").replace(/\D/g, "");
+  const [home, contact] = await Promise.all([
+    getHomeContent(),
+    getContactInfo(locale, { address: "", phone: "", email: "", hours: "", whatsapp: "" }),
+  ]);
+  const whatsapp = home?.cta?.whatsapp_number || contact.whatsapp;
+  const href = buildWhatsAppUrl(whatsapp);
 
   return (
     <section className="bg-primary-accessible text-primary-foreground">
@@ -15,7 +21,7 @@ export async function CtaBand() {
           {cms(home?.cta, "title", locale, t("title"))}
         </h2>
         <a
-          href={`https://wa.me/${whatsapp}`}
+          href={href}
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-[60px] flex-none items-center gap-3 rounded-md bg-foreground px-7 text-[15px] font-extrabold text-background shadow-lifted transition-transform hover:-translate-y-0.5"

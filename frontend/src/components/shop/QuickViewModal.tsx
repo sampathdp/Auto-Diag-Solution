@@ -11,9 +11,9 @@ import { productFitsVehicle } from "@/lib/productFitment";
 import { useRecentlyViewedStore } from "@/store/useRecentlyViewedStore";
 import { useCartStore } from "@/store/useCartStore";
 import { useFlyToCart } from "@/hooks/useFlyToCart";
+import { useContactInfo } from "@/hooks/useContactInfo";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import toast from "react-hot-toast";
-
-const WHATSAPP_NUMBER = "971501234567";
 
 interface QuickViewModalProps {
   product: Product;
@@ -28,6 +28,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
   const [mounted, setMounted] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const { data: siteInfo } = useContactInfo();
 
   const { fitsYear, fitsMake, fitsModel } = useShopFilters();
   const addToCart = useCartStore(state => state.addItem);
@@ -71,9 +72,10 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     triggerFly(buttonRef.current);
   };
 
-  const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+  const whatsappHref = buildWhatsAppUrl(
+    siteInfo?.whatsapp_number,
     `Hi, I'd like to ask about ${name} (SKU: ${product.sku})`
-  )}`;
+  );
 
   return <>
     {createPortal(

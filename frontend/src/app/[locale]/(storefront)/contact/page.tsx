@@ -4,8 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { ChevronRight, MapPin, Phone, Mail, Clock } from "lucide-react";
 import { ContactForm } from "@/components/contact/ContactForm";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
-
-const WHATSAPP_NUMBER = "971501234567";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export default async function ContactPage() {
   const t = await getTranslations("contact");
@@ -16,6 +15,7 @@ export default async function ContactPage() {
     phone: "+971 4 123 4567",
     email: "parts@asil.ae",
     hours: tFooter("hours"),
+    whatsapp: "",
   });
 
   const infoItems = [
@@ -93,7 +93,7 @@ export default async function ContactPage() {
             </div>
 
             <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}`}
+              href={buildWhatsAppUrl(contact.whatsapp)}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 flex h-14 w-full items-center justify-center gap-3 rounded-md bg-[#25D366] text-sm font-extrabold text-white shadow-lifted transition-transform hover:-translate-y-0.5"

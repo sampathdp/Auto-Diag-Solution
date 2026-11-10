@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useState } from "react";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, Languages } from "lucide-react";
+import { syncArabic } from "@/lib/admin/translate";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { DataTable } from "@/components/admin/DataTable";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
@@ -12,7 +13,7 @@ import { Button } from "@/components/admin/ui/Button";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { actionsColumn } from "@/components/admin/columns";
 import { defaultRowActions } from "@/components/admin/ActionsMenu";
-import { showSuccess } from "@/components/admin/ui/toast";
+import { showSuccess, showError } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
@@ -36,6 +37,53 @@ export default function AdminCmsPagesPage() {
       queryClient.invalidateQueries({ queryKey: adminQueryKeys.pages.all });
     },
   });
+
+  const [translating, setTranslating] = useState(false);
+
+  // Re-translates every page's Arabic title/content from its English text and saves.
+  const translateAll = async () => {
+    const pages = pagesQuery.data?.items ?? [];
+    if (!pages.length) return;
+    setTranslating(true);
+    let done = 0;
+    let failed = 0;
+    for (const p of pages) {
+      try {
+        const r = await syncArabic(
+          {
+            title_en: p.title_en,
+            title_ar: "",
+            slug: p.slug,
+            content_en: p.content_en ?? "",
+            content_ar: "",
+            is_published: p.is_published,
+          },
+          null,
+          [
+            { en: "title_en", ar: "title_ar" },
+            { en: "content_en", ar: "content_ar", html: true },
+          ]
+        );
+        if (r.failed.length) {
+          failed++;
+          continue;
+        }
+        const v = r.values;
+        await adminApi.put(`/pages/${p.id}`, {
+          ...v,
+          title_ar: v.title_ar || p.title_ar,
+          content_ar: v.content_ar || p.content_ar || "",
+        });
+        done++;
+      } catch {
+        failed++;
+      }
+    }
+    setTranslating(false);
+    queryClient.invalidateQueries({ queryKey: adminQueryKeys.pages.all });
+    if (done) showSuccess(`Arabic updated for ${done} page${done === 1 ? "" : "s"}`);
+    if (failed) showError(`${failed} page${failed === 1 ? "" : "s"} could not be translated`);
+  };
 
   const columns: ColumnDef<Page, any>[] = [
     {
@@ -71,10 +119,16 @@ export default function AdminCmsPagesPage() {
         title="Pages"
         description="Bilingual CMS pages (Terms, Refund Policy, Privacy Policy, etc.)"
         actions={
-          <Button onClick={() => router.push("/admin/content/pages/new")}>
-            <Plus className="h-4 w-4" />
-            New Page
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={translateAll} disabled={translating || pagesQuery.isLoading}>
+              <Languages className="h-4 w-4" />
+              {translating ? "Translating…" : "Update all Arabic"}
+            </Button>
+            <Button onClick={() => router.push("/admin/content/pages/new")}>
+              <Plus className="h-4 w-4" />
+              New Page
+            </Button>
+          </div>
         }
       />
 
