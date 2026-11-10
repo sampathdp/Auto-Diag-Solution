@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { translateAllArabic } from "@/lib/admin/translate";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -43,11 +45,23 @@ export function AboutPageForm({ page }: { page: AboutPage }) {
     handleSubmit,
     control,
     reset,
+    getValues,
+    setValue,
     formState: { isDirty },
   } = useForm<AboutPageFormValues>({
     resolver: zodResolver(AboutPageFormSchema),
     defaultValues: initialValues,
   });
+
+  const [translating, setTranslating] = useState(false);
+  const translateAll = async () => {
+    setTranslating(true);
+    const { updates, failed } = await translateAllArabic(getValues());
+    updates.forEach((u) => setValue(u.path as never, u.value as never, { shouldDirty: true, shouldValidate: true }));
+    setTranslating(false);
+    if (updates.length) showSuccess(`Arabic updated for ${updates.length} fields — review and press Save`);
+    if (failed) showError(`${failed} field${failed === 1 ? "" : "s"} could not be translated`);
+  };
 
   const { confirmDiscard } = useUnsavedChangesGuard(isDirty);
 
@@ -235,6 +249,9 @@ export function AboutPageForm({ page }: { page: AboutPage }) {
           }}
         >
           Cancel
+        </Button>
+        <Button type="button" variant="secondary" onClick={translateAll} loading={translating}>
+          Update Arabic from English
         </Button>
         <Button type="button" onClick={onSubmit} loading={save.isPending}>
           Save

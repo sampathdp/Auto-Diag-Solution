@@ -130,6 +130,45 @@ export async function syncArabic<T extends object>(
   return { values: next as unknown as T, fixed, failed };
 }
 
+/**
+ * Walks a nested object and, for every `<name>_en` / `<name>_ar` pair, translates the
+ * English text into Arabic. Returns dotted paths (e.g. "values.items.0.title_ar") with
+ * the new Arabic value, ready for react-hook-form `setValue`. Pairs that fail are skipped.
+ */
+export async function translateAllArabic(
+  values: unknown
+): Promise<{ updates: { path: string; value: string }[]; failed: number }> {
+  const jobs: { path: string; en: string }[] = [];
+  const walk = (node: unknown, prefix: string) => {
+    if (Array.isArray(node)) {
+      node.forEach((v, i) => walk(v, prefix ? `${prefix}.${i}` : String(i)));
+    } else if (node && typeof node === "object") {
+      const obj = node as Record<string, unknown>;
+      for (const [k, v] of Object.entries(obj)) {
+        const path = prefix ? `${prefix}.${k}` : k;
+        if (k.endsWith("_en") && typeof v === "string" && v.trim() && `${k.slice(0, -3)}_ar` in obj) {
+          if (/[A-Za-z]/.test(v)) jobs.push({ path: `${prefix ? prefix + "." : ""}${k.slice(0, -3)}_ar`, en: v });
+        } else if (v && typeof v === "object") {
+          walk(v, path);
+        }
+      }
+    }
+  };
+  walk(values, "");
+
+  const updates: { path: string; value: string }[] = [];
+  let failed = 0;
+  const BATCH = 5;
+  for (let i = 0; i < jobs.length; i += BATCH) {
+    const res = await Promise.all(jobs.slice(i, i + BATCH).map((j) => translateLong(j.en)));
+    res.forEach((t, idx) => {
+      if (t) updates.push({ path: jobs[i + idx].path, value: t });
+      else failed++;
+    });
+  }
+  return { updates, failed };
+}
+
 /** Pipe `syncArabic(...)` through this to toast the outcome and unwrap the values. */
 export function notifyArabic<T>(r: { values: T; fixed: string[]; failed: string[] }): T {
   if (r.fixed.length) showSuccess("Arabic text auto-updated to match the English");
