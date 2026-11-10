@@ -90,7 +90,7 @@ export async function SiteFooter() {
             ))}
           </div>
           <div className="flex gap-3.5">
-            <a href="#" aria-label="Instagram" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
+            <a href="https://www.instagram.com/asilautopartshub?utm_source=qr&mdxt=MXJ5ZW5wdDI5MXNpZQ==" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
               <Instagram className="h-3.5 w-3.5" strokeWidth={2} />
             </a>
             <a href="https://www.facebook.com/share/1EYF3YyEJv/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="flex h-8 w-8 items-center justify-center rounded-full border border-navy-border transition-colors hover:border-primary hover:text-primary">
