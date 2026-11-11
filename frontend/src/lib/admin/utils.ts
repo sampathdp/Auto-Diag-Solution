@@ -1,12 +1,13 @@
 import { format } from "date-fns";
 import type { Product } from "@/mocks/admin/db";
 
-export function formatAED(amount: number): string {
+export function formatAED(amount: number | string | null | undefined): string {
+  const num = typeof amount === "number" ? amount : Number(amount ?? 0);
   return new Intl.NumberFormat("en-AE", {
     style: "currency",
     currency: "AED",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(Number.isFinite(num) ? num : 0);
 }
 
 export function formatDate(iso: string): string {

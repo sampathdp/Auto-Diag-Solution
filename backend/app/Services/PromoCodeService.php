@@ -30,8 +30,9 @@ class PromoCodeService
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
+        $items = array_map([$this, 'shape'], $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage));
         return [
-            'items' => $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage),
+            'items' => $items,
             'total' => $this->repo->countFiltered($filters, $search),
         ];
     }
@@ -42,8 +43,27 @@ class PromoCodeService
         if (!$promo) {
             throw new DomainException('Promo code not found', 404);
         }
-        $promo['sales_rep'] = $this->salesReps->find((int)$promo['sales_rep_id']);
+        $promo = $this->shape($promo);
+        $salesRep = $this->salesReps->find((int)$promo['sales_rep_id']);
+        if ($salesRep) {
+            $salesRep['id'] = (int)$salesRep['id'];
+            $salesRep['commission_value'] = (float)$salesRep['commission_value'];
+        }
+        $promo['sales_rep'] = $salesRep;
         $promo['stats'] = $this->repo->stats($id);
+        return $promo;
+    }
+
+    private function shape(array $promo): array
+    {
+        $promo['id'] = (int)$promo['id'];
+        $promo['sales_rep_id'] = (int)$promo['sales_rep_id'];
+        $promo['discount_value'] = (float)$promo['discount_value'];
+        $promo['commission_value'] = (float)$promo['commission_value'];
+        $promo['minimum_order_amount'] = (float)$promo['minimum_order_amount'];
+        $promo['maximum_discount_amount'] = $promo['maximum_discount_amount'] !== null ? (float)$promo['maximum_discount_amount'] : null;
+        $promo['used_count'] = (int)$promo['used_count'];
+        $promo['usage_limit'] = $promo['usage_limit'] !== null ? (int)$promo['usage_limit'] : null;
         return $promo;
     }
 

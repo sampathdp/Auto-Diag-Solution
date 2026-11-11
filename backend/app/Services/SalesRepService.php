@@ -21,8 +21,9 @@ class SalesRepService
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage): array
     {
+        $items = array_map([$this, 'shape'], $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage));
         return [
-            'items' => $this->repo->paginate($filters, $search, $sortBy, $sortDir, $page, $perPage),
+            'items' => $items,
             'total' => $this->repo->countFiltered($filters, $search),
         ];
     }
@@ -33,7 +34,15 @@ class SalesRepService
         if (!$rep) {
             throw new DomainException('Sales representative not found', 404);
         }
+        $rep = $this->shape($rep);
         $rep['stats'] = $this->repo->stats($id);
+        return $rep;
+    }
+
+    private function shape(array $rep): array
+    {
+        $rep['id'] = (int)$rep['id'];
+        $rep['commission_value'] = (float)$rep['commission_value'];
         return $rep;
     }
 

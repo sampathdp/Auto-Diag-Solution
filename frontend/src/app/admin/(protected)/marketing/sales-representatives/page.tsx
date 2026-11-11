@@ -78,10 +78,12 @@ function AdminSalesRepsPageContent() {
       id: "commission",
       header: "Commission",
       enableSorting: false,
-      cell: ({ row }) =>
-        row.original.commission_type === "percentage"
-          ? `${row.original.commission_value}%`
-          : `AED ${row.original.commission_value.toFixed(2)}`,
+      cell: ({ row }) => {
+        const val = Number(row.original.commission_value ?? 0);
+        return row.original.commission_type === "percentage"
+          ? `${val}%`
+          : `AED ${val.toFixed(2)}`;
+      },
     },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
     actionsColumn<SalesRep>((rep) =>
