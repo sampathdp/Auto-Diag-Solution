@@ -12,8 +12,19 @@ use App\Exceptions\DomainException;
 // Allowed frontend origin(s). In production set FRONTEND_URL in .env.
 $isLocal = ($_ENV['APP_ENV'] ?? 'local') === 'local';
 
+$frontendUrl = $_ENV['FRONTEND_URL'] ?? null;
+$frontendUrlAlt = null;
+if ($frontendUrl) {
+    if (str_contains($frontendUrl, '://www.')) {
+        $frontendUrlAlt = str_replace('://www.', '://', $frontendUrl);
+    } elseif (str_contains($frontendUrl, '://')) {
+        $frontendUrlAlt = str_replace('://', '://www.', $frontendUrl);
+    }
+}
+
 $allowedOrigins = array_filter([
-    $_ENV['FRONTEND_URL']       ?? null,   // production origin from .env
+    $frontendUrl,
+    $frontendUrlAlt,
     'http://localhost:3000',               // Next.js dev server
     'http://127.0.0.1:3000',
 ]);

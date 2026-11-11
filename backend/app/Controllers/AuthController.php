@@ -504,9 +504,16 @@ class AuthController extends BaseController
         ], 'Password updated successfully');
     }
 
+    private function isSecureRequest(): bool
+    {
+        return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+            || (($_ENV['APP_ENV'] ?? 'local') === 'production');
+    }
+
     private function setAuthCookies(string $accessToken, string $refreshToken): void
     {
-        $isProduction = ($_ENV['APP_ENV'] ?? 'local') === 'production';
+        $isSecure = $this->isSecureRequest();
         // The frontend (Vercel) and this API (shared hosting) are on different
         // registrable domains — a genuinely cross-site request, not just a different
         // port like local dev. SameSite=Strict/Lax cookies are never sent on cross-site
@@ -515,8 +522,8 @@ class AuthController extends BaseController
         $base = [
             'path'     => '/',
             'httponly' => true,
-            'secure'   => $isProduction,
-            'samesite' => $isProduction ? 'None' : 'Lax',
+            'secure'   => $isSecure,
+            'samesite' => $isSecure ? 'None' : 'Lax',
         ];
 
         setcookie('access_token', $accessToken, array_merge($base, [
@@ -530,13 +537,13 @@ class AuthController extends BaseController
 
     private function clearAuthCookies(): void
     {
-        $isProduction = ($_ENV['APP_ENV'] ?? 'local') === 'production';
+        $isSecure = $this->isSecureRequest();
         $past = [
             'expires' => 1,
             'path' => '/',
             'httponly' => true,
-            'secure' => $isProduction,
-            'samesite' => $isProduction ? 'None' : 'Lax',
+            'secure' => $isSecure,
+            'samesite' => $isSecure ? 'None' : 'Lax',
         ];
         setcookie('access_token', '', $past);
         setcookie('refresh_token', '', $past);
