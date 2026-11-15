@@ -8,6 +8,7 @@ import { AppProviders } from "@/app/providers";
 import { SplashPreloader } from "@/components/ui/SplashPreloader";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { localeAlternates } from "@/lib/seo/alternates";
 import "../globals.css";
 
@@ -70,6 +71,7 @@ export default async function LocaleLayout({
         </NextIntlClientProvider>
         <SpeedInsights />
         <Analytics />
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID ?? "G-LCNVG3Y8DV"} />
       </body>
     </html>
   );
