@@ -193,9 +193,11 @@ function AdminProductsPageContent() {
       accessorKey: "name_en",
       header: "Product",
       cell: ({ row }) => (
-        <div>
-          <p className="font-medium text-ink">{row.original.name_en}</p>
-          <p className="text-caption text-ink-muted" dir="rtl">
+        // DataTable cells are whitespace-nowrap, so long part names would stretch the
+        // table and push Status/Actions off-screen — wrap and clamp to 2 lines instead.
+        <div className="w-64 whitespace-normal lg:w-80 xl:w-96" title={row.original.name_en}>
+          <p className="line-clamp-2 font-medium text-ink">{row.original.name_en}</p>
+          <p className="line-clamp-1 text-caption text-ink-muted" dir="rtl">
             {row.original.name_ar}
           </p>
         </div>
