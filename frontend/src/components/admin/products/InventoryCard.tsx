@@ -65,6 +65,24 @@ export function InventoryCard({ form }: { form: UseFormReturn<ProductFormValues>
             {...register("low_stock_threshold", { valueAsNumber: true })}
           />
         </FormField>
+
+        <FormField
+          label="Weight (kg)"
+          htmlFor="weight_kg"
+          error={errors.weight_kg?.message}
+          required={watch("source") === "3pl"}
+          helperText="Shipping weight. Required by Fulfillor for products sent to the 3PL."
+        >
+          <Input
+            id="weight_kg"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="e.g. 1.2"
+            error={!!errors.weight_kg}
+            {...register("weight_kg")}
+          />
+        </FormField>
       </CardBody>
     </Card>
   );

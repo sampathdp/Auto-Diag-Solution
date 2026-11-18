@@ -79,6 +79,12 @@ export const ProductFormSchema = z
       .int()
       .nonnegative("Threshold can't be negative."),
     track_inventory: z.boolean(),
+    // Empty input -> null. Required by Fulfillor to create a product, so it's enforced
+    // below for source='3pl' products.
+    weight_kg: z.preprocess(
+      (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? null : Number(v)),
+      z.number({ invalid_type_error: "Enter a valid weight." }).positive("Weight must be more than 0.").nullable()
+    ),
 
     // .coerce: the live backend's PDO driver returns every numeric column as a JSON
     // string ("8", not 8) — a shared-hosting/local-dev PHP driver difference, not a
@@ -115,6 +121,10 @@ export const ProductFormSchema = z
   .refine((data) => data.compare_at_price == null || data.compare_at_price > data.price, {
     message: "Compare-at price must be higher than the price.",
     path: ["compare_at_price"],
+  })
+  .refine((data) => data.source !== "3pl" || data.weight_kg != null, {
+    message: "Weight is required for products sent to the 3PL.",
+    path: ["weight_kg"],
   });
 
 export type ProductFormValues = z.infer<typeof ProductFormSchema>;
@@ -136,6 +146,7 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   vat_inclusive: true,
   stock_quantity: 0,
   low_stock_threshold: 5,
+  weight_kg: null,
   track_inventory: true,
   images: [],
   part_type: null,

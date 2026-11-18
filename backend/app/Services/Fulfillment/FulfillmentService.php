@@ -394,6 +394,11 @@ class FulfillmentService
             return ['fulfillor_product_id' => (string)$existing['id'], 'created' => false];
         }
 
+        // Fulfillor rejects a create without weight ("Field cannot be empty (for field Weight…)").
+        if (empty($product['weight_kg']) || (float)$product['weight_kg'] <= 0) {
+            throw new DomainException("Add a weight (kg) to product {$product['sku']} first — Fulfillor requires it.", 422);
+        }
+
         $payload = ['ownerPartyId' => $this->requireEnv('FULFILLOR_ORG_ID')] + $this->buildProductPayload($product);
 
         try {
