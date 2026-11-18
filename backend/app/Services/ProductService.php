@@ -9,6 +9,7 @@ use App\Core\Database\DatabaseManager;
 use App\Exceptions\DomainException;
 use App\Repositories\MediaRepository;
 use App\Repositories\ProductRepository;
+use App\Services\Fulfillment\FulfillmentService;
 
 class ProductService
 {
@@ -21,11 +22,28 @@ class ProductService
 
     private ProductRepository $repo;
     private MediaRepository $mediaRepo;
+    private ?FulfillmentService $fulfillment = null;
 
     public function __construct()
     {
         $this->repo = new ProductRepository();
         $this->mediaRepo = new MediaRepository();
+    }
+
+    /**
+     * Products marked source='3pl' are pushed to Fulfillor after every create/edit —
+     * created there (or linked by SKU) the first time, updated after that. Runs after
+     * the DB commit and never throws (see FulfillmentService::syncProduct), so a
+     * Fulfillor outage can't block saving; the result is on fulfillor_sync_error.
+     */
+    private function syncToFulfillor(int $id): void
+    {
+        $product = $this->repo->find($id);
+        if (!$product || ($product['source'] ?? 'local') !== '3pl') {
+            return;
+        }
+        $this->fulfillment ??= new FulfillmentService();
+        $this->fulfillment->syncProduct($id);
     }
 
     /**
@@ -233,6 +251,8 @@ class ProductService
             throw $e;
         }
 
+        $this->syncToFulfillor($id);
+
         return $this->find($id);
     }
 
@@ -272,6 +292,8 @@ class ProductService
             throw $e;
         }
 
+        $this->syncToFulfillor($id);
+
         return $this->find($id);
     }
 
@@ -304,16 +326,25 @@ class ProductService
         return $this->find($id);
     }
 
-    public function delete(int $id): void
+    /**
+     * Returns the Fulfillor product id if the deleted product was linked to one —
+     * Fulfillor's API has no product delete, so the caller tells the admin to remove
+     * it in the Fulfillor dashboard by hand.
+     */
+    public function delete(int $id): ?string
     {
-        if (!$this->repo->find($id)) {
+        $product = $this->repo->find($id);
+        if (!$product) {
             throw new DomainException('Product not found', 404);
         }
+        $fulfillorId = trim((string)($product['fulfillor_product_id'] ?? ''));
         // product_specifications/product_fitments/product_cross_references/cart_items/
         // wishlists CASCADE; order_items SET NULL (order history keeps its sku/name/price
         // snapshot) — schema already
         // handles cleanup, no extra guard needed here.
         $this->repo->delete($id);
+
+        return $fulfillorId !== '' ? $fulfillorId : null;
     }
 
     private function validate(array $input, ?int $excludeId): array

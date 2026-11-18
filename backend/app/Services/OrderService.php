@@ -168,32 +168,36 @@ class OrderService
 
     /**
      * Step 1 of leaving 'pending_vin_verification': an admin has checked the customer's
-     * VIN/Mulkiya against the ordered parts and records the VIN. The order stays in
-     * 'pending_vin_verification' — sending to the 3PL is a separate step (step 2,
-     * approveForFulfillment). Can be re-run to correct a mistyped VIN before sending.
+     * VIN/Mulkiya against the ordered parts and approves it, with an optional note. The
+     * order stays in 'pending_vin_verification' — sending to the 3PL is a separate step
+     * (step 2, approveForFulfillment). Can be re-run to edit the note before sending.
      */
-    public function verifyVin(int $id, string $vin, int $adminId): array
+    public function verifyVin(int $id, ?string $note, int $adminId): array
     {
         $order = $this->repo->find($id);
         if (!$order) {
             throw new DomainException('Order not found', 404);
         }
         if ($order['status'] !== 'pending_vin_verification') {
-            throw new DomainException('Only orders awaiting VIN verification can have their VIN verified', 409);
+            throw new DomainException('Only orders awaiting VIN verification can have their VIN approved', 409);
         }
 
-        $vin = strtoupper(preg_replace('/\s+/', '', $vin) ?? '');
-        // Standard 17-char VIN; I, O and Q are never used (confusable with 1/0).
-        if (!preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $vin)) {
-            throw new DomainException('Enter a valid 17-character VIN (letters I, O and Q are not used in VINs)', 422);
+        $note = trim((string)($note ?? ''));
+        if (mb_strlen($note) > 1000) {
+            throw new DomainException('Note must be 1000 characters or less', 422);
         }
 
         $this->repo->update($id, [
-            'vin' => $vin,
+            'vin_note' => $note !== '' ? $note : null,
             'vin_verified_at' => date('Y-m-d H:i:s'),
             'vin_verified_by' => $adminId,
         ]);
-        $this->repo->addStatusHistory($id, 'pending_vin_verification', "VIN {$vin} verified — ready to send to 3PL.", $adminId);
+        $this->repo->addStatusHistory(
+            $id,
+            'pending_vin_verification',
+            'VIN approved — ready to send to 3PL.' . ($note !== '' ? " Note: {$note}" : ''),
+            $adminId
+        );
 
         return $this->find($id);
     }

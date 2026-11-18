@@ -91,6 +91,8 @@ export const ProductFormSchema = z
     part_type: z.enum(["genuine", "aftermarket", "oem"]).nullable(),
     oem_part_number: z.string().nullable().optional(),
     fulfillor_product_id: z.string().nullable().optional(),
+    // '3pl' = stocked at Fulfillor: auto-created/updated there on every save.
+    source: z.enum(["local", "3pl"]),
     material: z.string().nullable().optional(),
     country_of_origin: z.string().nullable().optional(),
 
@@ -139,6 +141,7 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   part_type: null,
   oem_part_number: "",
   fulfillor_product_id: "",
+  source: "3pl",
   material: "",
   country_of_origin: "",
   fits_all_vehicles: false,

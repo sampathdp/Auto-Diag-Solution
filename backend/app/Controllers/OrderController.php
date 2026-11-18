@@ -104,10 +104,10 @@ class OrderController extends BaseController
     {
         $order = $this->service->verifyVin(
             (int)$request->getParam('id'),
-            (string)($request->input('vin') ?? ''),
+            is_string($request->input('note')) ? $request->input('note') : null,
             (int)$request->user->id
         );
-        $this->success($order, 'VIN verified');
+        $this->success($order, 'VIN approved');
     }
 
     public function approveFulfillment(Request $request): void

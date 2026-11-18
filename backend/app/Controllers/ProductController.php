@@ -125,8 +125,13 @@ class ProductController extends BaseController
 
     public function destroy(Request $request): void
     {
-        $this->service->delete((int)$request->getParam('id'));
-        $this->success(null, 'Product deleted successfully');
+        $fulfillorId = $this->service->delete((int)$request->getParam('id'));
+        $this->success(
+            ['fulfillor_product_id' => $fulfillorId],
+            $fulfillorId !== null
+                ? "Product deleted. It still exists in Fulfillor (product {$fulfillorId}) — remove it in the Fulfillor dashboard; their API has no delete."
+                : 'Product deleted successfully'
+        );
     }
 
     public function updateSpecifications(Request $request): void

@@ -124,7 +124,7 @@ export default function AdminOrderDetailPage() {
   });
 
   const verifyVin = useMutation({
-    mutationFn: (vin: string) => adminApi.post(`/orders/${id}/verify-vin`, { vin }),
+    mutationFn: (note: string) => adminApi.post(`/orders/${id}/verify-vin`, { note }),
     onSuccess: () => {
       showSuccess("VIN approved — you can now send the order to the 3PL");
       invalidate();
@@ -233,19 +233,18 @@ export default function AdminOrderDetailPage() {
             </Select>
             {order.status === "pending_vin_verification" &&
               (order.vin_verified_at ? (
-                <span className="text-caption text-ink-muted">
-                  VIN <span className="font-mono text-ink">{order.vin}</span> verified — send to 3PL.{" "}
+                <span className="max-w-xs text-caption text-ink-muted">
+                  VIN approved — send to 3PL.{" "}
                   <button type="button" className="underline hover:text-ink" onClick={() => setVerifyVinOpen(true)}>
-                    Edit
+                    Edit note
                   </button>
+                  {order.vin_note && <span className="block text-ink">{order.vin_note}</span>}
                 </span>
               ) : (
-                <span className="text-caption text-ink-muted">Step 1: verify the VIN.</span>
+                <span className="text-caption text-ink-muted">Step 1: approve the VIN.</span>
               ))}
-            {order.status !== "pending_vin_verification" && order.vin && (
-              <span className="text-caption text-ink-muted">
-                VIN <span className="font-mono text-ink">{order.vin}</span>
-              </span>
+            {order.status !== "pending_vin_verification" && order.vin_note && (
+              <span className="max-w-xs text-caption text-ink-muted">VIN note: {order.vin_note}</span>
             )}
           </div>
 
@@ -546,7 +545,7 @@ export default function AdminOrderDetailPage() {
         onClose={() => setApproveOpen(false)}
         onConfirm={() => approveFulfillment.mutate()}
         title="Send to 3PL?"
-        description={`VIN ${order.vin ?? ""} is verified. Order details will be sent to the 3PL for fulfillment — this can't be undone.`}
+        description={`The VIN is approved. Order details will be sent to the 3PL for fulfillment — this can't be undone.`}
         confirmLabel="Send to 3PL"
         loading={approveFulfillment.isPending}
       />
@@ -554,8 +553,8 @@ export default function AdminOrderDetailPage() {
       <VerifyVinModal
         open={verifyVinOpen}
         onClose={() => setVerifyVinOpen(false)}
-        onConfirm={(vin) => verifyVin.mutate(vin)}
-        initialVin={order.vin}
+        onConfirm={(note) => verifyVin.mutate(note)}
+        initialNote={order.vin_note}
         loading={verifyVin.isPending}
       />
     </div>

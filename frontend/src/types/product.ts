@@ -49,6 +49,9 @@ export interface Product {
   part_type: "genuine" | "aftermarket" | "oem" | null;
   oem_part_number: string | null;
   fulfillor_product_id?: string | null;
+  /** Last automatic push to Fulfillor (source='3pl' products only) — see FulfillmentService::syncProduct. */
+  fulfillor_synced_at?: string | null;
+  fulfillor_sync_error?: string | null;
   material: string | null;
   country_of_origin: string | null;
   source: "local" | "3pl";

@@ -9,7 +9,7 @@ import { Input } from "@/components/admin/ui/Input";
 import { Select } from "@/components/admin/ui/Select";
 import { Switch } from "@/components/admin/ui/Switch";
 import { Button } from "@/components/admin/ui/Button";
-import { generateSku } from "@/lib/admin/utils";
+import { formatDateTime, generateSku } from "@/lib/admin/utils";
 import { adminApi } from "@/lib/admin/api-client";
 import { showSuccess } from "@/components/admin/ui/toast";
 import type { ProductFormValues } from "@/lib/admin/schemas/productSchema";
@@ -21,12 +21,16 @@ export function BasicInfoCard({
   categories,
   brands,
   productId,
+  fulfillorSyncError,
+  fulfillorSyncedAt,
 }: {
   form: UseFormReturn<ProductFormValues>;
   categories: Category[];
   brands: Brand[];
   /** Set in edit mode — enables the Fulfillor link/create actions (they need a saved product). */
   productId?: number;
+  fulfillorSyncError?: string | null;
+  fulfillorSyncedAt?: string | null;
 }) {
   const {
     register,
@@ -137,6 +141,24 @@ export function BasicInfoCard({
             className="font-mono"
             {...register("oem_part_number")}
           />
+        </FormField>
+
+        <FormField
+          label="Send to 3PL"
+          className="sm:col-span-2"
+          helperText="On: this product is created in Fulfillor when saved, and every edit is sent there too. Fulfillor has no delete — remove deleted products in their dashboard."
+        >
+          <Switch
+            label={watch("source") === "3pl" ? "Stocked at the 3PL (Fulfillor) — synced on save" : "Local product — not sent to Fulfillor"}
+            checked={watch("source") === "3pl"}
+            onChange={(e) => setValue("source", e.target.checked ? "3pl" : "local", { shouldDirty: true })}
+          />
+          {watch("source") === "3pl" && fulfillorSyncError && (
+            <p className="mt-1 text-caption font-medium text-danger">Last sync to Fulfillor failed: {fulfillorSyncError}</p>
+          )}
+          {watch("source") === "3pl" && !fulfillorSyncError && fulfillorSyncedAt && (
+            <p className="mt-1 text-caption text-ink-muted">Last synced to Fulfillor {formatDateTime(fulfillorSyncedAt)}</p>
+          )}
         </FormField>
 
         <FormField

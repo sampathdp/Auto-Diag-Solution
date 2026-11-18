@@ -394,18 +394,7 @@ class FulfillmentService
             return ['fulfillor_product_id' => (string)$existing['id'], 'created' => false];
         }
 
-        $payload = [
-            'ownerPartyId' => $this->requireEnv('FULFILLOR_ORG_ID'),
-            'productName' => (string)$product['name_en'],
-            'description' => ((string)($product['short_description_en'] ?? '')) ?: (string)$product['name_en'],
-            'price' => (float)$product['price'],
-            'currency' => 'AED',
-            'identifications' => [['idType' => 'Sku', 'idValue' => (string)$product['sku']]],
-        ];
-        if (!empty($product['weight_kg'])) {
-            $payload['weight'] = (float)$product['weight_kg'];
-            $payload['weightUom'] = 'kg';
-        }
+        $payload = ['ownerPartyId' => $this->requireEnv('FULFILLOR_ORG_ID')] + $this->buildProductPayload($product);
 
         try {
             $response = $this->client->createProduct($payload);
@@ -420,6 +409,65 @@ class FulfillmentService
 
         $this->products->update($productId, ['fulfillor_product_id' => $newId]);
         return ['fulfillor_product_id' => $newId, 'created' => true];
+    }
+
+    /**
+     * Automatic push called after a product is created or edited in admin: creates it in
+     * Fulfillor (or links an existing one with the same SKU) if it isn't linked yet,
+     * otherwise PUTs the current name/description/price/weight/SKU. Best-effort, like
+     * pushOrder — never throws, so a Fulfillor outage can't block saving a product; the
+     * outcome lands in products.fulfillor_synced_at / fulfillor_sync_error instead.
+     * No-op until Fulfillor is configured.
+     */
+    public function syncProduct(int $productId): void
+    {
+        if (!$this->client->isConfigured()) {
+            return;
+        }
+
+        try {
+            $product = $this->requireProduct($productId);
+            $fulfillorId = trim((string)($product['fulfillor_product_id'] ?? ''));
+
+            if ($fulfillorId === '') {
+                $this->createProductInFulfillor($productId);
+            } else {
+                try {
+                    $this->client->updateProduct($fulfillorId, $this->buildProductPayload($product));
+                } catch (FulfillorApiException $e) {
+                    throw new DomainException($e->getMessage(), 502);
+                }
+            }
+
+            $this->products->update($productId, [
+                'fulfillor_synced_at' => date('Y-m-d H:i:s'),
+                'fulfillor_sync_error' => null,
+            ]);
+        } catch (\Throwable $e) {
+            error_log("Fulfillor product sync failed for product {$productId}: " . $e->getMessage());
+            try {
+                $this->products->update($productId, ['fulfillor_sync_error' => mb_substr($e->getMessage(), 0, 1000)]);
+            } catch (\Throwable $ignored) {
+                // Recording the error is itself best-effort (e.g. migration not run yet).
+            }
+        }
+    }
+
+    /** Shared create/update body — Fulfillor's PUT takes the same fields minus ownerPartyId. */
+    private function buildProductPayload(array $product): array
+    {
+        $payload = [
+            'productName' => (string)$product['name_en'],
+            'description' => ((string)($product['short_description_en'] ?? '')) ?: (string)$product['name_en'],
+            'price' => (float)$product['price'],
+            'currency' => 'AED',
+            'identifications' => [['idType' => 'Sku', 'idValue' => (string)$product['sku']]],
+        ];
+        if (!empty($product['weight_kg'])) {
+            $payload['weight'] = (float)$product['weight_kg'];
+            $payload['weightUom'] = 'kg';
+        }
+        return $payload;
     }
 
     private function findFulfillorProductBySku(string $sku): ?array

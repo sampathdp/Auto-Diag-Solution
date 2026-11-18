@@ -58,6 +58,12 @@ class FulfillorClient
         return $this->request('POST', '/rest/s1/api/v1/products', $payload);
     }
 
+    /** PUT /products/{productId} — name/description/price/weight/identifications changes. */
+    public function updateProduct(string $fulfillorProductId, array $payload): array
+    {
+        return $this->request('PUT', '/rest/s1/api/v1/products/' . rawurlencode($fulfillorProductId), $payload);
+    }
+
     /**
      * GET /inventory — stock rows for the given products at a facility. Rows may be
      * split by location, so callers must sum per productId.

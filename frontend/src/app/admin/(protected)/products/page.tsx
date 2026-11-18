@@ -15,7 +15,7 @@ import { FilterBar } from "@/components/admin/FilterBar";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { actionsColumn, currencyColumn } from "@/components/admin/columns";
 import { defaultRowActions } from "@/components/admin/ActionsMenu";
-import { showSuccess } from "@/components/admin/ui/toast";
+import { showInfo, showSuccess } from "@/components/admin/ui/toast";
 import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { useDataTable } from "@/lib/admin/hooks/useDataTable";
@@ -113,9 +113,13 @@ function AdminProductsPageContent() {
   });
 
   const deleteProduct = useMutation({
-    mutationFn: (id: number) => adminApi.delete(`/products/${id}`),
-    onSuccess: () => {
+    mutationFn: (id: number) => adminApi.delete<{ fulfillor_product_id: string | null } | null>(`/products/${id}`),
+    onSuccess: (data) => {
       showSuccess("Product deleted");
+      // Fulfillor's API has no product delete — the admin has to remove it there by hand.
+      if (data?.fulfillor_product_id) {
+        showInfo(`Still in Fulfillor as product ${data.fulfillor_product_id} — remove it in the Fulfillor dashboard.`);
+      }
       setDeleteTarget(null);
       invalidate();
     },
@@ -130,11 +134,17 @@ function AdminProductsPageContent() {
       Promise.all(
         payload.ids.map((id) =>
           payload.action === "delete"
-            ? adminApi.delete(`/products/${id}`)
+            ? adminApi.delete<{ fulfillor_product_id: string | null } | null>(`/products/${id}`)
             : adminApi.put(`/products/${id}`, { status: payload.action === "activate" ? "active" : "inactive" })
         )
       ),
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
+      if (variables.action === "delete") {
+        const stillInFulfillor = (data as ({ fulfillor_product_id?: string | null } | null)[]).filter((d) => d?.fulfillor_product_id).length;
+        if (stillInFulfillor > 0) {
+          showInfo(`${stillInFulfillor} deleted product(s) still exist in Fulfillor — remove them in the Fulfillor dashboard.`);
+        }
+      }
       showSuccess(
         variables.action === "delete"
           ? "Products deleted"
