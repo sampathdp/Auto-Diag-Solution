@@ -453,6 +453,61 @@ class FulfillmentService
         }
     }
 
+    /**
+     * Bulk "Send to 3PL" for existing products: marks each as source='3pl' (so later
+     * edits keep syncing) and pushes it via syncProduct(). One product failing doesn't
+     * stop the rest — each gets its own result row.
+     *
+     * @param int[] $productIds
+     * @return array{sent:int, failed:int, results:array<int, array{id:int, sku:string, ok:bool, fulfillor_product_id:?string, error:?string}>}
+     */
+    public function sendProducts(array $productIds): array
+    {
+        if (!$this->client->isConfigured()) {
+            throw new DomainException('Fulfillor is not configured (set FULFILLOR_BASE_URL / FULFILLOR_API_KEY)', 503);
+        }
+        $productIds = array_values(array_unique(array_filter(array_map('intval', $productIds), fn($id) => $id > 0)));
+        if ($productIds === []) {
+            throw new DomainException('Select at least one product', 422);
+        }
+        if (count($productIds) > 200) {
+            throw new DomainException('Send at most 200 products at a time', 422);
+        }
+
+        // Each product is 1–2 Fulfillor round trips; don't let PHP's default 30s cut a big batch off midway.
+        @set_time_limit(300);
+
+        $results = [];
+        $sent = 0;
+        foreach ($productIds as $id) {
+            $product = $this->products->find($id);
+            if (!$product) {
+                $results[] = ['id' => $id, 'sku' => '', 'ok' => false, 'fulfillor_product_id' => null, 'error' => 'Product not found'];
+                continue;
+            }
+
+            $this->products->update($id, ['source' => '3pl']);
+            $this->syncProduct($id);
+
+            $after = $this->products->find($id) ?? $product;
+            $error = $after['fulfillor_sync_error'] ?? null;
+            $fulfillorId = trim((string)($after['fulfillor_product_id'] ?? ''));
+            $ok = ($error === null || $error === '') && $fulfillorId !== '';
+            if ($ok) {
+                $sent++;
+            }
+            $results[] = [
+                'id' => $id,
+                'sku' => (string)$product['sku'],
+                'ok' => $ok,
+                'fulfillor_product_id' => $fulfillorId !== '' ? $fulfillorId : null,
+                'error' => $ok ? null : ((string)($error ?: 'Not linked after sync')),
+            ];
+        }
+
+        return ['sent' => $sent, 'failed' => count($results) - $sent, 'results' => $results];
+    }
+
     /** Shared create/update body — Fulfillor's PUT takes the same fields minus ownerPartyId. */
     private function buildProductPayload(array $product): array
     {

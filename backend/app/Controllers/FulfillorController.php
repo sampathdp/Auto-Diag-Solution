@@ -40,6 +40,14 @@ class FulfillorController extends BaseController
         );
     }
 
+    /** Bulk "Send to 3PL" from the products list — body: { ids: number[] }. */
+    public function sendProducts(Request $request): void
+    {
+        $ids = $request->input('ids');
+        $result = $this->fulfillment->sendProducts(is_array($ids) ? $ids : []);
+        $this->success($result, "Sent {$result['sent']} product(s) to Fulfillor" . ($result['failed'] > 0 ? ", {$result['failed']} failed" : ''));
+    }
+
     /** Pulls available stock from the Fulfillor warehouse now instead of waiting for cron. */
     public function syncStock(Request $request): void
     {

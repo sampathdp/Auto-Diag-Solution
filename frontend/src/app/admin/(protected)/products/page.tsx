@@ -15,11 +15,11 @@ import { FilterBar } from "@/components/admin/FilterBar";
 import { ConfirmDialog } from "@/components/admin/ui/ConfirmDialog";
 import { actionsColumn, currencyColumn } from "@/components/admin/columns";
 import { defaultRowActions } from "@/components/admin/ActionsMenu";
-import { showInfo, showSuccess } from "@/components/admin/ui/toast";
+import { showError, showInfo, showSuccess } from "@/components/admin/ui/toast";
 import { MediaThumbnail } from "@/components/admin/media/MediaThumbnail";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { useDataTable } from "@/lib/admin/hooks/useDataTable";
-import { adminApi } from "@/lib/admin/api-client";
+import { adminApi, ApiError } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatAED } from "@/lib/admin/utils";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
@@ -129,6 +129,29 @@ function AdminProductsPageContent() {
   // PUT/DELETE endpoint per id in parallel instead, the same working pattern
   // already used for Media's bulk delete (Phase F4). This is a real, fully
   // functional implementation, not a mock-shaped stand-in.
+  // Pushes existing products to Fulfillor (creates them there, or links by SKU) and
+  // marks them source='3pl' so later edits keep syncing. Writes to the live 3PL account.
+  type SendResult = { sent: number; failed: number; results: { id: number; sku: string; ok: boolean; error: string | null }[] };
+  const sendToFulfillor = useMutation({
+    mutationFn: (ids: number[]) => adminApi.post<SendResult>("/fulfillor/send-products", { ids }),
+    onSuccess: (result) => {
+      if (result.sent > 0) showSuccess(`Sent ${result.sent} product(s) to 3PL`);
+      const failures = result.results.filter((r) => !r.ok);
+      if (failures.length > 0) {
+        showError(
+          `${failures.length} failed — ` +
+            failures
+              .slice(0, 3)
+              .map((f) => `${f.sku || `#${f.id}`}: ${f.error}`)
+              .join("; ") +
+            (failures.length > 3 ? "…" : "")
+        );
+      }
+      invalidate();
+    },
+    onError: (err) => showError(err instanceof ApiError ? err.message : "Could not send products to 3PL."),
+  });
+
   const bulkAction = useMutation({
     mutationFn: (payload: { action: "delete" | "activate" | "deactivate"; ids: number[] }) =>
       Promise.all(
@@ -271,6 +294,18 @@ function AdminProductsPageContent() {
               loading={bulkAction.isPending}
             >
               Deactivate
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                if (window.confirm(`Send ${rows.length} product(s) to Fulfillor (live 3PL account)? Each is created there, or linked if the SKU already exists, and future edits will sync automatically.`)) {
+                  sendToFulfillor.mutate(rows.map((r) => r.id), { onSuccess: clear });
+                }
+              }}
+              loading={sendToFulfillor.isPending}
+            >
+              Send to 3PL
             </Button>
             <Button
               size="sm"

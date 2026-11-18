@@ -218,7 +218,8 @@ $router->group([
     $router->put('/products/{id}/vehicles', [ProductController::class, 'updateFitment']);
     $router->post('/products/{id}/fulfillor/link', [App\Controllers\FulfillorController::class, 'linkProduct']);
     $router->post('/products/{id}/fulfillor/create', [App\Controllers\FulfillorController::class, 'createProduct']);
-    $router->post('/fulfillor/sync-stock', [App\Controllers\FulfillorController::class, 'syncStock']);
+    $router->post('/fulfillor/send-products', [App\Controllers\FulfillorController::class, 'sendProducts']);
+    $router->post('/fulfillor/sync-stock',[App\Controllers\FulfillorController::class, 'syncStock']);
 
     // --- Settings ---
     // /settings/bulk is registered before /settings/{key} — same "specific route
