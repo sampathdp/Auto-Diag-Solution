@@ -4,52 +4,63 @@ declare(strict_types=1);
 
 namespace App\Services\Fulfillment;
 
+use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
 use App\Repositories\ProductRepository;
 
 /**
- * Hands a placed order off to Fulfillor (external fulfillment/WMS platform, built on
- * Moqui — see Fulfillor_API_v1_Reference.pdf) so their warehouse can pick, pack, and
- * ship it, and keeps our order status in sync with theirs afterward. Deliberately
- * best-effort and non-blocking throughout: until FULFILLOR_BASE_URL/FULFILLOR_API_KEY
- * are set, every method here no-ops, and even once they are, an outage on Fulfillor's
- * side must never stop a customer's checkout or an admin's "Approve & Send to 3PL"
- * action from succeeding locally. Failures/skips are recorded on the order
- * (fulfillor_sync_error) instead of thrown — callers (OrderService::
- * approveForFulfillment(), the fulfillor:sync console command, the webhook receiver)
- * never need to catch anything.
+ * Integration with Fulfillor (external 3PL / WMS platform, built on Moqui — see
+ * Fulfillor_API_v1_Reference.pdf): their warehouse holds our stock, picks, packs and
+ * hands orders to a courier.
  *
- * Per the reference doc, v1 is a plain pull-only REST API (List/Get/Create/Update
- * orders) — there is no documented outbound-webhook capability. Polling (pullOrderStatus()
- * / syncAllPending(), scheduled via console.php's fulfillor:sync) is therefore the
- * confirmed way status changes make it back to us; applyWebhookUpdate() exists as a
- * defensive extra in case Fulfillor adds/enables push callbacks later, not because
- * their v1 docs promise one.
+ * Order flow is deliberately best-effort and non-blocking: until FULFILLOR_BASE_URL /
+ * FULFILLOR_API_KEY are set every order method no-ops, and even once they are, an
+ * outage on Fulfillor's side must never stop a checkout or an admin action from
+ * succeeding locally. Failures are recorded on the order (fulfillor_sync_error) instead
+ * of thrown. The product-linking methods are the exception: they're explicit admin
+ * actions, so they throw a DomainException the admin sees directly.
+ *
+ * v1 is a pull-only REST API with no documented webhooks, so status comes back via
+ * polling (syncAllPending(), scheduled through `php console.php fulfillor:sync`).
  */
 class FulfillmentService
 {
     /**
-     * Fulfillor statusId -> our orders.status. Fulfillor runs on Moqui, whose enum ids
-     * are PascalCase without underscores (confirmed by the reference doc's own
-     * conventions table: ProductActive, AstAvailable, ShipInput, PtAsset, ScWeb, ...).
-     * Of the order statuses, only OrderPlaced and OrderApproved are actually
-     * documented; OrderShipped/OrderCompleted/OrderCancelled/OrderRejected below follow
-     * the same confirmed "Order" + PascalCase-verb pattern but are inferred, not
-     * confirmed — verify these against a real order's lifecycle once live and adjust.
-     * Payment-side statuses (refunded) are deliberately not mapped here: Fulfillor
-     * reports fulfillment/shipping state, not refunds.
+     * Fulfillor order statusId -> our status. Moqui order statuses. OrderPlaced and
+     * OrderApproved are confirmed by the reference doc and the live account; the rest
+     * are Moqui's standard OrderStatus enum values.
      */
-    private const STATUS_MAP = [
-        'OrderPlaced' => 'processing',     // confirmed — Fulfillor's initial status right after Create Order
-        'OrderApproved' => 'processing',   // confirmed
-        'OrderShipped' => 'shipped',       // inferred
-        'OrderCompleted' => 'delivered',   // inferred
-        'OrderCancelled' => 'cancelled',   // inferred
-        'OrderRejected' => 'cancelled',    // inferred
+    private const ORDER_STATUS_MAP = [
+        'OrderOpen' => 'processing',
+        'OrderRequested' => 'processing',
+        'OrderPlaced' => 'processing',
+        'OrderProcessing' => 'processing',
+        'OrderApproved' => 'processing',
+        'OrderHold' => 'processing',
+        'OrderSent' => 'shipped',
+        'OrderCompleted' => 'shipped', // Moqui completes an order once fully shipped — not proof of delivery
+        'OrderCancelled' => 'cancelled',
+        'OrderRejected' => 'cancelled',
     ];
 
-    // Once a local order is one of these, a stale/out-of-order webhook or poll result
-    // must never regress it.
+    /**
+     * Fulfillor shipment (fulfillments[].status) -> our status. ShipInput is confirmed
+     * by the reference doc; the rest are Moqui's standard ShipmentStatus enum values.
+     * Physical progress shows up here, not on the order status, which stays
+     * "OrderApproved" while the warehouse works on it (seen on the live account).
+     */
+    private const SHIPMENT_STATUS_MAP = [
+        'ShipInput' => 'processing',
+        'ShipScheduled' => 'processing',
+        'ShipPicked' => 'processing',
+        'ShipPacked' => 'processing',
+        'ShipShipped' => 'shipped',
+        'ShipDelivered' => 'delivered',
+    ];
+
+    // Forward-only progression; a stale poll must never move an order backwards.
+    private const PROGRESS_RANK = ['processing' => 1, 'shipped' => 2, 'delivered' => 3];
+
     private const TERMINAL_STATUSES = ['delivered', 'cancelled', 'refunded'];
 
     private FulfillorClient $client;
@@ -62,6 +73,13 @@ class FulfillmentService
         $this->orders = new OrderRepository();
         $this->products = new ProductRepository();
     }
+
+    public function isConfigured(): bool
+    {
+        return $this->client->isConfigured();
+    }
+
+    // ---------------------------------------------------------------- orders
 
     public function pushOrder(int $orderId): void
     {
@@ -79,12 +97,14 @@ class FulfillmentService
             [$lineItems, $unmapped] = $this->buildLineItems($this->orders->items($orderId));
 
             if (!$lineItems) {
-                $this->orders->update($orderId, [
-                    'fulfillor_sync_error' => 'No line items are mapped to a Fulfillor product id yet '
-                        . '(set products.fulfillor_product_id for: ' . implode(', ', $unmapped) . ').',
-                ]);
+                $this->recordSyncError($orderId, 'No line items are mapped to a Fulfillor product id yet '
+                    . '(set products.fulfillor_product_id for: ' . implode(', ', $unmapped) . ').');
                 return;
             }
+
+            $address1 = trim(implode(' ', array_filter([$shipping['building'] ?? '', $shipping['street'] ?? ''])));
+            $address2 = trim(implode(', ', array_filter([$shipping['apartment'] ?? '', $shipping['area'] ?? ''])));
+            $emirate = (string)($shipping['emirate'] ?? '');
 
             $response = $this->client->createOrder([
                 'ownerPartyId' => (string)($_ENV['FULFILLOR_ORG_ID'] ?? ''),
@@ -92,10 +112,13 @@ class FulfillmentService
                     'email' => $order['customer_email'] ?? '',
                     'name' => $shipping['name'] ?? ($order['customer_name'] ?? ''),
                     'phone' => $shipping['phone'] ?? '',
-                    'address1' => trim(($shipping['building'] ?? '') . ' ' . ($shipping['street'] ?? '')),
-                    'city' => $shipping['city'] ?? '',
-                    'state' => $shipping['emirate'] ?? '',
+                    'address1' => $address1 !== '' ? $address1 : ($shipping['area'] ?? ''),
+                    'address2' => $address2,
+                    'city' => ($shipping['city'] ?? '') ?: $emirate,
+                    'state' => $emirate,
                     'country' => 'AE',
+                    // UAE has no postal codes; the API requires the field. Fulfillor's own
+                    // UAE orders use a placeholder too.
                     'postalCode' => '00000',
                 ],
                 'productStoreId' => (string)($_ENV['FULFILLOR_STORE_ID'] ?? ''),
@@ -108,24 +131,20 @@ class FulfillmentService
             ]);
 
             $this->orders->update($orderId, [
-                'fulfillor_order_id' => $response['orderId'] ?? null,
+                'fulfillor_order_id' => $response['orderId'] ?? ($response['order']['orderId'] ?? null),
                 'fulfillor_synced_at' => date('Y-m-d H:i:s'),
                 'fulfillor_sync_error' => $unmapped
                     ? 'Order created, but some items were skipped (no Fulfillor mapping): ' . implode(', ', $unmapped)
                     : null,
             ]);
         } catch (\Throwable $e) {
-            $this->orders->update($orderId, [
-                'fulfillor_sync_error' => substr($e->getMessage(), 0, 500),
-            ]);
+            $this->recordSyncError($orderId, $e->getMessage());
         }
     }
 
     /**
-     * Pull-based sync — polls Fulfillor for one order's current status and applies it
-     * locally. Called per-order by syncAllPending() (console/cron) and by the admin's
-     * manual "Sync Now" action; a no-op if the order was never pushed or Fulfillor
-     * isn't configured.
+     * Polls Fulfillor for one order's current status and applies it locally. A no-op if
+     * the order was never pushed or Fulfillor isn't configured.
      */
     public function pullOrderStatus(int $orderId): void
     {
@@ -139,24 +158,14 @@ class FulfillmentService
         }
 
         try {
-            $response = $this->client->getOrder($order['fulfillor_order_id']);
+            $response = $this->fetchOrder($orderId, (string)$order['fulfillor_order_id']);
             $this->applyProviderUpdate($orderId, $order, $response);
         } catch (\Throwable $e) {
-            $this->orders->update($orderId, [
-                'fulfillor_sync_error' => substr($e->getMessage(), 0, 500),
-            ]);
+            $this->recordSyncError($orderId, $e->getMessage());
         }
     }
 
-    /**
-     * Runs pullOrderStatus() for every order still awaiting a terminal status from
-     * Fulfillor. This is the half of "keep status in sync automatically" that works
-     * without needing Fulfillor to support outbound webhooks — but it only actually
-     * runs automatically once something calls it on a schedule (see console.php's
-     * `fulfillor:sync` command and the cron entry documented alongside it).
-     *
-     * @return array{checked:int, updated:int}
-     */
+    /** @return array{checked:int, updated:int} */
     public function syncAllPending(): array
     {
         if (!$this->client->isConfigured()) {
@@ -179,11 +188,35 @@ class FulfillmentService
     }
 
     /**
-     * Push-based sync — the other half. If/when Fulfillor calls our webhook receiver
-     * with a status change, this looks the order up by the externalId we originally
-     * sent them (our order_number) and applies the same update logic pullOrderStatus()
-     * uses, so both paths can never disagree on what a given payload means.
+     * Tells Fulfillor to cancel an order we cancelled locally, so the warehouse doesn't
+     * ship it. Returns null on success (or when there's nothing to cancel there), or the
+     * error message — the caller still cancels locally and surfaces the message so an
+     * admin can cancel it by hand in Fulfillor.
      */
+    public function cancelInFulfillor(int $orderId, string $reason): ?string
+    {
+        $order = $this->orders->find($orderId);
+        if (!$order || !$order['fulfillor_order_id'] || !$this->client->isConfigured()) {
+            return null;
+        }
+
+        try {
+            $this->client->updateOrder((string)$order['fulfillor_order_id'], [
+                'statusId' => 'OrderCancelled',
+                'orderMessage' => 'Cancelled by store: ' . $reason,
+            ]);
+            $this->safeUpdate($orderId, [
+                'fulfillor_synced_at' => date('Y-m-d H:i:s'),
+                'fulfillor_sync_error' => null,
+            ]);
+            return null;
+        } catch (\Throwable $e) {
+            $message = 'Could not cancel in Fulfillor — cancel it there manually before it ships. (' . $e->getMessage() . ')';
+            $this->recordSyncError($orderId, $message);
+            return $message;
+        }
+    }
+
     public function applyWebhookUpdate(string $externalOrderId, array $payload): void
     {
         $order = $this->orders->findBy('order_number', $externalOrderId);
@@ -195,15 +228,31 @@ class FulfillmentService
     }
 
     /**
-     * Shared by the pull and push paths. $payload is Fulfillor's order representation —
-     * GET /orders/{id} wraps everything under an "order" key (confirmed by the
-     * reference doc's Get/List Order samples), so that's unwrapped first. Status reads
-     * as "status" on GET/List responses but "statusId" on the Update Order request/
-     * response — checked defensively in that order. Carrier comes from the first
-     * fulfillment's carrierPartyId (confirmed field); tracking number is inferred from
-     * fulfillments[].packages[].trackingCode by symmetry with the (confirmed)
-     * incomingShipment.packages[].trackingCode shape, since no example order in the
-     * docs has a populated packages array to confirm against directly.
+     * GET with a fallback for the order-id format. The create response returns a bare
+     * orderId ("100462"), but on the live account GET only accepts the id with its
+     * order-part suffix ("…-01") for some orders. Try as stored, then with "-01"; if
+     * the suffixed form is what works, store it so later polls go straight there.
+     */
+    private function fetchOrder(int $orderId, string $fulfillorOrderId): array
+    {
+        try {
+            return $this->client->getOrder($fulfillorOrderId);
+        } catch (FulfillorApiException $e) {
+            $notFound = in_array($e->getStatusCode(), [400, 404], true);
+            if (!$notFound || preg_match('/-\d{2}$/', $fulfillorOrderId)) {
+                throw $e;
+            }
+        }
+
+        $suffixed = $fulfillorOrderId . '-01';
+        $response = $this->client->getOrder($suffixed);
+        $this->safeUpdate($orderId, ['fulfillor_order_id' => $suffixed]);
+        return $response;
+    }
+
+    /**
+     * Shared by the pull and push paths. Takes the most advanced state reported by
+     * either the order status or its shipments, and only ever moves an order forward.
      */
     private function applyProviderUpdate(int $orderId, array $order, array $payload): void
     {
@@ -212,50 +261,273 @@ class FulfillmentService
         }
 
         $providerOrder = $payload['order'] ?? $payload;
-        $providerStatus = (string)($providerOrder['status'] ?? $providerOrder['statusId'] ?? '');
-        $localStatus = self::STATUS_MAP[$providerStatus] ?? null;
+        $orderStatus = (string)($providerOrder['status'] ?? $providerOrder['statusId'] ?? '');
+        $fulfillments = is_array($providerOrder['fulfillments'] ?? null) ? $providerOrder['fulfillments'] : [];
 
         $data = ['fulfillor_synced_at' => date('Y-m-d H:i:s')];
+        $unknown = [];
 
-        $fulfillment = $providerOrder['fulfillments'][0] ?? [];
-        $carrier = $fulfillment['carrierPartyId'] ?? null;
-        $trackingNumber = $fulfillment['packages'][0]['trackingCode'] ?? null;
-        if ($trackingNumber) {
-            $data['tracking_number'] = $trackingNumber;
-        }
-        if ($carrier) {
-            $data['carrier'] = $carrier;
+        // Carrier/tracking from the most recent fulfillment that has them.
+        foreach ($fulfillments as $fulfillment) {
+            if (!empty($fulfillment['carrierPartyId'])) {
+                $data['carrier'] = (string)$fulfillment['carrierPartyId'];
+            }
+            foreach ((array)($fulfillment['packages'] ?? []) as $package) {
+                if (!empty($package['trackingCode'])) {
+                    $data['tracking_number'] = (string)$package['trackingCode'];
+                }
+            }
         }
 
-        if ($localStatus === null) {
-            // Unrecognized/unmapped provider status — record it for visibility instead
-            // of guessing at a local status. Add it to STATUS_MAP once confirmed.
-            $data['fulfillor_sync_error'] = $providerStatus !== ''
-                ? "Received unmapped Fulfillor status '{$providerStatus}' — add it to FulfillmentService::STATUS_MAP."
+        // Most advanced reported state.
+        $target = null;
+        if ($orderStatus !== '') {
+            if (array_key_exists($orderStatus, self::ORDER_STATUS_MAP)) {
+                $target = self::ORDER_STATUS_MAP[$orderStatus];
+            } else {
+                $unknown[] = "order status '{$orderStatus}'";
+            }
+        }
+        $shipStatuses = [];
+        if ($target !== 'cancelled') {
+            foreach ($fulfillments as $fulfillment) {
+                $shipStatus = (string)($fulfillment['status'] ?? '');
+                if ($shipStatus === '') {
+                    continue;
+                }
+                $shipStatuses[] = $shipStatus;
+                if (!array_key_exists($shipStatus, self::SHIPMENT_STATUS_MAP)) {
+                    $unknown[] = "shipment status '{$shipStatus}'";
+                    continue;
+                }
+                $target = $this->moreAdvanced($target, self::SHIPMENT_STATUS_MAP[$shipStatus]);
+            }
+            if (strcasecmp((string)($providerOrder['fulfillmentStatus'] ?? ''), 'Fulfilled') === 0) {
+                $target = $this->moreAdvanced($target, 'shipped');
+            }
+        }
+
+        $note = null;
+        $newStatus = null;
+
+        if ($target === 'cancelled') {
+            if ($order['status'] === 'shipped') {
+                // Cancelled after it left the warehouse: most likely a refused/undeliverable
+                // parcel coming back (RTO). Don't silently flip it — flag for a human.
+                $data['fulfillor_sync_error'] = "Fulfillor reports this shipped order as {$orderStatus} — possible return to origin (RTO). Check with Fulfillor and update the order manually.";
+            } else {
+                $newStatus = 'cancelled';
+                $data['cancellation_reason'] = ($order['cancellation_reason'] ?? null) ?: "Cancelled in Fulfillor ({$orderStatus})";
+                $note = "Synced from Fulfillor (status: {$orderStatus}).";
+            }
+        } elseif ($target !== null) {
+            $currentRank = self::PROGRESS_RANK[$order['status']] ?? 0;
+            if ((self::PROGRESS_RANK[$target] ?? 0) > $currentRank) {
+                $newStatus = $target;
+                $note = 'Synced from Fulfillor (' . implode(' / ', array_filter(array_merge([$orderStatus], array_unique($shipStatuses)))) . ').';
+            }
+        }
+
+        if (!array_key_exists('fulfillor_sync_error', $data)) {
+            $data['fulfillor_sync_error'] = $unknown
+                ? 'Received unmapped Fulfillor ' . implode(', ', array_unique($unknown)) . ' — add it to FulfillmentService.'
                 : null;
-            $this->orders->update($orderId, $data);
-            return;
         }
 
-        $data['fulfillor_sync_error'] = null;
-        if ($localStatus === 'shipped' && !$order['shipped_at']) {
-            $data['shipped_at'] = date('Y-m-d H:i:s');
-        }
-        if ($localStatus === 'delivered' && !$order['delivered_at']) {
-            $data['delivered_at'] = date('Y-m-d H:i:s');
-        }
-
-        $statusChanged = $localStatus !== $order['status'];
-        if ($statusChanged) {
-            $data['status'] = $localStatus;
+        if ($newStatus !== null) {
+            $data['status'] = $newStatus;
+            if (in_array($newStatus, ['shipped', 'delivered'], true) && !$order['shipped_at']) {
+                $data['shipped_at'] = date('Y-m-d H:i:s');
+            }
+            if ($newStatus === 'delivered' && !$order['delivered_at']) {
+                $data['delivered_at'] = date('Y-m-d H:i:s');
+            }
         }
 
         $this->orders->update($orderId, $data);
 
-        if ($statusChanged) {
-            $this->orders->addStatusHistory($orderId, $localStatus, "Synced from Fulfillor (status: {$providerStatus}).", null);
+        if ($newStatus !== null) {
+            $this->orders->addStatusHistory($orderId, $newStatus, $note, null);
         }
     }
+
+    private function moreAdvanced(?string $a, string $b): string
+    {
+        if ($a === null) {
+            return $b;
+        }
+        return (self::PROGRESS_RANK[$b] ?? 0) > (self::PROGRESS_RANK[$a] ?? 0) ? $b : $a;
+    }
+
+    // -------------------------------------------------------------- products
+
+    /**
+     * Finds this product in Fulfillor by SKU and stores its Fulfillor id. Read-only on
+     * Fulfillor's side.
+     */
+    public function linkProductBySku(int $productId): array
+    {
+        $product = $this->requireProduct($productId);
+        $match = $this->findFulfillorProductBySku((string)$product['sku']);
+        if (!$match) {
+            throw new DomainException("No product with SKU {$product['sku']} found in Fulfillor. Create it there first, or use \"Create in Fulfillor\".", 404);
+        }
+
+        $this->products->update($productId, ['fulfillor_product_id' => (string)$match['id']]);
+        return ['fulfillor_product_id' => (string)$match['id'], 'created' => false];
+    }
+
+    /**
+     * Creates this product in Fulfillor and stores the new id. If a product with the
+     * same SKU already exists there, links to it instead of creating a duplicate.
+     */
+    public function createProductInFulfillor(int $productId): array
+    {
+        $product = $this->requireProduct($productId);
+        if (!empty($product['fulfillor_product_id'])) {
+            throw new DomainException('This product is already linked to Fulfillor product ' . $product['fulfillor_product_id'], 409);
+        }
+
+        $existing = $this->findFulfillorProductBySku((string)$product['sku']);
+        if ($existing) {
+            $this->products->update($productId, ['fulfillor_product_id' => (string)$existing['id']]);
+            return ['fulfillor_product_id' => (string)$existing['id'], 'created' => false];
+        }
+
+        $payload = [
+            'ownerPartyId' => $this->requireEnv('FULFILLOR_ORG_ID'),
+            'productName' => (string)$product['name_en'],
+            'description' => ((string)($product['short_description_en'] ?? '')) ?: (string)$product['name_en'],
+            'price' => (float)$product['price'],
+            'currency' => 'AED',
+            'identifications' => [['idType' => 'Sku', 'idValue' => (string)$product['sku']]],
+        ];
+        if (!empty($product['weight_kg'])) {
+            $payload['weight'] = (float)$product['weight_kg'];
+            $payload['weightUom'] = 'kg';
+        }
+
+        try {
+            $response = $this->client->createProduct($payload);
+        } catch (FulfillorApiException $e) {
+            throw new DomainException($e->getMessage(), 502);
+        }
+
+        $newId = (string)($response['productId'] ?? ($response['product']['productId'] ?? ''));
+        if ($newId === '') {
+            throw new DomainException('Fulfillor did not return a product id', 502);
+        }
+
+        $this->products->update($productId, ['fulfillor_product_id' => $newId]);
+        return ['fulfillor_product_id' => $newId, 'created' => true];
+    }
+
+    private function findFulfillorProductBySku(string $sku): ?array
+    {
+        if (!$this->client->isConfigured()) {
+            throw new DomainException('Fulfillor is not configured', 503);
+        }
+        if ($sku === '') {
+            throw new DomainException('Product has no SKU', 422);
+        }
+
+        try {
+            $response = $this->client->listProducts([
+                'ownerPartyId' => $this->requireEnv('FULFILLOR_ORG_ID'),
+                'sku' => $sku,
+                'countLimit' => 20,
+                'pageIndex' => 0,
+            ]);
+        } catch (FulfillorApiException $e) {
+            throw new DomainException($e->getMessage(), 502);
+        }
+
+        // The sku filter may be a partial match — only accept an exact one.
+        foreach ((array)($response['products'] ?? []) as $candidate) {
+            if (strcasecmp(trim((string)($candidate['sku'] ?? '')), trim($sku)) === 0) {
+                return $candidate;
+            }
+        }
+        return null;
+    }
+
+    private function requireProduct(int $productId): array
+    {
+        $product = $this->products->find($productId);
+        if (!$product) {
+            throw new DomainException('Product not found', 404);
+        }
+        return $product;
+    }
+
+    private function requireEnv(string $key): string
+    {
+        $value = trim((string)($_ENV[$key] ?? ''));
+        if ($value === '') {
+            throw new DomainException("{$key} is not set", 503);
+        }
+        return $value;
+    }
+
+    // ------------------------------------------------------------- inventory
+
+    /**
+     * Overwrites local stock for Fulfillor-linked, stock-tracked products with the
+     * warehouse's available-to-promise (atp) count at FULFILLOR_FACILITY_ID, minus units
+     * we've already sold but not yet sent to Fulfillor (those still count as available
+     * on their side). Read-only on Fulfillor's side.
+     *
+     * @return array{checked:int, updated:int, skipped?:string}
+     */
+    public function syncInventory(): array
+    {
+        $orgId = trim((string)($_ENV['FULFILLOR_ORG_ID'] ?? ''));
+        $facilityId = trim((string)($_ENV['FULFILLOR_FACILITY_ID'] ?? ''));
+        if (!$this->client->isConfigured() || $orgId === '' || $facilityId === '') {
+            return ['checked' => 0, 'updated' => 0, 'skipped' => 'FULFILLOR_* / FULFILLOR_FACILITY_ID not set'];
+        }
+
+        $products = $this->products->findFulfillorStockTracked();
+        if (!$products) {
+            return ['checked' => 0, 'updated' => 0];
+        }
+
+        $reserved = $this->products->quantitiesReservedNotSentToFulfillor();
+        $updated = 0;
+
+        foreach (array_chunk($products, 50) as $chunk) {
+            $ids = array_values(array_unique(array_map(fn ($p) => (string)$p['fulfillor_product_id'], $chunk)));
+            $response = $this->client->getInventory($orgId, $facilityId, $ids);
+
+            $atpByProduct = [];
+            foreach ((array)($response['inventoryList'] ?? []) as $row) {
+                $pid = (string)($row['productId'] ?? '');
+                $atpByProduct[$pid] = ($atpByProduct[$pid] ?? 0) + (int)($row['atp'] ?? 0);
+            }
+
+            foreach ($chunk as $product) {
+                // Missing from the response = nothing available at that facility.
+                $atp = $atpByProduct[(string)$product['fulfillor_product_id']] ?? 0;
+                $quantity = max(0, $atp - ($reserved[(int)$product['id']] ?? 0));
+
+                $status = $quantity > 0
+                    ? 'in_stock'
+                    : ($product['stock_status'] === 'backorder' ? 'backorder' : 'out_of_stock');
+
+                if ((int)$product['stock_quantity'] !== $quantity || $product['stock_status'] !== $status) {
+                    $this->products->update((int)$product['id'], [
+                        'stock_quantity' => $quantity,
+                        'stock_status' => $status,
+                    ]);
+                    $updated++;
+                }
+            }
+        }
+
+        return ['checked' => count($products), 'updated' => $updated];
+    }
+
+    // --------------------------------------------------------------- helpers
 
     /**
      * @return array{0: array<int, array{productId:string,quantity:int,unitAmount:float}>, 1: string[]}
@@ -282,5 +554,24 @@ class FulfillmentService
         }
 
         return [$lineItems, $unmapped];
+    }
+
+    /**
+     * Saves a failure on the order for admins to see. Never throws: it runs inside
+     * catch blocks, and a throw here (e.g. fulfillor_* columns missing) would turn a
+     * recorded best-effort failure into a 500. Falls back to the PHP error log.
+     */
+    private function recordSyncError(int $orderId, string $message): void
+    {
+        $this->safeUpdate($orderId, ['fulfillor_sync_error' => substr($message, 0, 500)], $message);
+    }
+
+    private function safeUpdate(int $orderId, array $data, ?string $context = null): void
+    {
+        try {
+            $this->orders->update($orderId, $data);
+        } catch (\Throwable $e) {
+            error_log("Fulfillor: could not update order {$orderId}" . ($context ? " ({$context})" : '') . ": {$e->getMessage()}");
+        }
     }
 }

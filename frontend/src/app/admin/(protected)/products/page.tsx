@@ -4,7 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Search, Plus, Package } from "lucide-react";
+import { Search, Plus, Package, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { DataTable } from "@/components/admin/DataTable";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
@@ -96,6 +96,21 @@ function AdminProductsPageContent() {
   );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: adminQueryKeys.products.list() });
+
+  // Read-only on Fulfillor's side: pulls warehouse stock for linked products now
+  // instead of waiting for the scheduled fulfillor:sync run.
+  const syncStock = useMutation({
+    mutationFn: () =>
+      adminApi.post<{ checked: number; updated: number; skipped?: string }>("/fulfillor/sync-stock"),
+    onSuccess: (result) => {
+      showSuccess(
+        result.skipped
+          ? `Stock sync skipped: ${result.skipped}`
+          : `Stock synced from 3PL — ${result.updated} of ${result.checked} linked product(s) changed`
+      );
+      invalidate();
+    },
+  });
 
   const deleteProduct = useMutation({
     mutationFn: (id: number) => adminApi.delete(`/products/${id}`),
@@ -203,10 +218,16 @@ function AdminProductsPageContent() {
         title="Products"
         description={`${productsQuery.data?.meta.total ?? "…"} products in catalog`}
         actions={
-          <Button onClick={() => router.push("/admin/products/new")}>
-            <Plus className="h-4 w-4" />
-            Add Product
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => syncStock.mutate()} loading={syncStock.isPending}>
+              <RefreshCw className="h-4 w-4" />
+              Sync Stock from 3PL
+            </Button>
+            <Button onClick={() => router.push("/admin/products/new")}>
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Button>
+          </>
         }
       />
 

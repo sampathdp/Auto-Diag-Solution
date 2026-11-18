@@ -114,6 +114,12 @@ class OrderService
             $data['cancellation_reason'] = $reason;
         }
 
+        // Once an order is with Fulfillor, their warehouse ships it and the sync fills in
+        // carrier/tracking — a hand-typed value would be overwritten or conflict.
+        if (in_array($newStatus, ['processing', 'shipped'], true) && !empty($order['fulfillor_order_id']) && $order['status'] !== $newStatus) {
+            throw new DomainException('This order is fulfilled by Fulfillor — shipping status and tracking come from the 3PL. Use "Sync Now" to refresh.', 409);
+        }
+
         if ($newStatus === 'shipped') {
             $carrier = trim((string)($carrier ?? ''));
             $trackingNumber = trim((string)($trackingNumber ?? ''));
@@ -135,6 +141,19 @@ class OrderService
         $this->repo->update($id, $data);
         $this->repo->addStatusHistory($id, $newStatus, $note, $adminId);
 
+        // Stop the warehouse from shipping a cancelled order. Best-effort: the local
+        // cancel stands either way; a failure is recorded on the order and in the
+        // timeline so an admin can cancel it in Fulfillor by hand.
+        if ($newStatus === 'cancelled' && !empty($order['fulfillor_order_id'])) {
+            $cancelError = $this->fulfillment->cancelInFulfillor($id, $data['cancellation_reason'] ?? 'Cancelled');
+            $this->repo->addStatusHistory(
+                $id,
+                'cancelled',
+                $cancelError ?? 'Cancellation sent to Fulfillor.',
+                $adminId
+            );
+        }
+
         // Promo-linked commission follows the order's own status, not a separate admin
         // click — see CommissionService::approveForOrder/cancelForOrder (both no-op if
         // this order never had a promo code, or its commission already moved past pending).
@@ -148,9 +167,40 @@ class OrderService
     }
 
     /**
-     * The one way out of 'pending_vin_verification': an admin has manually checked the
-     * vehicle model/VIN against the order and confirmed it's correct, so it's now safe to
-     * hand off to Fulfillor. Moves the order to 'processing' and pushes it — same
+     * Step 1 of leaving 'pending_vin_verification': an admin has checked the customer's
+     * VIN/Mulkiya against the ordered parts and records the VIN. The order stays in
+     * 'pending_vin_verification' — sending to the 3PL is a separate step (step 2,
+     * approveForFulfillment). Can be re-run to correct a mistyped VIN before sending.
+     */
+    public function verifyVin(int $id, string $vin, int $adminId): array
+    {
+        $order = $this->repo->find($id);
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        if ($order['status'] !== 'pending_vin_verification') {
+            throw new DomainException('Only orders awaiting VIN verification can have their VIN verified', 409);
+        }
+
+        $vin = strtoupper(preg_replace('/\s+/', '', $vin) ?? '');
+        // Standard 17-char VIN; I, O and Q are never used (confusable with 1/0).
+        if (!preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $vin)) {
+            throw new DomainException('Enter a valid 17-character VIN (letters I, O and Q are not used in VINs)', 422);
+        }
+
+        $this->repo->update($id, [
+            'vin' => $vin,
+            'vin_verified_at' => date('Y-m-d H:i:s'),
+            'vin_verified_by' => $adminId,
+        ]);
+        $this->repo->addStatusHistory($id, 'pending_vin_verification', "VIN {$vin} verified — ready to send to 3PL.", $adminId);
+
+        return $this->find($id);
+    }
+
+    /**
+     * Step 2, the one way out of 'pending_vin_verification': the VIN has already been
+     * verified (verifyVin), so it's now safe to hand off to Fulfillor. Moves the order to 'processing' and pushes it — same
      * best-effort push CheckoutService used to fire automatically at checkout, just gated
      * on this manual check now.
      */
@@ -160,12 +210,23 @@ class OrderService
         if (!$order) {
             throw new DomainException('Order not found', 404);
         }
-        if ($order['status'] !== 'pending_vin_verification') {
-            throw new DomainException('Only orders awaiting VIN verification can be approved for fulfillment', 409);
+        // A retry is allowed for an order that was already approved but never made it to
+        // Fulfillor (push failed or was skipped, so no fulfillor_order_id was stored) —
+        // otherwise a failed first push would leave the order stuck in 'processing' with
+        // no way to resend it.
+        $isRetry = $order['status'] === 'processing' && empty($order['fulfillor_order_id']);
+        if ($order['status'] !== 'pending_vin_verification' && !$isRetry) {
+            throw new DomainException('Only orders awaiting VIN verification (or approved orders not yet sent to the 3PL) can be sent for fulfillment', 409);
         }
 
-        $this->repo->update($id, ['status' => 'processing']);
-        $this->repo->addStatusHistory($id, 'processing', 'VIN verified — approved for fulfillment and sent to 3PL.', $adminId);
+        if (!$isRetry && empty($order['vin_verified_at'])) {
+            throw new DomainException('Verify the VIN first, then send the order to the 3PL', 409);
+        }
+
+        if (!$isRetry) {
+            $this->repo->update($id, ['status' => 'processing']);
+            $this->repo->addStatusHistory($id, 'processing', 'Approved for fulfillment and sent to 3PL.', $adminId);
+        }
 
         $this->fulfillment->pushOrder($id);
 

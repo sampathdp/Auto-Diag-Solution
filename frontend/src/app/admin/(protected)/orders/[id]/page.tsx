@@ -22,12 +22,14 @@ import { StatusTimeline } from "@/components/admin/StatusTimeline";
 import { NotesPanel } from "@/components/admin/NotesPanel";
 import { CancelOrderModal } from "@/components/admin/orders/CancelOrderModal";
 import { ShipOrderModal } from "@/components/admin/orders/ShipOrderModal";
+import { VerifyVinModal } from "@/components/admin/orders/VerifyVinModal";
 import { showSuccess } from "@/components/admin/ui/toast";
 import { useAdminQuery } from "@/lib/admin/hooks/useAdminQuery";
 import { adminApi } from "@/lib/admin/api-client";
 import { adminQueryKeys } from "@/lib/admin/query-keys";
 import { formatAED, formatDateTime } from "@/lib/admin/utils";
 import { cn } from "@/lib/utils";
+import { getTrackingLink } from "@/lib/tracking";
 import type { PaginatedResponse } from "@/types/api";
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import type { Order, OrderItem, OrderStatus, Product } from "@/mocks/admin/db";
@@ -61,6 +63,7 @@ export default function AdminOrderDetailPage() {
   const [shipOpen, setShipOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [verifyVinOpen, setVerifyVinOpen] = useState(false);
 
   const orderQuery = useAdminQuery<Order>(adminQueryKeys.orders.detail(id), `/orders/${id}`);
   const order = orderQuery.data;
@@ -120,10 +123,21 @@ export default function AdminOrderDetailPage() {
     },
   });
 
+  const verifyVin = useMutation({
+    mutationFn: (vin: string) => adminApi.post(`/orders/${id}/verify-vin`, { vin }),
+    onSuccess: () => {
+      showSuccess("VIN approved — you can now send the order to the 3PL");
+      invalidate();
+      setVerifyVinOpen(false);
+    },
+  });
+
   const approveFulfillment = useMutation({
     mutationFn: () => adminApi.post(`/orders/${id}/approve-fulfillment`),
     onSuccess: () => {
-      showSuccess("Order approved and sent to the 3PL");
+      // The push is best-effort: a failure is saved on the order (fulfillor_sync_error)
+      // rather than failing this request, so the 3PL card below shows whether it landed.
+      showSuccess("Order approved — check the Fulfillment (3PL) card for the send result");
       invalidate();
       setApproveOpen(false);
     },
@@ -168,6 +182,11 @@ export default function AdminOrderDetailPage() {
   if (orderQuery.isLoading) return <FullScreenLoader label="Loading order…" />;
   if (!order) return <EmptyState icon={PackageX} title="Order not found" message="It may have been deleted." />;
 
+  const trackingLink = getTrackingLink(order.carrier, order.tracking_number);
+  // Once Fulfillor has the order, its warehouse drives processing/shipped (and the
+  // carrier/tracking) via sync — the backend rejects setting those by hand.
+  const managedByFulfillor = !!order.fulfillor_order_id;
+
   return (
     <div>
       <PageHeader
@@ -203,13 +222,30 @@ export default function AdminOrderDetailPage() {
               className="w-44"
             >
               {STATUS_OPTIONS.map((s) => (
-                <option key={s} value={s}>
+                <option
+                  key={s}
+                  value={s}
+                  disabled={managedByFulfillor && s !== order.status && (s === "processing" || s === "shipped")}
+                >
                   {statusLabel(s)}
                 </option>
               ))}
             </Select>
-            {order.status === "pending_vin_verification" && (
-              <span className="text-caption text-ink-muted">Verify the VIN, then approve below.</span>
+            {order.status === "pending_vin_verification" &&
+              (order.vin_verified_at ? (
+                <span className="text-caption text-ink-muted">
+                  VIN <span className="font-mono text-ink">{order.vin}</span> verified — send to 3PL.{" "}
+                  <button type="button" className="underline hover:text-ink" onClick={() => setVerifyVinOpen(true)}>
+                    Edit
+                  </button>
+                </span>
+              ) : (
+                <span className="text-caption text-ink-muted">Step 1: verify the VIN.</span>
+              ))}
+            {order.status !== "pending_vin_verification" && order.vin && (
+              <span className="text-caption text-ink-muted">
+                VIN <span className="font-mono text-ink">{order.vin}</span>
+              </span>
             )}
           </div>
 
@@ -219,9 +255,21 @@ export default function AdminOrderDetailPage() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 self-stretch border-l border-border pl-6">
-            {order.status === "pending_vin_verification" && (
+            {/* Two-step VIN gate: approve the VIN first, only then can it go to the 3PL. */}
+            {order.status === "pending_vin_verification" && !order.vin_verified_at && (
+              <Button variant="primary" onClick={() => setVerifyVinOpen(true)}>
+                Approve VIN
+              </Button>
+            )}
+            {order.status === "pending_vin_verification" && order.vin_verified_at && (
               <Button variant="primary" onClick={() => setApproveOpen(true)}>
-                Approve &amp; Send to 3PL
+                Send to 3PL
+              </Button>
+            )}
+            {/* Approved but the push never reached Fulfillor (no order id stored) — resend. */}
+            {order.status === "processing" && !order.fulfillor_order_id && (
+              <Button variant="primary" onClick={() => approveFulfillment.mutate()} loading={approveFulfillment.isPending}>
+                Retry Send to 3PL
               </Button>
             )}
             <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={order.status === "cancelled"}>
@@ -290,14 +338,14 @@ export default function AdminOrderDetailPage() {
                   <p className="font-medium">
                     {order.carrier} <span className="font-mono font-normal text-ink-muted">· {order.tracking_number}</span>
                   </p>
-                  {order.carrier === "Aramex" && order.tracking_number && (
+                  {trackingLink && (
                     <a
-                      href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
+                      href={trackingLink.href}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
                     >
-                      Track on Aramex
+                      Track on {trackingLink.name}
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
@@ -497,10 +545,18 @@ export default function AdminOrderDetailPage() {
         open={approveOpen}
         onClose={() => setApproveOpen(false)}
         onConfirm={() => approveFulfillment.mutate()}
-        title="Approve & send to 3PL?"
-        description="Confirm the vehicle model and VIN have been verified against this order. Once approved, order details are sent to the 3PL for fulfillment and this can't be undone."
-        confirmLabel="Approve & Send to 3PL"
+        title="Send to 3PL?"
+        description={`VIN ${order.vin ?? ""} is verified. Order details will be sent to the 3PL for fulfillment — this can't be undone.`}
+        confirmLabel="Send to 3PL"
         loading={approveFulfillment.isPending}
+      />
+
+      <VerifyVinModal
+        open={verifyVinOpen}
+        onClose={() => setVerifyVinOpen(false)}
+        onConfirm={(vin) => verifyVin.mutate(vin)}
+        initialVin={order.vin}
+        loading={verifyVin.isPending}
       />
     </div>
   );

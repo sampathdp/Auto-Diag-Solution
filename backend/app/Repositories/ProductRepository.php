@@ -436,4 +436,42 @@ class ProductRepository extends BaseRepository
         $sql = !empty($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';
         return [$sql, $params];
     }
+
+    /**
+     * Products linked to Fulfillor whose stock we track — the set the Fulfillor
+     * inventory sync overwrites from the warehouse's available-to-promise count.
+     */
+    public function findFulfillorStockTracked(): array
+    {
+        return DatabaseManager::query(
+            "SELECT id, sku, fulfillor_product_id, stock_quantity, stock_status
+             FROM products
+             WHERE fulfillor_product_id IS NOT NULL AND fulfillor_product_id <> '' AND track_inventory = 1"
+        )->fetchAll();
+    }
+
+    /**
+     * Units already sold on our side (stock decremented at checkout) but not yet handed
+     * to Fulfillor, so the warehouse's count still includes them. Subtracted from the
+     * warehouse figure during inventory sync to avoid re-selling those units.
+     * @return array<int,int> product_id => quantity
+     */
+    public function quantitiesReservedNotSentToFulfillor(): array
+    {
+        $rows = DatabaseManager::query(
+            "SELECT oi.product_id, SUM(oi.quantity) AS qty
+             FROM order_items oi
+             JOIN orders o ON o.id = oi.order_id
+             WHERE oi.product_id IS NOT NULL
+               AND o.fulfillor_order_id IS NULL
+               AND o.status IN ('pending', 'pending_vin_verification', 'paid', 'processing')
+             GROUP BY oi.product_id"
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['product_id']] = (int)$row['qty'];
+        }
+        return $map;
+    }
 }

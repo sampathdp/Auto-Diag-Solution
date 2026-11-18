@@ -100,6 +100,16 @@ class OrderController extends BaseController
         $this->success($order, 'Note added successfully', 201);
     }
 
+    public function verifyVin(Request $request): void
+    {
+        $order = $this->service->verifyVin(
+            (int)$request->getParam('id'),
+            (string)($request->input('vin') ?? ''),
+            (int)$request->user->id
+        );
+        $this->success($order, 'VIN verified');
+    }
+
     public function approveFulfillment(Request $request): void
     {
         $order = $this->service->approveForFulfillment(

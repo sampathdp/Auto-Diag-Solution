@@ -200,6 +200,9 @@ export interface Order {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  /** Set by an admin via verify-vin (step 1 of the VIN gate) — required before approve-fulfillment. */
+  vin?: string | null;
+  vin_verified_at?: string | null;
   /** Set once the order's been pushed to Fulfillor (approve-fulfillment) — null until then. */
   fulfillor_order_id: string | null;
   fulfillor_synced_at: string | null;

@@ -6,7 +6,7 @@ namespace App\Services\Fulfillment;
 
 /**
  * Thin HTTP client for the Fulfillor REST API (Products/Orders/Inventory/Incoming
- * Shipments/Organization — see the vendor's v1 REST reference). Not configured until
+ * Shipments/Organization — see Fulfillor_API_v1_Reference.pdf). Not configured until
  * FULFILLOR_BASE_URL and FULFILLOR_API_KEY are set in .env; isConfigured() lets
  * callers skip the integration cleanly until real credentials exist.
  */
@@ -28,19 +28,49 @@ class FulfillorClient
         return $this->baseUrl !== null && $this->apiKey !== null;
     }
 
-    /**
-     * POST /rest/s1/api/v1/orders — hands a placed order to Fulfillor for fulfillment.
-     * @return array Decoded response body (includes the Fulfillor orderId on success).
-     */
+    /** POST /orders — hands a placed order to Fulfillor for fulfillment. */
     public function createOrder(array $payload): array
     {
         return $this->request('POST', '/rest/s1/api/v1/orders', $payload);
     }
 
-    /** GET /rest/s1/api/v1/orders/{orderId} — pulls current status/fulfillment info. */
+    /** GET /orders/{orderId} — current status/fulfillment info. */
     public function getOrder(string $fulfillorOrderId): array
     {
         return $this->request('GET', '/rest/s1/api/v1/orders/' . rawurlencode($fulfillorOrderId));
+    }
+
+    /** PUT /orders/{orderId} — status/shipping/message changes (only supplied fields change). */
+    public function updateOrder(string $fulfillorOrderId, array $payload): array
+    {
+        return $this->request('PUT', '/rest/s1/api/v1/orders/' . rawurlencode($fulfillorOrderId), $payload);
+    }
+
+    /** GET /products — paginated, filterable by sku/upc/name/status. */
+    public function listProducts(array $query): array
+    {
+        return $this->request('GET', '/rest/s1/api/v1/products?' . http_build_query($query));
+    }
+
+    /** POST /products — creates a product under the organization. */
+    public function createProduct(array $payload): array
+    {
+        return $this->request('POST', '/rest/s1/api/v1/products', $payload);
+    }
+
+    /**
+     * GET /inventory — stock rows for the given products at a facility. Rows may be
+     * split by location, so callers must sum per productId.
+     * @param string[] $productIds
+     */
+    public function getInventory(string $orgId, string $facilityId, array $productIds, string $statusId = 'AstAvailable'): array
+    {
+        return $this->request('GET', '/rest/s1/api/v1/inventory?' . http_build_query([
+            'orgId' => $orgId,
+            'facilityId' => $facilityId,
+            'productIds' => implode(',', $productIds),
+            'statusId' => $statusId,
+        ]));
     }
 
     private function request(string $method, string $path, ?array $body = null): array
@@ -58,7 +88,7 @@ class FulfillorClient
                 'Accept: application/json',
             ],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 8,
+            CURLOPT_TIMEOUT => 15,
             CURLOPT_CONNECTTIMEOUT => 5,
         ]);
         if ($body !== null) {
@@ -78,8 +108,13 @@ class FulfillorClient
         $decoded = json_decode((string)$responseBody, true);
 
         if ($statusCode < 200 || $statusCode >= 300) {
-            $message = is_array($decoded) && isset($decoded['message']) ? (string)$decoded['message'] : "HTTP {$statusCode}";
-            throw new FulfillorApiException("Fulfillor request failed: {$message}", $statusCode);
+            // Moqui errors come back as {"errorCode":400,"errors":"..."}; the docs' own
+            // samples use "message" — accept either.
+            $message = "HTTP {$statusCode}";
+            if (is_array($decoded)) {
+                $message = (string)($decoded['message'] ?? $decoded['errors'] ?? $message);
+            }
+            throw new FulfillorApiException('Fulfillor request failed: ' . trim($message), $statusCode);
         }
 
         return is_array($decoded) ? $decoded : [];

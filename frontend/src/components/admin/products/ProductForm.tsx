@@ -54,6 +54,7 @@ function productToFormValues(product: Product): ProductFormValues {
     images: product.images,
     part_type: product.part_type,
     oem_part_number: product.oem_part_number,
+    fulfillor_product_id: product.fulfillor_product_id ?? "",
     material: product.material,
     country_of_origin: product.country_of_origin,
     fits_all_vehicles: product.fits_all_vehicles,
@@ -142,6 +143,7 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
     images: values.images,
     part_type: values.part_type ?? null,
     oem_part_number: values.oem_part_number ?? null,
+    fulfillor_product_id: values.fulfillor_product_id ?? null,
     material: values.material ?? null,
     country_of_origin: values.country_of_origin ?? null,
     fits_all_vehicles: values.fits_all_vehicles,
@@ -174,7 +176,7 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
   return (
     <form onSubmit={(e) => e.preventDefault()}>
       <div className="space-y-6">
-        <BasicInfoCard form={form} categories={categories} brands={brands} />
+        <BasicInfoCard form={form} categories={categories} brands={brands} productId={product?.id} />
         <BilingualContentCard form={form} />
         <PricingCard form={form} />
         <InventoryCard form={form} />

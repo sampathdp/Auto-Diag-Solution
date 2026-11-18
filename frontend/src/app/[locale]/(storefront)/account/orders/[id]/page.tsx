@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { getOrderStatusClassName, getOrderStatusLabel } from "@/lib/orderStatus";
 import { useVehicleStore } from "@/store/useVehicleStore";
+import { getTrackingLink } from "@/lib/tracking";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -245,16 +246,19 @@ export default function OrderDetailPage() {
                   </p>
                 )}
               </div>
-              {order.carrier === "Aramex" && (
-                <a
-                  href={`https://www.aramex.com/track/results?ShipmentNumber=${encodeURIComponent(order.tracking_number)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-flex w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-bold text-primary hover:bg-secondary/50"
-                >
-                  Track on Aramex
-                </a>
-              )}
+              {(() => {
+                const link = getTrackingLink(order.carrier, order.tracking_number);
+                return link ? (
+                  <a
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-bold text-primary hover:bg-secondary/50"
+                  >
+                    Track on {link.name}
+                  </a>
+                ) : null;
+              })()}
             </div>
           )}
 

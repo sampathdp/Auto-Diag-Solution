@@ -1,6 +1,7 @@
 "use client";
 
 import type { UseFormReturn } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { Card, CardHeader, CardBody } from "@/components/admin/ui/Card";
 import { FormField } from "@/components/admin/ui/FormField";
@@ -9,6 +10,8 @@ import { Select } from "@/components/admin/ui/Select";
 import { Switch } from "@/components/admin/ui/Switch";
 import { Button } from "@/components/admin/ui/Button";
 import { generateSku } from "@/lib/admin/utils";
+import { adminApi } from "@/lib/admin/api-client";
+import { showSuccess } from "@/components/admin/ui/toast";
 import type { ProductFormValues } from "@/lib/admin/schemas/productSchema";
 import type { Category } from "@/mocks/admin/db";
 import type { Brand } from "@/types/brand";
@@ -17,10 +20,13 @@ export function BasicInfoCard({
   form,
   categories,
   brands,
+  productId,
 }: {
   form: UseFormReturn<ProductFormValues>;
   categories: Category[];
   brands: Brand[];
+  /** Set in edit mode — enables the Fulfillor link/create actions (they need a saved product). */
+  productId?: number;
 }) {
   const {
     register,
@@ -28,6 +34,27 @@ export function BasicInfoCard({
     watch,
     formState: { errors },
   } = form;
+
+  type FulfillorLinkResult = { fulfillor_product_id: string; created: boolean };
+  const onLinked = (result: FulfillorLinkResult) => {
+    setValue("fulfillor_product_id", result.fulfillor_product_id, { shouldDirty: false });
+    showSuccess(
+      result.created
+        ? `Created in Fulfillor as product ${result.fulfillor_product_id}`
+        : `Linked to Fulfillor product ${result.fulfillor_product_id}`
+    );
+  };
+  // Read-only on Fulfillor's side: finds the product there by this product's SKU.
+  const linkFulfillor = useMutation({
+    mutationFn: () => adminApi.post<FulfillorLinkResult>(`/products/${productId}/fulfillor/link`),
+    onSuccess: onLinked,
+  });
+  // Writes to Fulfillor (creates the product there) — confirmed first.
+  const createInFulfillor = useMutation({
+    mutationFn: () => adminApi.post<FulfillorLinkResult>(`/products/${productId}/fulfillor/create`),
+    onSuccess: onLinked,
+  });
+  const fulfillorId = watch("fulfillor_product_id");
 
   return (
     <Card>
@@ -110,6 +137,50 @@ export function BasicInfoCard({
             className="font-mono"
             {...register("oem_part_number")}
           />
+        </FormField>
+
+        <FormField
+          label="Fulfillor Product ID"
+          htmlFor="fulfillor_product_id"
+          error={errors.fulfillor_product_id?.message}
+          helperText="The product's id in Fulfillor (3PL). Orders containing unmapped products can't be sent to the warehouse."
+        >
+          <div className="flex flex-col gap-2">
+            <Input
+              id="fulfillor_product_id"
+              placeholder="106024"
+              className="font-mono"
+              {...register("fulfillor_product_id")}
+            />
+            {productId !== undefined && (
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={linkFulfillor.isPending}
+                  onClick={() => linkFulfillor.mutate()}
+                >
+                  Find by SKU
+                </Button>
+                {!fulfillorId && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    loading={createInFulfillor.isPending}
+                    onClick={() => {
+                      if (window.confirm("Create this product in Fulfillor (live 3PL account)? Save any unsaved changes first — the saved name, price and SKU are sent.")) {
+                        createInFulfillor.mutate();
+                      }
+                    }}
+                  >
+                    Create in Fulfillor
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </FormField>
 
         <FormField label="Material" htmlFor="material" error={errors.material?.message}>

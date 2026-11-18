@@ -48,6 +48,7 @@ export interface Product {
   weight_kg: number | null;
   part_type: "genuine" | "aftermarket" | "oem" | null;
   oem_part_number: string | null;
+  fulfillor_product_id?: string | null;
   material: string | null;
   country_of_origin: string | null;
   source: "local" | "3pl";

@@ -23,18 +23,25 @@ switch ($command) {
         echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync]\n";
 }
 
-// Polling half of "sync order status back from Fulfillor automatically" — the push
-// half is the /api/v1/webhooks/fulfillor receiver, for if/when Fulfillor supports
-// outbound webhooks. This only actually runs "automatically" once it's on a schedule;
-// add a cron entry along the lines of (adjust paths/interval as needed):
-//   */5 * * * * php /path/to/backend/console.php fulfillor:sync >> /path/to/backend/storage/logs/fulfillor-sync.log 2>&1
-// No-ops cleanly (prints a message, exits 0) until FULFILLOR_BASE_URL/FULFILLOR_API_KEY
-// are set in .env.
+// Polls Fulfillor for order status and warehouse stock (both read-only on Fulfillor's
+// side). Fulfillor v1 has no webhooks, so this only runs "automatically" once it's on a
+// schedule — add a cron entry (cPanel > Cron Jobs), e.g. every 5 minutes:
+//   */5 * * * * php /path/to/backend/console.php fulfillor:sync >> /path/to/backend/scratch/fulfillor-sync.log 2>&1
+// No-ops cleanly until FULFILLOR_BASE_URL/FULFILLOR_API_KEY are set in .env; the stock
+// part also needs FULFILLOR_ORG_ID and FULFILLOR_FACILITY_ID.
 function syncFulfillorOrders(): void
 {
     $service = new \App\Services\Fulfillment\FulfillmentService();
     $result = $service->syncAllPending();
-    echo "Fulfillor sync: checked {$result['checked']} order(s), updated {$result['updated']}.\n";
+    echo "Fulfillor order sync: checked {$result['checked']} order(s), updated {$result['updated']}.\n";
+
+    try {
+        $stock = $service->syncInventory();
+        $suffix = isset($stock['skipped']) ? " (skipped: {$stock['skipped']})" : '';
+        echo "Fulfillor stock sync: checked {$stock['checked']} product(s), updated {$stock['updated']}{$suffix}.\n";
+    } catch (\Throwable $e) {
+        echo "Fulfillor stock sync failed: {$e->getMessage()}\n";
+    }
 }
 
 function ensureMigrationsLedger(): void

@@ -90,6 +90,7 @@ export const ProductFormSchema = z
     // up front, unlike category/brand which the catalog requires.
     part_type: z.enum(["genuine", "aftermarket", "oem"]).nullable(),
     oem_part_number: z.string().nullable().optional(),
+    fulfillor_product_id: z.string().nullable().optional(),
     material: z.string().nullable().optional(),
     country_of_origin: z.string().nullable().optional(),
 
@@ -137,6 +138,7 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   images: [],
   part_type: null,
   oem_part_number: "",
+  fulfillor_product_id: "",
   material: "",
   country_of_origin: "",
   fits_all_vehicles: false,

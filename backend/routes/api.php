@@ -216,6 +216,9 @@ $router->group([
     $router->delete('/products/{id}', [ProductController::class, 'destroy']);
     $router->put('/products/{id}/specifications', [ProductController::class, 'updateSpecifications']);
     $router->put('/products/{id}/vehicles', [ProductController::class, 'updateFitment']);
+    $router->post('/products/{id}/fulfillor/link', [App\Controllers\FulfillorController::class, 'linkProduct']);
+    $router->post('/products/{id}/fulfillor/create', [App\Controllers\FulfillorController::class, 'createProduct']);
+    $router->post('/fulfillor/sync-stock', [App\Controllers\FulfillorController::class, 'syncStock']);
 
     // --- Settings ---
     // /settings/bulk is registered before /settings/{key} — same "specific route
@@ -263,7 +266,8 @@ $router->group([
     $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
     $router->post('/orders/{id}/refund-request', [OrderController::class, 'requestRefund']);
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
-    $router->post('/orders/{id}/approve-fulfillment', [OrderController::class, 'approveFulfillment']);
+    $router->post('/orders/{id}/verify-vin', [OrderController::class, 'verifyVin']);
+    $router->post('/orders/{id}/approve-fulfillment',[OrderController::class, 'approveFulfillment']);
     $router->post('/orders/{id}/sync-fulfillment', [OrderController::class, 'syncFulfillment']);
 
     // --- Customers (users with role = 'customer') ---
