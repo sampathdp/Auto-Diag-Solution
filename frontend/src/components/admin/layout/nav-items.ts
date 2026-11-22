@@ -18,6 +18,9 @@ import {
   Wallet,
   ShieldCheck,
   Mail,
+  Handshake,
+  ClipboardList,
+  Store,
 } from "lucide-react";
 
 export interface NavLeaf {
@@ -49,6 +52,14 @@ export const NAV_ITEMS: NavEntry[] = [
   { label: "Shipping", href: "/admin/shipping", icon: Truck },
   { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
   { label: "Customers", href: "/admin/customers", icon: Users },
+  {
+    label: "B2B Dealers",
+    icon: Handshake,
+    children: [
+      { label: "Dealer Applications", href: "/admin/b2b/applications", icon: ClipboardList, permission: "b2b.applications.view" },
+      { label: "Approved Dealers", href: "/admin/b2b/dealers", icon: Store, permission: "b2b.applications.view" },
+    ],
+  },
   {
     label: "Content",
     icon: FileText,

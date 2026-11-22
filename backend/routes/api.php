@@ -69,6 +69,7 @@ $router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
 $router->get("$v1/announcement", [SettingController::class, 'publicAnnouncement']);
 $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 $router->get("$v1/home-page", [HomePageController::class, 'show']);
+$router->get("$v1/partner/info", [App\Controllers\B2B\PartnerController::class, 'info']);
 
 // Guest checkout — no login required, customer + shipping details are typed in at
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
@@ -144,6 +145,13 @@ $router->group([
 
     $router->get('/notifications/preferences', [AccountNotificationController::class, 'show']);
     $router->put('/notifications/preferences', [AccountNotificationController::class, 'update']);
+
+    // B2B dealer application: always the caller's own profile (no profile id accepted).
+    $router->get('/dealer', [App\Controllers\B2B\DealerAccountController::class, 'show']);
+    $router->put('/dealer/application', [App\Controllers\B2B\DealerAccountController::class, 'saveDraft']);
+    $router->post('/dealer/documents', [App\Controllers\B2B\DealerAccountController::class, 'uploadDocument']);
+    $router->get('/dealer/documents/{id}', [App\Controllers\B2B\DealerAccountController::class, 'document']);
+    $router->post('/dealer/submit', [App\Controllers\B2B\DealerAccountController::class, 'submit']);
 
     // Mock checkout — creates a real order and auto-confirms payment via a 'mock'
     // provider until the client's real payment gateway is integrated.
@@ -295,6 +303,23 @@ $router->group([
 
     // --- Dashboard ---
     $router->get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // --- B2B: dealer applications and dealers ---
+    $dealersView = [[PermissionMiddleware::class, Permissions::B2B_APPLICATIONS_VIEW]];
+    $dealersReview = [[PermissionMiddleware::class, Permissions::B2B_APPLICATIONS_REVIEW]];
+    $dealersSuspend = [[PermissionMiddleware::class, Permissions::B2B_DEALERS_SUSPEND]];
+    $b2bDealers = App\Controllers\B2B\DealerAdminController::class;
+    $router->get('/b2b/dealers', [$b2bDealers, 'index'], $dealersView);
+    $router->get('/b2b/dealers/{id}', [$b2bDealers, 'show'], $dealersView);
+    $router->post('/b2b/dealers/{id}/notes', [$b2bDealers, 'addNote'], $dealersView);
+    $router->post('/b2b/dealers/{id}/start-review', [$b2bDealers, 'startReview'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/request-info', [$b2bDealers, 'requestInfo'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/approve', [$b2bDealers, 'approve'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/reject', [$b2bDealers, 'reject'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/suspend', [$b2bDealers, 'suspend'], $dealersSuspend);
+    $router->post('/b2b/dealers/{id}/reactivate', [$b2bDealers, 'reactivate'], $dealersSuspend);
+    $router->put('/b2b/dealers/{id}/credit', [$b2bDealers, 'updateCredit'], [[PermissionMiddleware::class, Permissions::B2B_CREDIT_MANAGE]]);
+    $router->get('/b2b/documents/{id}', [$b2bDealers, 'document'], [[PermissionMiddleware::class, Permissions::B2B_DOCUMENTS_VIEW]]);
 
     // --- Email outbox (delivery log + resend) ---
     $router->get('/notifications/outbox', [App\Controllers\NotificationOutboxController::class, 'index']);

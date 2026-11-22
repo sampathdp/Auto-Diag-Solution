@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { safeNextPath } from "@/lib/safeNext";
 import Script from "next/script";
 import { useTranslations } from "next-intl";
 import toast from "react-hot-toast";
@@ -31,7 +32,7 @@ export function SocialButtons() {
     (data: unknown) => {
       const { user, permissions } = data as { user: any; permissions: string[] };
       setAuth(user, permissions || []);
-      router.push("/account/overview");
+      router.push(safeNextPath("/account/overview") as any);
     },
     [router, setAuth]
   );

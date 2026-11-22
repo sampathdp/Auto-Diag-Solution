@@ -100,7 +100,11 @@ try {
 
 } catch (DomainException $e) {
     // Known, user-safe failure (e.g. "Product out of stock") — message is intentionally shown as-is.
-    Response::error($e->getMessage(), null, $e->getStatusCode());
+    Response::error(
+        $e->getMessage(),
+        $e instanceof App\Exceptions\ValidationException ? $e->errors() : null,
+        $e->getStatusCode()
+    );
 } catch (\Throwable $e) {
     // Global Exception Handler — never expose internals in the API response.
     // Every other module (catalog, cart, payments, 3PL sync, ...) funnels its unexpected

@@ -40,6 +40,14 @@ Frontend:
 - Header nav item (en/ar), `/partner`, `/partner/apply` (multi-step, zod), and the status card.
 - Admin Dealer Applications list/detail, the secure document viewer (blob fetch), the approve/reject/suspend modals, and the Dealers list.
 
+**Status (2026-11-23): built and tested.**
+- Migrations `2026_11_23_000001–000005`: dealer profiles, status history, documents, credit accounts, and `admin_notes` accepting `dealer`.
+- The owner's ID number is encrypted at rest (`App\Core\Encryption`), and only admins with `b2b.documents.view` see it in full.
+- Login, register and social sign-in now support `?next=` (same-site paths only), so "Sign in to apply" returns to the form.
+- The admin list and detail pages share one route, `/admin/b2b/dealers/{id}`.
+- Tested on a throwaway database built from all 72 migrations. My new migrations roll back and re-apply cleanly. A 72-check end-to-end API run passed: draft, validation, uploads (a disguised PHP file is rejected), document privacy (other customer 404, anonymous 401, no storage paths in responses), submit, permission checks (customer and limited staff get 403), review, approve with credit, double-approve 409, suspend/reactivate, credit edit, notes, history, info request and resubmit, final rejection, admins can't apply, and all 7 dealer emails queued. Every new page compiles and renders in Next.js, in English and Arabic.
+- Not done in this phase: dealer helpers in the e2e harness, and profile change requests (Phase 6).
+
 ## Phase 2: Wholesale pricing engine
 
 - Migration step 1: `products.wholesale_price` (NULL for now) and `wholesale_min_qty`.
