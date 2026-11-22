@@ -49,6 +49,16 @@ export const adminQueryKeys = {
   settings: {
     all: ["admin", "settings"] as const,
   },
+  staff: {
+    all: ["admin", "staff"] as const,
+    list: ["admin", "staff", "list"] as const,
+    catalogue: ["admin", "staff", "catalogue"] as const,
+    permissions: (id: number) => ["admin", "staff", "permissions", id] as const,
+  },
+  outbox: {
+    all: ["admin", "outbox"] as const,
+    list: (filters: Record<string, unknown> = {}) => ["admin", "outbox", "list", filters] as const,
+  },
   media: {
     list: (filters: Record<string, unknown> = {}) => ["admin", "media", "list", filters] as const,
   },

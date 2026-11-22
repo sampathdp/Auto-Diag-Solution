@@ -39,6 +39,22 @@ export const SETTING_LABELS: Record<string, { label: string; helperText?: string
   whatsapp_number: { label: "WhatsApp Number", helperText: "Include the country code, e.g. 9715XXXXXXXX." },
   ga_tracking_id: { label: "Google Analytics Tracking ID" },
   stripe_publishable_key: { label: "Stripe Publishable Key", helperText: "Safe to expose client-side." },
+
+  // Payment and B2B settings: changing them needs the "Change B2B and payment settings" permission.
+  payment_online_card_enabled: { label: "Online card payments", helperText: "On hold. Leave off until a card gateway is connected; checkout shows card as \"Coming soon\"." },
+  retail_payment_methods: { label: "Retail payment methods", helperText: 'JSON list. Allowed: "cod", "bank_transfer".' },
+  payment_bank_accounts: { label: "Company bank accounts", helperText: "JSON list of {bank_name, account_holder, account_number, iban, swift, branch}. Shown to customers who pay by bank transfer." },
+  payment_bank_transfer_instructions: { label: "Bank transfer instructions", helperText: "Shown under the bank details at checkout and in the order email." },
+  b2b_registration_enabled: { label: "Dealer registration open", helperText: "When off, the Become a Partner form is closed to new applications." },
+  b2b_first_order_requires_quotation: { label: "First dealer order needs a quotation" },
+  b2b_default_credit_enabled: { label: "Credit on by default for new dealers" },
+  b2b_default_credit_period_days: { label: "Default credit period (days)", helperText: "Counted from the delivery date." },
+  b2b_quotation_expiry_days: { label: "Quotation valid for (days)" },
+  b2b_invoice_trigger: { label: "Invoice dealers when the order is", helperText: '"delivered" (default) or "shipped".' },
+  b2b_payment_methods: { label: "Dealer payment methods", helperText: 'JSON list. Allowed: "cod", "bank_transfer", "cheque", "credit".' },
+  b2b_sales_team_emails: { label: "Sales team emails", helperText: 'JSON list of addresses that receive new quotations, e.g. ["sales@example.com"].' },
+  b2b_max_document_mb: { label: "Max document upload size (MB)" },
+  b2b_terms_html: { label: "Dealer terms and conditions", helperText: "Shown on the Become a Partner page." },
 };
 
 export const GROUP_LABELS: Record<string, string> = {
@@ -47,4 +63,5 @@ export const GROUP_LABELS: Record<string, string> = {
   tax: "Tax & VAT",
   integrations: "Integrations",
   payments: "Payments",
+  b2b: "B2B Dealers",
 };

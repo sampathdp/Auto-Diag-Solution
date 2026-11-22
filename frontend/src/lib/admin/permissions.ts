@@ -1,0 +1,18 @@
+/**
+ * Client-side permission check, mirroring PermissionService::hasPermission on the
+ * backend. It only decides what to SHOW; every action is still authorized server-side.
+ */
+export function hasPermission(userPermissions: string[] | undefined, required: string): boolean {
+  if (!userPermissions) return false;
+  return userPermissions.some((p) => {
+    if (p === "*" || p === required) return true;
+    if (!p.includes("*")) return false;
+    const pattern = new RegExp(`^${p.split("*").map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`);
+    return pattern.test(required);
+  });
+}
+
+export const PERMISSIONS = {
+  STAFF_MANAGE: "staff.manage",
+  SETTINGS_B2B: "b2b.settings.manage",
+} as const;

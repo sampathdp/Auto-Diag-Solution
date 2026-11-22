@@ -16,12 +16,16 @@ import {
   Percent,
   UserCheck,
   Wallet,
+  ShieldCheck,
+  Mail,
 } from "lucide-react";
 
 export interface NavLeaf {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Hidden unless the admin holds this permission (the API enforces it regardless). */
+  permission?: string;
 }
 
 export interface NavGroup {
@@ -66,5 +70,13 @@ export const NAV_ITEMS: NavEntry[] = [
   },
   { label: "Media", href: "/admin/media", icon: ImageIcon },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  {
+    label: "Settings",
+    icon: Settings,
+    children: [
+      { label: "Store Settings", href: "/admin/settings", icon: Settings },
+      { label: "Staff & Permissions", href: "/admin/staff", icon: ShieldCheck, permission: "staff.manage" },
+      { label: "Email Log", href: "/admin/email-log", icon: Mail },
+    ],
+  },
 ];

@@ -1,4 +1,30 @@
-# Architecture — eCommerce Skeleton
+# Architecture
+
+## Current architecture (updated 2026-11-22). Read this first
+
+Sections 1–5 below describe the original skeleton and are kept as history. Some of it no longer matches the code: the frontend is **Next.js**, not Vite, and the admin talks to the **real PHP API**, not mocks. This summary is the current state.
+
+| Layer | What runs |
+|---|---|
+| Storefront + admin | Next.js 15 App Router (`frontend/`). Storefront under `src/app/[locale]/(storefront)` (en/ar via next-intl); admin under `src/app/admin` (English only, client-rendered) |
+| API | Hand-rolled PHP 8.3 framework (`backend/`): `Router` → middleware → Controller → Service → Repository over PDO. Entry point `backend/public/index.php`, routes in `backend/routes/api.php` under `/api/v1` |
+| Database | MySQL/InnoDB. Migrations in `backend/database/migrations`, run with `php backend/console.php migrate` |
+| Auth | JWT access token (15 min) + refresh token, HttpOnly cookies or Bearer header, optional TOTP 2FA, Google/Facebook login |
+| Authorization | `AuthMiddleware` → `RoleMiddleware` (`admin` for `/api/v1/admin/*`) → `PermissionMiddleware` for sensitive routes. Super admins (`users.is_super_admin`) hold every permission; other admins only what is granted in `user_permissions` (catalogue: `App\Support\Permissions`). Permissions are read from the database on every check, never trusted from the token |
+| Files | Public assets: `backend/public/uploads/{type}` served by `StorageController`. Sensitive files (dealer documents, payment proofs): `backend/storage/private` via `App\Core\PrivateStorage`, outside the web root, streamed only by endpoints that check ownership or an admin permission |
+| Email | Every email goes through `App\Services\Mail\EmailOutbox` (`notification_outbox` table). Delivered right after the response; failures retried by `php console.php notifications:dispatch` (cron, every minute). Admin view: Settings → Email Log. No SMS |
+| Background jobs | Cron calls `console.php`: `notifications:dispatch` (every minute), `fulfillor:sync` (every 5 minutes) |
+| 3PL | Fulfillor (`backend/app/Services/Fulfillment`) |
+| Payments | Cash on Delivery and Bank Transfer in practice; checkout still records a mock payment until the payment-method work (B2B plan, Phase 3) lands. The card gateway is on hold |
+| Cart | Client-side (`useCartStore`, localStorage). Prices are always recalculated server-side at checkout, so a tampered cart can't change what is charged |
+| Tests | Playwright API tests in `e2e/` (`tests/security`, `tests/b2b`) |
+| Deploy | GitHub Actions → FTP (`.github/workflows/main.yml`); the root `.htaccess` it writes blocks source, `scratch/` and `storage/` |
+
+The B2B dealer portal plan and its current progress are in [`docs/b2b-integration/`](docs/b2b-integration/).
+
+---
+
+## History: original skeleton notes
 
 This project started as a copy of a salon booking/management ERP (`salon-saas`). It has been stripped down
 to a clean architectural skeleton: routing, API client, auth (JWT + 2FA + RBAC), database layer, and UI

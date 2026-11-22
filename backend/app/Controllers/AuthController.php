@@ -10,7 +10,6 @@ use App\Core\Database\DatabaseManager;
 use App\Repositories\UserRepository;
 use App\Services\RateLimiter;
 use App\Services\TwoFactorService;
-use App\Services\SimpleSmtpMailer;
 use App\Services\SocialAuth\GoogleTokenVerifier;
 use App\Services\SocialAuth\FacebookTokenVerifier;
 use App\Services\SocialAuth\SocialAuthException;
@@ -312,21 +311,14 @@ class AuthController extends BaseController
         $frontendUrl = rtrim((string)($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000'), '/');
         $resetUrl = "{$frontendUrl}/en/reset-password?token={$rawToken}";
 
-        $smtpHost = trim((string)($_ENV['SMTP_HOST'] ?? ''));
-
-        if ($smtpHost !== '') {
+        if (\App\Services\Mail\Mailer::isConfigured()) {
             $safeName = htmlspecialchars((string)$user['name'], ENT_QUOTES, 'UTF-8');
-            SimpleSmtpMailer::send(
-                $smtpHost,
-                (int)($_ENV['SMTP_PORT'] ?? 587),
-                $_ENV['SMTP_ENCRYPTION'] ?? 'tls',
-                $_ENV['SMTP_USER'] ?? null,
-                $_ENV['SMTP_PASS'] ?? null,
-                (string)($_ENV['SMTP_FROM_ADDRESS'] ?? 'no-reply@example.com'),
-                (string)($_ENV['SMTP_FROM_NAME'] ?? 'Auto Parts UAE'),
-                $user['email'],
+            \App\Services\Mail\EmailOutbox::queue(
+                (string)$user['email'],
                 'Reset your password',
-                "<p>Hi {$safeName},</p><p>Click the link below to reset your password. This link expires in 30 minutes.</p><p><a href=\"{$resetUrl}\">{$resetUrl}</a></p>"
+                "<p>Hi {$safeName},</p><p>Click the link below to reset your password. This link expires in 30 minutes.</p><p><a href=\"{$resetUrl}\">{$resetUrl}</a></p>",
+                null,
+                'password_reset'
             );
 
             $this->success(null, $genericMessage);
@@ -427,9 +419,15 @@ class AuthController extends BaseController
     {
         $user = clone $request->user;
 
+        // Fresh from the database, not the token: a permission granted or revoked since
+        // login shows up on the next /auth/me instead of after the token expires.
+        $permissionService = new \App\Services\PermissionService();
+        $user->permissions = $permissionService->forUser((int)$user->id);
+        $user->is_super_admin = $permissionService->isSuperAdmin((int)$user->id);
+
         $this->success([
             'user' => $user,
-            'permissions' => $user->permissions ?? []
+            'permissions' => $user->permissions
         ], 'User data retrieved');
     }
 

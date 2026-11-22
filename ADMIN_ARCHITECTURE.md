@@ -1,5 +1,13 @@
 # Admin Dashboard Architecture
 
+> **Status (2026-11-22): partly historical.** The admin now runs against the real PHP API
+> (`/api/v1/admin/*`, see `backend/routes/api.php`). The MSW mock layer described below is
+> still in the repo for offline development, but it is off unless
+> `NEXT_PUBLIC_ADMIN_USE_MOCKS=true`, and its endpoint list is out of date. Navigation lives in
+> `components/admin/layout/nav-items.ts`, and items can be hidden by permission. Staff
+> permissions are managed at `/admin/staff`, and sent/failed emails are listed at
+> `/admin/email-log`. For the current overall architecture see the top of `ARCHITECTURE.md`.
+
 Frontend-only admin dashboard for the UAE auto parts eCommerce site, built inside the existing
 Next.js App Router project (`frontend/`). The real PHP backend does not exist yet for these
 endpoints — the admin runs end-to-end against an in-browser mock API (MSW) that mimics the final

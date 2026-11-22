@@ -33,13 +33,13 @@ class SettingController extends BaseController
 
     public function store(Request $request): void
     {
-        $setting = $this->service->create($request->all());
+        $setting = $this->service->create($request->all(), (int)$request->user->id);
         $this->success($setting, 'Setting created successfully', 201);
     }
 
     public function update(Request $request): void
     {
-        $setting = $this->service->update((string)$request->getParam('key'), $request->all());
+        $setting = $this->service->update((string)$request->getParam('key'), $request->all(), (int)$request->user->id);
         $this->success($setting, 'Setting updated successfully');
     }
 
@@ -50,13 +50,13 @@ class SettingController extends BaseController
             $this->error('settings must be an object of {key: value}', null, 400);
             return;
         }
-        $settings = $this->service->bulkUpdate($items);
+        $settings = $this->service->bulkUpdate($items, (int)$request->user->id);
         $this->success($settings, 'Settings updated successfully');
     }
 
     public function destroy(Request $request): void
     {
-        $this->service->delete((string)$request->getParam('key'));
+        $this->service->delete((string)$request->getParam('key'), (int)$request->user->id);
         $this->success(null, 'Setting deleted successfully');
     }
 }

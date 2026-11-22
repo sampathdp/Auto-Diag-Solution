@@ -34,7 +34,9 @@ use App\Controllers\CheckoutController;
 use App\Controllers\OrderTrackingController;
 use App\Controllers\ShippingController;
 use App\Middleware\AuthMiddleware;
+use App\Middleware\PermissionMiddleware;
 use App\Middleware\RoleMiddleware;
+use App\Support\Permissions;
 
 // API v1 Routes
 $v1 = '/api/v1';
@@ -155,11 +157,17 @@ $router->group([
     'prefix' => "$v1/admin",
     'middleware' => [AuthMiddleware::class, [RoleMiddleware::class, ['admin']]],
 ], function ($router) {
-    // --- User Management (admin only) ---
-    $router->get('/users', [UserController::class, 'index']);
-    $router->post('/users', [UserController::class, 'store']);
-    $router->put('/users/{id}', [UserController::class, 'update']);
-    $router->delete('/users/{id}', [UserController::class, 'destroy']);
+    // --- User / Staff Management ---
+    // staff.manage (super admins hold it implicitly). Changing permissions themselves is
+    // further restricted to super admins inside UserController::updatePermissions.
+    $staff = [[PermissionMiddleware::class, Permissions::STAFF_MANAGE]];
+    $router->get('/permissions', [UserController::class, 'permissionCatalogue'], $staff);
+    $router->get('/users', [UserController::class, 'index'], $staff);
+    $router->post('/users', [UserController::class, 'store'], $staff);
+    $router->get('/users/{id}/permissions', [UserController::class, 'showPermissions'], $staff);
+    $router->put('/users/{id}/permissions', [UserController::class, 'updatePermissions'], $staff);
+    $router->put('/users/{id}', [UserController::class, 'update'], $staff);
+    $router->delete('/users/{id}', [UserController::class, 'destroy'], $staff);
 
     // --- Categories ---
     $router->get('/categories', [CategoryController::class, 'index']);
@@ -287,6 +295,10 @@ $router->group([
 
     // --- Dashboard ---
     $router->get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // --- Email outbox (delivery log + resend) ---
+    $router->get('/notifications/outbox', [App\Controllers\NotificationOutboxController::class, 'index']);
+    $router->post('/notifications/outbox/{id}/resend', [App\Controllers\NotificationOutboxController::class, 'resend'], $staff);
 
     // --- Sales Representatives ---
     $router->get('/sales-representatives', [SalesRepController::class, 'index']);

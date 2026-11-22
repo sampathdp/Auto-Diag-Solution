@@ -19,6 +19,9 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   failed: "danger",
   refund_requested: "warning",
   out_of_stock: "danger",
+  sent: "success",
+  sending: "info",
+  skipped: "neutral",
 };
 
 const STATUS_LABEL: Record<string, string> = {

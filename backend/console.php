@@ -19,8 +19,50 @@ switch ($command) {
     case 'fulfillor:sync':
         syncFulfillorOrders();
         break;
+    case 'notifications:dispatch':
+        dispatchNotifications();
+        break;
+    case 'staff:make-super-admin':
+        makeSuperAdmin($argv[2] ?? '');
+        break;
     default:
-        echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync]\n";
+        echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync|notifications:dispatch|staff:make-super-admin <email>]\n";
+}
+
+// Promotes an existing account to super admin. Needed on a fresh install (the
+// is_super_admin migration only upgrades admins that already existed) or to recover
+// access if every super admin has been locked out.
+function makeSuperAdmin(string $email): void
+{
+    $email = strtolower(trim($email));
+    if ($email === '') {
+        echo "Usage: php console.php staff:make-super-admin <email>\n";
+        exit(1);
+    }
+    $updated = DatabaseManager::query(
+        "UPDATE users SET role = 'admin', is_super_admin = 1, is_active = 1 WHERE email = :email",
+        ['email' => $email]
+    )->rowCount();
+    echo $updated === 1
+        ? "{$email} is now a super admin. They need to log in again to see the change.\n"
+        : "No change: no user with email {$email} (or they were already a super admin).\n";
+}
+
+// Delivers queued emails that weren't sent right after their request (SMTP down,
+// worker killed, CLI-queued mail). Normal delivery doesn't depend on this, but retries
+// do. Add a cron entry (cPanel > Cron Jobs), e.g. every minute:
+//   * * * * * php /path/to/backend/console.php notifications:dispatch >> /path/to/backend/scratch/notifications.log 2>&1
+function dispatchNotifications(): void
+{
+    $stats = \App\Services\Mail\EmailOutbox::dispatchDue(100);
+    echo sprintf(
+        "[%s] Email outbox: sent %d, retry later %d, failed %d, skipped (SMTP not configured) %d.\n",
+        date('Y-m-d H:i:s'),
+        $stats['sent'],
+        $stats['retried'],
+        $stats['failed'],
+        $stats['skipped']
+    );
 }
 
 // Polls Fulfillor for order status and warehouse stock (both read-only on Fulfillor's

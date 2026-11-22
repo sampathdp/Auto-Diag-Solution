@@ -1,0 +1,3 @@
+# Private uploads are runtime data, never committed.
+private/*
+!private/.gitkeep

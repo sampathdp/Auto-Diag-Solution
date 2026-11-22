@@ -46,15 +46,16 @@ class JWTService
 
     /**
      * Resolve a user's permission strings for embedding in the JWT.
-     * Replace with real role/permission-table lookups as the permission model grows.
+     * The claim is informational (the frontend uses it to hide controls). Authorization
+     * never trusts it: PermissionMiddleware re-reads permissions from the database.
      */
     private function getUserPermissions(int $userId, string $role): array
     {
-        if ($role === 'admin') {
-            return ['*'];
+        if ($role !== 'admin') {
+            return [];
         }
 
-        return [];
+        return (new \App\Services\PermissionService())->forUser($userId);
     }
 
     public function generateRefreshToken(int $userId): string
