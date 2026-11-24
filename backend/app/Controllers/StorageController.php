@@ -7,11 +7,21 @@ namespace App\Controllers;
 use App\Core\Request;
 use App\Core\Auth\JWTService;
 
+/**
+ * Serves PUBLIC uploaded assets only (product media, part images, refund photos) from
+ * public/uploads/{type}/{file}.
+ *
+ * Sensitive files (dealer documents, payment proofs, cheque images, invoices) are NOT
+ * served here. They live in App\Core\PrivateStorage, outside the web root, and are only
+ * reachable through dedicated endpoints that check ownership or an admin permission.
+ * Checking "has any valid token" (what this controller used to do for the types below)
+ * let any logged-in customer open any other customer's file.
+ */
 class StorageController extends BaseController
 {
-    // File types that contain sensitive data and require a valid JWT to access.
-    // Public asset types (logos, avatars, covers) are intentionally NOT in this list.
-    private const PRIVATE_TYPES = [
+    // Former private types. Requests for them still need a login (so the old 401
+    // behaviour holds), but nothing is ever served from here for these types.
+    private const RETIRED_PRIVATE_TYPES = [
         'payment-proofs',
         'payment-slips',
         'documents',
@@ -37,26 +47,20 @@ class StorageController extends BaseController
             exit;
         }
 
-        // Enforce authentication for private file types
-        if (in_array($type, self::PRIVATE_TYPES, true)) {
+        if (in_array($type, self::RETIRED_PRIVATE_TYPES, true)) {
             $authHeader = $request->getHeader('Authorization');
 
             if (!$authHeader || !str_starts_with($authHeader, 'Bearer ')) {
-                http_response_code(401);
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Unauthorized: authentication required']);
-                exit;
+                $this->jsonExit(401, 'Unauthorized: authentication required');
             }
 
             try {
-                $jwtService = new JWTService();
-                $jwtService->validateToken(substr($authHeader, 7));
+                (new JWTService())->validateToken(substr($authHeader, 7));
             } catch (\Exception $e) {
-                http_response_code(401);
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Unauthorized: ' . $e->getMessage()]);
-                exit;
+                $this->jsonExit(401, 'Unauthorized: ' . $e->getMessage());
             }
+
+            $this->jsonExit(404, 'Not found');
         }
 
         $filePath = dirname(__DIR__, 2) . '/public/uploads/' . $type . '/' . $filename;
@@ -71,17 +75,22 @@ class StorageController extends BaseController
 
         // Only serve allowed MIME types to prevent content injection attacks
         if (!in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
-            http_response_code(403);
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Forbidden: file type not allowed']);
-            exit;
+            $this->jsonExit(403, 'Forbidden: file type not allowed');
         }
 
         header('Content-Type: ' . $mimeType);
         header('Content-Length: ' . filesize($filePath));
-        header('Cache-Control: private, max-age=3600');
+        header('Cache-Control: public, max-age=3600');
         header('X-Content-Type-Options: nosniff');
         readfile($filePath);
+        exit;
+    }
+
+    private function jsonExit(int $status, string $message): never
+    {
+        http_response_code($status);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $message]);
         exit;
     }
 }

@@ -27,6 +27,8 @@ jobs:
           # Clean up unnecessary files to optimize upload size
           rm -rf dist/scratch
           rm -f dist/.env
+          # Never ship local private files; the folder's .htaccess guard is still deployed.
+          rm -rf dist/storage/private
 
       - name: 📝 Create production .htaccess at root
         run: |
@@ -41,7 +43,9 @@ jobs:
 
               # Block direct access to source/config directories and files — the only
               # thing meant to be reachable here is the API entry point below.
-              RewriteRule ^(app|bootstrap|database|routes|scratch)(/|$) - [F,L]
+              # storage/ holds private dealer documents and payment proofs: never web-served,
+              # only streamed by authenticated API endpoints (App\Core\PrivateStorage).
+              RewriteRule ^(app|bootstrap|database|routes|scratch|storage)(/|$) - [F,L]
               RewriteRule ^(composer\.json|composer\.lock|console\.php)$ - [F,L]
 
               # Route API requests to the backend entry point
@@ -71,3 +75,4 @@ jobs:
             **/.git*/**
             **/backend/.env
             **/backend/scratch/**
+            **/storage/private/**

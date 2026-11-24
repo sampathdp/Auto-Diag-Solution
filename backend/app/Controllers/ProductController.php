@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Request;
+use App\Services\B2B\WholesalePriceImportService;
 use App\Services\ProductService;
 
 class ProductController extends BaseController
@@ -38,6 +39,9 @@ class ProductController extends BaseController
         if ($request->input('low_stock') !== null) {
             $filters['low_stock'] = true;
         }
+        if ($request->input('wholesale_missing') !== null) {
+            $filters['wholesale_missing'] = true;
+        }
 
         $result = $this->service->list($filters, $search, $sortBy, $sortDir, $page, $perPage);
 
@@ -48,8 +52,30 @@ class ProductController extends BaseController
                 'per_page' => $perPage,
                 'total' => $result['total'],
                 'total_pages' => (int)ceil($result['total'] / $perPage),
+                // Drives the "Missing wholesale price" badge during the B2B backfill.
+                'missing_wholesale_count' => $this->service->countMissingWholesale(),
             ],
         ]);
+    }
+
+    /** GET /admin/products/wholesale/export[?missing=1]  (CSV download) */
+    public function exportWholesale(Request $request): void
+    {
+        (new WholesalePriceImportService())->streamExport($request->input('missing') !== null);
+    }
+
+    /** POST /admin/products/wholesale/import  (multipart: file, dry_run) */
+    public function importWholesale(Request $request): void
+    {
+        $dryRun = filter_var($request->input('dry_run', false), FILTER_VALIDATE_BOOLEAN);
+        $files = $request->getFiles();
+        $result = (new WholesalePriceImportService())->import((int)$request->user->id, $files['file'] ?? null, $dryRun);
+        $message = match (true) {
+            $result['error_count'] > 0 => 'Nothing was saved. Fix the rows listed and upload again.',
+            $dryRun => 'Checked. Nothing saved yet.',
+            default => "Saved {$result['updated']} wholesale price(s).",
+        };
+        $this->success($result, $message);
     }
 
     public function show(Request $request): void
@@ -113,13 +139,13 @@ class ProductController extends BaseController
 
     public function store(Request $request): void
     {
-        $product = $this->service->create($request->all());
+        $product = $this->service->create($request->all(), (int)$request->user->id);
         $this->success($product, 'Product created successfully', 201);
     }
 
     public function update(Request $request): void
     {
-        $product = $this->service->update((int)$request->getParam('id'), $request->all());
+        $product = $this->service->update((int)$request->getParam('id'), $request->all(), (int)$request->user->id);
         $this->success($product, 'Product updated successfully');
     }
 

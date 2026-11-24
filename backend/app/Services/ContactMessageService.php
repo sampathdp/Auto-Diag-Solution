@@ -24,30 +24,22 @@ class ContactMessageService
         // Best-effort notification — the message is already safely stored above, so a
         // down/unconfigured SMTP server shouldn't turn a successful submission into an
         // error for the customer (mirrors AuthController::forgotPassword's SMTP_HOST gate).
-        $smtpHost = trim((string)($_ENV['SMTP_HOST'] ?? ''));
-        if ($smtpHost !== '') {
-            $teamEmail = (string)($_ENV['CONTACT_NOTIFY_EMAIL'] ?? $_ENV['SMTP_FROM_ADDRESS'] ?? '');
-            if ($teamEmail !== '') {
-                try {
-                    $safeName = htmlspecialchars($data['name'], ENT_QUOTES, 'UTF-8');
-                    $safeEmail = htmlspecialchars($data['email'], ENT_QUOTES, 'UTF-8');
-                    $safeSubject = htmlspecialchars($data['subject'], ENT_QUOTES, 'UTF-8');
-                    $safeMessage = nl2br(htmlspecialchars($data['message'], ENT_QUOTES, 'UTF-8'));
-                    SimpleSmtpMailer::send(
-                        $smtpHost,
-                        (int)($_ENV['SMTP_PORT'] ?? 587),
-                        $_ENV['SMTP_ENCRYPTION'] ?? 'tls',
-                        $_ENV['SMTP_USER'] ?? null,
-                        $_ENV['SMTP_PASS'] ?? null,
-                        (string)($_ENV['SMTP_FROM_ADDRESS'] ?? 'no-reply@example.com'),
-                        (string)($_ENV['SMTP_FROM_NAME'] ?? 'Auto Parts UAE'),
-                        $teamEmail,
-                        "New contact message: {$data['subject']}",
-                        "<p><strong>From:</strong> {$safeName} ({$safeEmail})</p><p><strong>Subject:</strong> {$safeSubject}</p><p>{$safeMessage}</p>"
-                    );
-                } catch (\Throwable $e) {
-                    // Swallow — see comment above.
-                }
+        $teamEmail = (string)($_ENV['CONTACT_NOTIFY_EMAIL'] ?? $_ENV['SMTP_FROM_ADDRESS'] ?? '');
+        if ($teamEmail !== '') {
+            try {
+                $safeName = htmlspecialchars($data['name'], ENT_QUOTES, 'UTF-8');
+                $safeEmail = htmlspecialchars($data['email'], ENT_QUOTES, 'UTF-8');
+                $safeSubject = htmlspecialchars($data['subject'], ENT_QUOTES, 'UTF-8');
+                $safeMessage = nl2br(htmlspecialchars($data['message'], ENT_QUOTES, 'UTF-8'));
+                \App\Services\Mail\EmailOutbox::queue(
+                    $teamEmail,
+                    "New contact message: {$data['subject']}",
+                    "<p><strong>From:</strong> {$safeName} ({$safeEmail})</p><p><strong>Subject:</strong> {$safeSubject}</p><p>{$safeMessage}</p>",
+                    null,
+                    'contact_message'
+                );
+            } catch (\Throwable $e) {
+                // Swallow — see comment above.
             }
         }
 

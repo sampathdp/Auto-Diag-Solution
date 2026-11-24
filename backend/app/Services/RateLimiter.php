@@ -89,6 +89,47 @@ class RateLimiter
         );
     }
 
+    /**
+     * Sliding-window limit for normal actions (uploads, submissions): allows up to $max
+     * calls per $windowSeconds, counting from the first call in the window. Returns
+     * false when the caller should be refused. Unlike hit(), the count resets once the
+     * window has passed, so steady legitimate use is never locked out permanently.
+     */
+    public static function allow(string $action, string $identifier, int $max, int $windowSeconds): bool
+    {
+        self::ensureTable();
+
+        $row = DatabaseManager::query(
+            "SELECT attempts, last_attempt_at, locked_until FROM rate_limits WHERE action = :action AND identifier = :identifier LIMIT 1",
+            ['action' => $action, 'identifier' => $identifier]
+        )->fetch();
+
+        if ($row && $row['locked_until'] && strtotime($row['locked_until']) > time()) {
+            return false;
+        }
+
+        $windowExpired = !$row || !$row['last_attempt_at'] || strtotime($row['last_attempt_at']) < time() - $windowSeconds;
+        $attempts = ($windowExpired ? 0 : (int)$row['attempts']) + 1;
+        $blocked = $attempts > $max;
+        $lockedUntil = $blocked ? date('Y-m-d H:i:s', time() + $windowSeconds) : null;
+
+        DatabaseManager::query(
+            "INSERT INTO rate_limits (action, identifier, attempts, last_attempt_at, locked_until)
+             VALUES (:action, :identifier, :attempts, NOW(), :locked_until)
+             ON DUPLICATE KEY UPDATE attempts = :attempts2, last_attempt_at = NOW(), locked_until = :locked_until2",
+            [
+                'action' => $action,
+                'identifier' => $identifier,
+                'attempts' => $blocked ? 0 : $attempts,
+                'locked_until' => $lockedUntil,
+                'attempts2' => $blocked ? 0 : $attempts,
+                'locked_until2' => $lockedUntil,
+            ]
+        );
+
+        return !$blocked;
+    }
+
     public static function clear(string $action, string $identifier): void
     {
         self::ensureTable();

@@ -16,6 +16,9 @@ $defaults = [
     ['key' => 'whatsapp_number', 'value' => '', 'type' => 'string', 'group_name' => 'general'],
     ['key' => 'ga_tracking_id', 'value' => '', 'type' => 'string', 'group_name' => 'integrations'],
     ['key' => 'stripe_publishable_key', 'value' => '', 'type' => 'string', 'group_name' => 'payments'],
+
+    // Payment and B2B settings (payment_*, retail_payment_methods, b2b_*) are created
+    // automatically by SettingService::ensureRestrictedRows() on first use.
 ];
 
 try {

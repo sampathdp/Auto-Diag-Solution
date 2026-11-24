@@ -8,6 +8,13 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Services\PermissionService;
 
+/**
+ * Usage in routes: [PermissionMiddleware::class, 'b2b.credit.manage']
+ *
+ * Checks the database on every request instead of trusting the JWT's permissions
+ * claim, so revoking a permission (or deactivating an admin) takes effect immediately.
+ * Only super admins bypass — the plain admin role is no longer enough on its own.
+ */
 class PermissionMiddleware
 {
     private string $requiredPermission;
@@ -21,15 +28,11 @@ class PermissionMiddleware
 
     public function handle(Request $request): void
     {
-        // Admins bypass all permission checks
-        if ($request->user->role === 'admin') {
-            return;
+        if (!isset($request->user)) {
+            Response::error('Unauthorized: authentication required', null, 401);
         }
 
-        // Check JWT-embedded permissions
-        $userPermissions = $request->user->permissions ?? [];
-
-        if (!$this->permissionService->hasPermission($userPermissions, $this->requiredPermission)) {
+        if (!$this->permissionService->userHas((int)$request->user->id, $this->requiredPermission)) {
             Response::error("Forbidden: Missing permission [{$this->requiredPermission}]", null, 403);
         }
     }

@@ -8,7 +8,7 @@ use App\Core\Database\DatabaseManager;
 
 class ProductRepository extends BaseRepository
 {
-    private const SORTABLE_COLUMNS = ['id', 'name_en', 'price', 'stock_quantity', 'created_at'];
+    private const SORTABLE_COLUMNS = ['id', 'name_en', 'price', 'wholesale_price', 'stock_quantity', 'created_at'];
 
     private const PUBLIC_SORT_COLUMNS = [
         'price_asc' => ['p.price', 'ASC'],
@@ -69,6 +69,74 @@ class ProductRepository extends BaseRepository
                 LIMIT {$perPage} OFFSET {$offset}";
 
         return DatabaseManager::query($sql, $params)->fetchAll();
+    }
+
+    public function countMissingWholesale(): int
+    {
+        return (int) DatabaseManager::query("SELECT COUNT(*) FROM products WHERE wholesale_price IS NULL")->fetchColumn();
+    }
+
+    /**
+     * Batch price lookup for PricingService: one query however many products. Active
+     * products only, so a dealer can't probe prices of drafts or removed items.
+     *
+     * @param int[] $ids
+     * @return array<int, array{id:int,price:string,wholesale_price:?string,wholesale_min_qty:?string}>
+     */
+    public function pricesForIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
+        if (!$ids) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $rows = DatabaseManager::query(
+            "SELECT id, price, wholesale_price, wholesale_min_qty
+             FROM products WHERE status = 'active' AND id IN ($placeholders)",
+            $ids
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['id']] = $row;
+        }
+        return $map;
+    }
+
+    /** Every product's SKU, name and prices, for the wholesale CSV export. */
+    public function wholesaleExportRows(bool $missingOnly): array
+    {
+        $where = $missingOnly ? 'WHERE wholesale_price IS NULL' : '';
+        return DatabaseManager::query(
+            "SELECT sku, name_en, status, price, wholesale_price, wholesale_min_qty
+             FROM products {$where} ORDER BY sku ASC"
+        )->fetchAll();
+    }
+
+    /**
+     * SKU matching follows the column's case-insensitive collation, so the map is keyed
+     * by the lower-cased SKU.
+     *
+     * @param string[] $skus
+     * @return array<string, array{id:int,sku:string,price:string}>
+     */
+    public function findBySkus(array $skus): array
+    {
+        $skus = array_values(array_unique($skus));
+        if (!$skus) {
+            return [];
+        }
+        $placeholders = implode(',', array_fill(0, count($skus), '?'));
+        $rows = DatabaseManager::query(
+            "SELECT id, sku, price, wholesale_price, wholesale_min_qty FROM products WHERE sku IN ($placeholders)",
+            $skus
+        )->fetchAll();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[mb_strtolower((string)$row['sku'])] = $row;
+        }
+        return $map;
     }
 
     public function countFiltered(array $filters, string $search): int
@@ -420,6 +488,11 @@ class ProductRepository extends BaseRepository
         // DashboardService::stats()'s own low_stock_count definition), not a stored value.
         if (!empty($filters['low_stock'])) {
             $conditions[] = 'p.track_inventory = 1 AND p.low_stock_threshold IS NOT NULL AND p.stock_quantity <= p.low_stock_threshold';
+        }
+
+        // B2B backfill: products that still need a wholesale price.
+        if (!empty($filters['wholesale_missing'])) {
+            $conditions[] = 'p.wholesale_price IS NULL';
         }
 
         if ($search !== '') {

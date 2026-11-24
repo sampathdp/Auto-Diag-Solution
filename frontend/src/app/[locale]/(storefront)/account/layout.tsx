@@ -2,7 +2,7 @@
 
 import { AuthGuard } from "@/components/account/AuthGuard";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { User, Car, MapPin, Package, Heart, Bell, LogOut, LayoutDashboard } from "lucide-react";
+import { User, Car, MapPin, Package, Heart, Bell, LogOut, LayoutDashboard, Handshake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTranslations } from "next-intl";
@@ -28,6 +28,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     { label: t("profile"), href: "/account/profile", icon: User },
     { label: t("addresses"), href: "/account/addresses", icon: MapPin },
     { label: t("alerts"), href: "/account/notifications", icon: Bell },
+    { label: t("dealer"), href: "/partner", icon: Handshake },
   ];
 
   // For bottom tab, we usually pick the 4 or 5 most important ones.

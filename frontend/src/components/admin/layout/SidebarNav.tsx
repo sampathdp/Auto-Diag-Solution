@@ -5,14 +5,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NAV_ITEMS, isNavGroup } from "./nav-items";
+import { useAuthStore } from "@/store/useAuthStore";
+import { hasPermission } from "@/lib/admin/permissions";
+import { NAV_ITEMS as ALL_NAV_ITEMS, isNavGroup, type NavEntry } from "./nav-items";
 
 function isActiveHref(pathname: string | null, href: string) {
   return pathname === href || !!pathname?.startsWith(`${href}/`);
 }
 
+function visibleNav(permissions: string[]): NavEntry[] {
+  return ALL_NAV_ITEMS.flatMap((entry): NavEntry[] => {
+    if (!isNavGroup(entry)) {
+      return !entry.permission || hasPermission(permissions, entry.permission) ? [entry] : [];
+    }
+    const children = entry.children.filter((c) => !c.permission || hasPermission(permissions, c.permission));
+    return children.length ? [{ ...entry, children }] : [];
+  });
+}
+
 export function SidebarNav({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const permissions = useAuthStore((s) => s.permissions);
+  const NAV_ITEMS = visibleNav(permissions);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(
       NAV_ITEMS.filter(isNavGroup).map((group) => [

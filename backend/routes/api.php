@@ -34,7 +34,9 @@ use App\Controllers\CheckoutController;
 use App\Controllers\OrderTrackingController;
 use App\Controllers\ShippingController;
 use App\Middleware\AuthMiddleware;
+use App\Middleware\PermissionMiddleware;
 use App\Middleware\RoleMiddleware;
+use App\Support\Permissions;
 
 // API v1 Routes
 $v1 = '/api/v1';
@@ -67,6 +69,7 @@ $router->get("$v1/pages/{slug}", [PageController::class, 'publicShow']);
 $router->get("$v1/announcement", [SettingController::class, 'publicAnnouncement']);
 $router->get("$v1/about-page", [AboutPageController::class, 'show']);
 $router->get("$v1/home-page", [HomePageController::class, 'show']);
+$router->get("$v1/partner/info", [App\Controllers\B2B\PartnerController::class, 'info']);
 
 // Guest checkout — no login required, customer + shipping details are typed in at
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
@@ -143,6 +146,15 @@ $router->group([
     $router->get('/notifications/preferences', [AccountNotificationController::class, 'show']);
     $router->put('/notifications/preferences', [AccountNotificationController::class, 'update']);
 
+    // B2B dealer application: always the caller's own profile (no profile id accepted).
+    $router->get('/dealer', [App\Controllers\B2B\DealerAccountController::class, 'show']);
+    $router->put('/dealer/application', [App\Controllers\B2B\DealerAccountController::class, 'saveDraft']);
+    $router->post('/dealer/documents', [App\Controllers\B2B\DealerAccountController::class, 'uploadDocument']);
+    $router->get('/dealer/documents/{id}', [App\Controllers\B2B\DealerAccountController::class, 'document']);
+    $router->post('/dealer/submit', [App\Controllers\B2B\DealerAccountController::class, 'submit']);
+    // Wholesale prices for products on screen; approved dealers only (403 otherwise).
+    $router->post('/dealer/pricing', [App\Controllers\B2B\DealerPricingController::class, 'prices']);
+
     // Mock checkout — creates a real order and auto-confirms payment via a 'mock'
     // provider until the client's real payment gateway is integrated.
     $router->post('/checkout', [CheckoutController::class, 'store']);
@@ -155,11 +167,17 @@ $router->group([
     'prefix' => "$v1/admin",
     'middleware' => [AuthMiddleware::class, [RoleMiddleware::class, ['admin']]],
 ], function ($router) {
-    // --- User Management (admin only) ---
-    $router->get('/users', [UserController::class, 'index']);
-    $router->post('/users', [UserController::class, 'store']);
-    $router->put('/users/{id}', [UserController::class, 'update']);
-    $router->delete('/users/{id}', [UserController::class, 'destroy']);
+    // --- User / Staff Management ---
+    // staff.manage (super admins hold it implicitly). Changing permissions themselves is
+    // further restricted to super admins inside UserController::updatePermissions.
+    $staff = [[PermissionMiddleware::class, Permissions::STAFF_MANAGE]];
+    $router->get('/permissions', [UserController::class, 'permissionCatalogue'], $staff);
+    $router->get('/users', [UserController::class, 'index'], $staff);
+    $router->post('/users', [UserController::class, 'store'], $staff);
+    $router->get('/users/{id}/permissions', [UserController::class, 'showPermissions'], $staff);
+    $router->put('/users/{id}/permissions', [UserController::class, 'updatePermissions'], $staff);
+    $router->put('/users/{id}', [UserController::class, 'update'], $staff);
+    $router->delete('/users/{id}', [UserController::class, 'destroy'], $staff);
 
     // --- Categories ---
     $router->get('/categories', [CategoryController::class, 'index']);
@@ -210,6 +228,10 @@ $router->group([
 
     // --- Products ---
     $router->get('/products', [ProductController::class, 'index']);
+    // Wholesale CSV backfill: literal paths before /products/{id}.
+    $pricingManage = [[PermissionMiddleware::class, Permissions::B2B_PRICING_MANAGE]];
+    $router->get('/products/wholesale/export', [ProductController::class, 'exportWholesale'], $pricingManage);
+    $router->post('/products/wholesale/import', [ProductController::class, 'importWholesale'], $pricingManage);
     $router->post('/products', [ProductController::class, 'store']);
     $router->get('/products/{id}', [ProductController::class, 'show']);
     $router->put('/products/{id}', [ProductController::class, 'update']);
@@ -287,6 +309,27 @@ $router->group([
 
     // --- Dashboard ---
     $router->get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // --- B2B: dealer applications and dealers ---
+    $dealersView = [[PermissionMiddleware::class, Permissions::B2B_APPLICATIONS_VIEW]];
+    $dealersReview = [[PermissionMiddleware::class, Permissions::B2B_APPLICATIONS_REVIEW]];
+    $dealersSuspend = [[PermissionMiddleware::class, Permissions::B2B_DEALERS_SUSPEND]];
+    $b2bDealers = App\Controllers\B2B\DealerAdminController::class;
+    $router->get('/b2b/dealers', [$b2bDealers, 'index'], $dealersView);
+    $router->get('/b2b/dealers/{id}', [$b2bDealers, 'show'], $dealersView);
+    $router->post('/b2b/dealers/{id}/notes', [$b2bDealers, 'addNote'], $dealersView);
+    $router->post('/b2b/dealers/{id}/start-review', [$b2bDealers, 'startReview'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/request-info', [$b2bDealers, 'requestInfo'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/approve', [$b2bDealers, 'approve'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/reject', [$b2bDealers, 'reject'], $dealersReview);
+    $router->post('/b2b/dealers/{id}/suspend', [$b2bDealers, 'suspend'], $dealersSuspend);
+    $router->post('/b2b/dealers/{id}/reactivate', [$b2bDealers, 'reactivate'], $dealersSuspend);
+    $router->put('/b2b/dealers/{id}/credit', [$b2bDealers, 'updateCredit'], [[PermissionMiddleware::class, Permissions::B2B_CREDIT_MANAGE]]);
+    $router->get('/b2b/documents/{id}', [$b2bDealers, 'document'], [[PermissionMiddleware::class, Permissions::B2B_DOCUMENTS_VIEW]]);
+
+    // --- Email outbox (delivery log + resend) ---
+    $router->get('/notifications/outbox', [App\Controllers\NotificationOutboxController::class, 'index']);
+    $router->post('/notifications/outbox/{id}/resend', [App\Controllers\NotificationOutboxController::class, 'resend'], $staff);
 
     // --- Sales Representatives ---
     $router->get('/sales-representatives', [SalesRepController::class, 'index']);

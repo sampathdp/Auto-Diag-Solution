@@ -68,6 +68,17 @@ export const ProductFormSchema = z
       .nonnegative("Cost price can't be negative.")
       .nullable()
       .optional(),
+    // B2B dealer price: required on every product, > 0 and not above the retail price
+    // (same rules as ProductService::applyWholesale). Admins without the
+    // b2b.pricing.manage permission see it read-only and the server keeps the stored value.
+    wholesale_price: z.preprocess(
+      (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? null : Number(v)),
+      z.number({ invalid_type_error: "Enter a wholesale price." }).positive("Wholesale price must be greater than 0.").nullable()
+    ),
+    wholesale_min_qty: z.preprocess(
+      (v) => (v === "" || v == null || (typeof v === "number" && Number.isNaN(v)) ? null : Number(v)),
+      z.number({ invalid_type_error: "Enter a whole number." }).int("Enter a whole number.").min(1, "Minimum quantity is at least 1.").nullable()
+    ),
     vat_inclusive: z.boolean(),
 
     stock_quantity: z.coerce
@@ -122,6 +133,14 @@ export const ProductFormSchema = z
     message: "Compare-at price must be higher than the price.",
     path: ["compare_at_price"],
   })
+  .refine((data) => data.wholesale_price != null, {
+    message: "Wholesale price is required.",
+    path: ["wholesale_price"],
+  })
+  .refine((data) => data.wholesale_price == null || data.wholesale_price <= data.price, {
+    message: "Wholesale price can't be higher than the retail price.",
+    path: ["wholesale_price"],
+  })
   .refine((data) => data.source !== "3pl" || data.weight_kg != null, {
     message: "Weight is required for products sent to the 3PL.",
     path: ["weight_kg"],
@@ -143,6 +162,8 @@ export const PRODUCT_FORM_DEFAULTS: ProductFormValues = {
   price: 0,
   compare_at_price: null,
   cost_price: null,
+  wholesale_price: null,
+  wholesale_min_qty: null,
   vat_inclusive: true,
   stock_quantity: 0,
   low_stock_threshold: 5,

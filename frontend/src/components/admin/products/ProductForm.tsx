@@ -16,6 +16,8 @@ import { ProductFormSchema, PRODUCT_FORM_DEFAULTS, type ProductFormValues } from
 import { toMediaItem, type RawMediaRow } from "@/lib/admin/mediaAdapter";
 import { slugify } from "@/lib/admin/utils";
 import { onFormInvalid } from "@/lib/admin/formErrors";
+import { hasPermission, PERMISSIONS } from "@/lib/admin/permissions";
+import { useAuthStore } from "@/store/useAuthStore";
 import type { PaginatedResponse } from "@/types/api";
 import type { Category } from "@/mocks/admin/db";
 import type { Brand } from "@/types/brand";
@@ -47,6 +49,8 @@ function productToFormValues(product: Product): ProductFormValues {
     price: product.price,
     compare_at_price: product.compare_at_price,
     cost_price: product.cost_price,
+    wholesale_price: product.wholesale_price != null ? Number(product.wholesale_price) : null,
+    wholesale_min_qty: product.wholesale_min_qty != null ? Number(product.wholesale_min_qty) : null,
     vat_inclusive: product.vat_inclusive,
     stock_quantity: product.stock_quantity,
     low_stock_threshold: product.low_stock_threshold ?? 0,
@@ -72,6 +76,8 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
   const router = useRouter();
   const [pendingIntent, setPendingIntent] = useState<"draft" | "publish" | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  const canEditWholesale = hasPermission(useAuthStore((s) => s.permissions), PERMISSIONS.B2B_PRICING_MANAGE);
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(ProductFormSchema),
@@ -138,6 +144,8 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
     price: values.price,
     compare_at_price: values.compare_at_price ?? null,
     cost_price: values.cost_price ?? null,
+    // Only sent by admins who may set it; the server ignores it from anyone else anyway.
+    ...(canEditWholesale ? { wholesale_price: values.wholesale_price, wholesale_min_qty: values.wholesale_min_qty ?? null } : {}),
     vat_inclusive: values.vat_inclusive,
     stock_quantity: values.stock_quantity,
     low_stock_threshold: values.low_stock_threshold,
@@ -189,7 +197,7 @@ export function ProductForm({ mode, product }: { mode: "create" | "edit"; produc
           fulfillorSyncedAt={product?.fulfillor_synced_at}
         />
         <BilingualContentCard form={form} />
-        <PricingCard form={form} />
+        <PricingCard form={form} canEditWholesale={canEditWholesale} />
         <InventoryCard form={form} />
         <ImagesCard form={form} mediaById={mediaById} />
         <VehicleCompatibilityCard form={form} />

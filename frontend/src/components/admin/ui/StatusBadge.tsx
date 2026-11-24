@@ -19,12 +19,21 @@ const STATUS_VARIANT: Record<string, BadgeVariant> = {
   failed: "danger",
   refund_requested: "warning",
   out_of_stock: "danger",
+  sent: "success",
+  pending_review: "warning",
+  under_review: "info",
+  rejected: "danger",
+  suspended: "danger",
+  sending: "info",
+  skipped: "neutral",
 };
 
 const STATUS_LABEL: Record<string, string> = {
   out_of_stock: "Out of Stock",
   refund_requested: "Refund Requested",
   pending_vin_verification: "Pending VIN Verification",
+  pending_review: "Pending Review",
+  under_review: "Under Review",
 };
 
 export function StatusBadge({ status }: { status: string }) {

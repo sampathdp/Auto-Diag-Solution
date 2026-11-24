@@ -21,30 +21,9 @@ class FileUploader
 
     public static function upload(array $file, string $subDir = ''): string
     {
-        if (!isset($file['error'])) {
+        $mimeType = self::validateUpload($file);
+        if ($mimeType === null) {
             return '';
-        }
-
-        // Error must be checked before tmp_name: PHP leaves tmp_name empty for most
-        // error cases, not just "no file selected" — an empty-tmp_name check done
-        // first (as this used to be) silently swallows the real reason (e.g. a file
-        // bigger than upload_max_filesize) into an unhelpful generic message.
-        if ((int) $file['error'] === UPLOAD_ERR_NO_FILE) {
-            return '';
-        }
-        if ((int) $file['error'] !== UPLOAD_ERR_OK) {
-            throw new \Exception(self::errorMessage((int) $file['error']));
-        }
-
-        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
-            throw new \Exception("Invalid upload.");
-        }
-
-        // Validate MIME type from actual file content, not the client-supplied name
-        $finfo = new \finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
-        if (!isset(self::ALLOWED_MIME_TYPES[$mimeType])) {
-            throw new \Exception("Invalid file type. Only JPG, PNG, and PDF are allowed.");
         }
 
         // Base directory is the project root (backend/)
@@ -66,6 +45,52 @@ class FileUploader
         }
 
         return '/uploads/' . ($subDir ? $subDir . '/' : '') . $fileName;
+    }
+
+    /**
+     * Shared upload checks (also used by PrivateStorage): PHP upload error, that the file
+     * really is an upload, and the MIME type sniffed from its content (never the client's
+     * name or Content-Type).
+     *
+     * @param string[]|null $allowedMimes  subset of ALLOWED_MIME_TYPES keys; null = all
+     * @return string|null the detected MIME type, or null when no file was sent
+     */
+    public static function validateUpload(array $file, ?array $allowedMimes = null): ?string
+    {
+        if (!isset($file['error'])) {
+            return null;
+        }
+
+        // Error must be checked before tmp_name: PHP leaves tmp_name empty for most
+        // error cases, not just "no file selected" — an empty-tmp_name check done
+        // first (as this used to be) silently swallows the real reason (e.g. a file
+        // bigger than upload_max_filesize) into an unhelpful generic message.
+        if ((int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+        if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+            throw new \Exception(self::errorMessage((int) $file['error']));
+        }
+
+        if (empty($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+            throw new \Exception("Invalid upload.");
+        }
+
+        // Validate MIME type from actual file content, not the client-supplied name
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = (string) $finfo->file($file['tmp_name']);
+        $allowed = $allowedMimes ?? array_keys(self::ALLOWED_MIME_TYPES);
+        if (!isset(self::ALLOWED_MIME_TYPES[$mimeType]) || !in_array($mimeType, $allowed, true)) {
+            throw new \Exception("Invalid file type. Only JPG, PNG, and PDF are allowed.");
+        }
+
+        return $mimeType;
+    }
+
+    /** File extension for an allowed MIME type (never derived from the client's file name). */
+    public static function extensionFor(string $mimeType): string
+    {
+        return self::ALLOWED_MIME_TYPES[$mimeType] ?? 'bin';
     }
 
     /** Human-readable message per PHP UPLOAD_ERR_* code — shown to the admin as-is. */

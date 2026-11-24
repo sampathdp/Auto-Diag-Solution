@@ -12,7 +12,8 @@
     "wishlist": "Wishlist",
     "cart": "Cart",
     "search": "Search",
-    "menu": "Menu"
+    "menu": "Menu",
+    "partner": "Become a Partner"
   },
   "announce": {
     "message": "Free UAE-wide delivery on orders over <strong>AED 500</strong>"
@@ -54,7 +55,11 @@
       "body": "ASIL sources genuine and OEM-equivalent parts from certified manufacturers across Asia, Europe and the US, then stocks them locally in Dubai — so you're not waiting weeks for a part that should take a day. From daily maintenance to full rebuilds, our catalogue is matched precisely to what's actually on UAE roads.",
       "link": "Learn More About ASIL",
       "imageTag": "ASIL · Dubai Distribution Centre",
-      "imageTags": ["ASIL · Dubai Distribution Centre", "ASIL · Ajman Distribution Centre", "ASIL · Sharjah Distribution Centre"]
+      "imageTags": [
+        "ASIL · Dubai Distribution Centre",
+        "ASIL · Ajman Distribution Centre",
+        "ASIL · Sharjah Distribution Centre"
+      ]
     },
     "categories": {
       "eyebrow": "Shop By Category",
@@ -110,7 +115,11 @@
       "body1": "ASIL was founded in Dubai in 2015 after our own team spent too many afternoons chasing down a single brake caliper that sat in a customs warehouse for three weeks. We built the company we wished existed — one that actually stocks the parts UAE drivers need, in the UAE, ready to move.",
       "body2": "Today that means over 10,000 SKUs held locally across engine, brake, filtration and electrical systems, sourced directly from certified manufacturers and matched precisely to what's on the road here — from daily runabouts to full workshop rebuilds.",
       "imageTag": "ASIL · Dubai Distribution Centre",
-      "imageTags": ["ASIL · Dubai Distribution Centre", "ASIL · Ajman Distribution Centre", "ASIL · Sharjah Distribution Centre"]
+      "imageTags": [
+        "ASIL · Dubai Distribution Centre",
+        "ASIL · Ajman Distribution Centre",
+        "ASIL · Sharjah Distribution Centre"
+      ]
     },
     "values": {
       "eyebrow": "How We Work",
@@ -373,7 +382,210 @@
       "addresses": "Addresses",
       "alerts": "Alerts",
       "logout": "Logout",
-      "welcomeBack": "Welcome back,"
+      "welcomeBack": "Welcome back,",
+      "dealer": "Dealer account"
     }
+  },
+  "partner": {
+    "hero": {
+      "eyebrow": "Trade accounts",
+      "title": "Become a partner dealer",
+      "subtitle": "Garages, spare parts shops and fleet operators across the UAE buy from us at dealer prices, with quotations and credit terms for approved businesses.",
+      "crumb": "Become a Partner"
+    },
+    "benefits": {
+      "eyebrow": "Why partner with us",
+      "title": "Built for businesses that buy parts every week",
+      "items": {
+        "pricing": {
+          "title": "Dealer prices",
+          "body": "See your dealer price next to the retail price on every product, straight from our live catalogue."
+        },
+        "credit": {
+          "title": "Credit terms",
+          "body": "Approved dealers can pay on credit within agreed limits, counted from the day the order is delivered."
+        },
+        "quotation": {
+          "title": "Quotations",
+          "body": "Your first order is confirmed with you as a quotation, so quantities, prices and delivery are agreed up front."
+        },
+        "payments": {
+          "title": "Flexible payment",
+          "body": "Pay by Cash on Delivery, bank transfer or cheque, with every invoice and payment in your account."
+        }
+      }
+    },
+    "how": {
+      "eyebrow": "How it works",
+      "title": "Four steps to a dealer account",
+      "steps": {
+        "account": {
+          "title": "Create an account",
+          "body": "Sign in or create a customer account with your email."
+        },
+        "details": {
+          "title": "Tell us about your business",
+          "body": "Trade licence, TRN, owner details and your shop location."
+        },
+        "documents": {
+          "title": "Upload documents",
+          "body": "Trade licence and the owner's Emirates ID or UAE driving licence."
+        },
+        "review": {
+          "title": "We review it",
+          "body": "We check every application by hand, usually within 2 working days."
+        }
+      }
+    },
+    "status": {
+      "eyebrow": "Your application",
+      "none": {
+        "title": "Apply in about 10 minutes",
+        "body": "Have your trade licence and the owner's Emirates ID ready. You can save and come back at any time."
+      },
+      "draft": {
+        "title": "Your application is not sent yet",
+        "body": "Finish the remaining details and submit it for review."
+      },
+      "infoRequested": {
+        "title": "We need more information",
+        "body": "Our team asked for the following. Update your application and submit it again."
+      },
+      "pending_review": {
+        "title": "Application received",
+        "body": "Thanks! Your application is in the queue. We'll email you when there's a decision."
+      },
+      "under_review": {
+        "title": "We're reviewing your application",
+        "body": "Our team is checking your details. We'll email you soon."
+      },
+      "approved": {
+        "title": "You're an approved dealer",
+        "body": "Your dealer code is {code}. Dealer prices show in the shop while you're signed in."
+      },
+      "approvedNotYet": {
+        "title": "Approved, starting soon",
+        "body": "Your dealer account with code {code} becomes active on the date in your approval email."
+      },
+      "approvedExpired": {
+        "title": "Your dealer account has expired",
+        "body": "Contact us to renew your dealer account ({code})."
+      },
+      "rejected": {
+        "title": "Your application wasn't approved",
+        "body": "Reason: {reason}"
+      },
+      "rejectedCanRetry": "You can update the application and send it again.",
+      "rejectedFinal": "If you think this is a mistake, please contact us.",
+      "suspended": {
+        "title": "Your dealer account is on hold",
+        "body": "Dealer prices and dealer checkout are unavailable for now. Reason: {reason}"
+      },
+      "submittedOn": "Submitted on {date}",
+      "credit": "Credit limit: AED {limit} · {days} days from delivery",
+      "noCredit": "Payment is due on each order."
+    },
+    "cta": {
+      "apply": "Start your application",
+      "continue": "Continue application",
+      "update": "Update application",
+      "signIn": "Sign in to apply",
+      "register": "Create an account",
+      "shop": "Shop at dealer prices",
+      "closed": "Dealer registration is closed at the moment. Please check back later or contact us.",
+      "adminNote": "You're signed in as staff. Dealer applications need a customer account."
+    },
+    "terms": {
+      "title": "Dealer terms"
+    },
+    "apply": {
+      "title": "Dealer application",
+      "subtitle": "Your details are kept private and are only seen by our review team.",
+      "back": "Back",
+      "next": "Save and continue",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "submit": "Submit application",
+      "submitting": "Submitting…",
+      "submitted": "Application submitted. We'll email you when it has been reviewed.",
+      "saveFailed": "We couldn't save your changes. Check the highlighted fields.",
+      "notEditable": "This application can't be changed right now.",
+      "fixErrors": "Some details are missing or need correcting. They are highlighted below.",
+      "steps": {
+        "business": "Business",
+        "owner": "Owner",
+        "location": "Location",
+        "documents": "Documents",
+        "review": "Review"
+      },
+      "optional": "optional",
+      "fields": {
+        "business_name": "Registered business name",
+        "business_type": "Business type",
+        "trade_licence_number": "Trade licence number",
+        "trade_licence_expiry": "Trade licence expiry date",
+        "trn": "TRN (VAT Tax Registration Number)",
+        "trnHelp": "15 digits. Leave empty if your business isn't VAT-registered.",
+        "business_email": "Business email",
+        "business_phone": "Business phone",
+        "whatsapp_number": "WhatsApp number",
+        "phoneHelp": "Include the country code, e.g. +971 50 123 4567.",
+        "owner_name": "Owner or authorised person's full name",
+        "owner_id_type": "ID document",
+        "owner_id_number": "ID number",
+        "emiratesIdHelp": "15 digits starting with 784, e.g. 784-1985-1234567-1.",
+        "licenceHelp": "As printed on the driving licence.",
+        "address_line": "Shop address",
+        "emirate": "Emirate",
+        "city": "City",
+        "area": "Area",
+        "po_box": "P.O. Box",
+        "map_url": "Google Maps link",
+        "mapHelp": "Open your shop in Google Maps, tap Share and paste the link here.",
+        "latitude": "Latitude",
+        "longitude": "Longitude",
+        "notes": "Anything else we should know?",
+        "choose": "Choose…"
+      },
+      "businessTypes": {
+        "spare_parts_shop": "Spare parts shop",
+        "garage": "Garage / workshop",
+        "fleet_operator": "Fleet operator",
+        "car_dealer": "Car dealer",
+        "other": "Other"
+      },
+      "idTypes": {
+        "emirates_id": "Emirates ID",
+        "driving_licence": "UAE driving licence"
+      },
+      "docs": {
+        "intro": "Upload clear photos or PDF scans. JPG, PNG, WebP or PDF, up to {mb} MB each. Files are stored privately.",
+        "trade_licence": "Trade licence",
+        "trn_certificate": "TRN certificate",
+        "emirates_id_front": "Emirates ID, front",
+        "emirates_id_back": "Emirates ID, back",
+        "dl_front": "Driving licence, front",
+        "dl_back": "Driving licence, back",
+        "required": "Required",
+        "upload": "Upload",
+        "replace": "Replace",
+        "view": "View",
+        "uploading": "Uploading…",
+        "uploaded": "Uploaded",
+        "missing": "Please upload this document."
+      },
+      "review": {
+        "title": "Check and submit",
+        "body": "Make sure everything is correct. You can't change the application while it is being reviewed.",
+        "edit": "Edit",
+        "consent": "I confirm the information is correct and that I'm authorised to apply on behalf of this business.",
+        "documents": "Documents"
+      }
+    }
+  },
+  "dealerPrice": {
+    "label": "Dealer price",
+    "save": "You save {percent}%",
+    "minQty": "Dealer price from {count} units"
   }
 }

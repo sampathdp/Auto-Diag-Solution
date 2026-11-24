@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Database\DatabaseManager;
 use App\Exceptions\DomainException;
 use App\Repositories\SettingRepository;
+use App\Support\Permissions;
 
 class SettingService
 {
@@ -39,11 +40,90 @@ class SettingService
         'whatsapp_number' => '+971 50 123 4567',
     ];
 
+    /**
+     * Payment and B2B settings. They change how money is taken, so editing them needs
+     * the b2b.settings.manage permission (super admins hold it), not just the admin role.
+     * Rows are created on first use so production needs no seeder run.
+     * Live payment methods are COD and Bank Transfer; the card gateway is on hold.
+     *
+     * @var array<string, array{0:string,1:string,2:string}> key => [default value, type, group]
+     */
+    private const RESTRICTED_DEFAULTS = [
+        'payment_online_card_enabled' => ['0', 'boolean', 'payments'],
+        'retail_payment_methods' => ['["cod","bank_transfer"]', 'json', 'payments'],
+        'payment_bank_accounts' => ['[{"bank_name":"","account_holder":"","account_number":"","iban":"","swift":"","branch":""}]', 'json', 'payments'],
+        'payment_bank_transfer_instructions' => ['Use your order number as the transfer reference and upload the transfer receipt. Your order is processed once the payment is verified.', 'string', 'payments'],
+        'b2b_registration_enabled' => ['1', 'boolean', 'b2b'],
+        'b2b_first_order_requires_quotation' => ['1', 'boolean', 'b2b'],
+        'b2b_default_credit_enabled' => ['0', 'boolean', 'b2b'],
+        'b2b_default_credit_period_days' => ['30', 'number', 'b2b'],
+        'b2b_quotation_expiry_days' => ['14', 'number', 'b2b'],
+        // The credit period starts when a B2B order is delivered (decision 2026-11-22).
+        'b2b_invoice_trigger' => ['delivered', 'string', 'b2b'],
+        'b2b_payment_methods' => ['["cod","bank_transfer","cheque","credit"]', 'json', 'b2b'],
+        'b2b_sales_team_emails' => ['[]', 'json', 'b2b'],
+        'b2b_max_document_mb' => ['5', 'number', 'b2b'],
+        'b2b_terms_html' => ['', 'string', 'b2b'],
+    ];
+
     private SettingRepository $repo;
+    private PermissionService $permissions;
 
     public function __construct()
     {
         $this->repo = new SettingRepository();
+        $this->permissions = new PermissionService();
+    }
+
+    public static function isRestrictedKey(string $key): bool
+    {
+        return isset(self::RESTRICTED_DEFAULTS[$key])
+            || str_starts_with($key, 'b2b_')
+            || str_starts_with($key, 'payment_')
+            || $key === 'retail_payment_methods';
+    }
+
+    /** @param string[] $keys */
+    private function authorizeKeys(array $keys, ?int $actorId): void
+    {
+        foreach ($keys as $key) {
+            if (self::isRestrictedKey((string)$key)) {
+                if ($actorId === null) {
+                    throw new DomainException('Payment and B2B settings need the b2b.settings.manage permission', 403);
+                }
+                $this->permissions->authorize($actorId, Permissions::SETTINGS_B2B);
+                return;
+            }
+        }
+    }
+
+    private function ensureRestrictedRows(): void
+    {
+        foreach (self::RESTRICTED_DEFAULTS as $key => [$value, $type, $group]) {
+            if (!$this->repo->findByKey($key)) {
+                $this->repo->create(['key' => $key, 'value' => $value, 'type' => $type, 'group_name' => $group]);
+            }
+        }
+    }
+
+    /** Typed read for services (checkout, B2B). Falls back to the built-in default. */
+    public function get(string $key, mixed $fallback = null): mixed
+    {
+        $row = $this->repo->findByKey($key);
+        if (!$row) {
+            if (!isset(self::RESTRICTED_DEFAULTS[$key])) {
+                return $fallback;
+            }
+            [$value, $type] = self::RESTRICTED_DEFAULTS[$key];
+            $row = ['value' => $value, 'type' => $type];
+        }
+        $value = (string)($row['value'] ?? '');
+        return match ($row['type']) {
+            'boolean' => in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true),
+            'number' => is_numeric($value) ? $value + 0 : $fallback,
+            'json' => json_decode($value, true) ?? $fallback,
+            default => $value,
+        };
     }
 
     // Creates the announcement rows on first use so they show up in the admin
@@ -80,6 +160,7 @@ class SettingService
     public function list(): array
     {
         $this->ensureAnnouncementRows();
+        $this->ensureRestrictedRows();
         return $this->repo->allGrouped();
     }
 
@@ -92,12 +173,13 @@ class SettingService
         return $setting;
     }
 
-    public function create(array $input): array
+    public function create(array $input, ?int $actorId = null): array
     {
         $key = trim((string)($input['key'] ?? ''));
         if (!preg_match('/^[a-z][a-z0-9_]*$/', $key)) {
             throw new DomainException('Key must be lowercase snake_case (e.g. site_name)', 422);
         }
+        $this->authorizeKeys([$key], $actorId);
         if ($this->repo->findByKey($key)) {
             throw new DomainException('A setting with this key already exists', 409);
         }
@@ -121,8 +203,9 @@ class SettingService
         return $this->find($key);
     }
 
-    public function update(string $key, array $input): array
+    public function update(string $key, array $input, ?int $actorId = null): array
     {
+        $this->authorizeKeys([$key], $actorId);
         $setting = $this->repo->findByKey($key);
         if (!$setting) {
             throw new DomainException('Setting not found', 404);
@@ -157,15 +240,22 @@ class SettingService
      * Update many settings in one transaction — matches how an admin settings page
      * with several fields typically submits on save (one request, not one per field).
      */
-    public function bulkUpdate(array $items): array
+    public function bulkUpdate(array $items, ?int $actorId = null): array
     {
+        $changed = [];
         foreach ($items as $key => $value) {
             $setting = $this->repo->findByKey((string)$key);
             if (!$setting) {
                 throw new DomainException("Unknown setting key: {$key}", 422);
             }
-            $this->normalizeValue($setting['type'], $value); // validate before writing anything
+            // validate before writing anything
+            if ($this->normalizeValue($setting['type'], $value) !== (string)($setting['value'] ?? '')) {
+                $changed[] = (string)$key;
+            }
         }
+        // Only keys whose value actually changes need the permission, so an admin can
+        // still save a settings tab that merely displays a restricted value.
+        $this->authorizeKeys($changed, $actorId);
 
         DatabaseManager::beginTransaction();
         try {
@@ -182,9 +272,9 @@ class SettingService
         return $this->list();
     }
 
-    public function delete(string $key): void
+    public function delete(string $key, ?int $actorId = null): void
     {
-        if (in_array($key, self::PROTECTED_KEYS, true)) {
+        if (in_array($key, self::PROTECTED_KEYS, true) || isset(self::RESTRICTED_DEFAULTS[$key])) {
             throw new DomainException('This is a core setting and cannot be deleted', 409);
         }
         if (!$this->repo->findByKey($key)) {

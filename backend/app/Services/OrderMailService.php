@@ -20,25 +20,20 @@ class OrderMailService
         string $customerEmail,
         string $trackingUrl
     ): void {
-        $smtpHost = trim((string)($_ENV['SMTP_HOST'] ?? ''));
-        if ($smtpHost === '' || $customerEmail === '') {
-            // Not configured yet (or no email to send to, e.g. malformed guest data that
-            // somehow got past validation) — checkout must never fail because of this.
+        if ($customerEmail === '') {
+            // No email to send to (e.g. malformed guest data that somehow got past
+            // validation) — checkout must never fail because of this.
             return;
         }
 
         try {
-            SimpleSmtpMailer::send(
-                $smtpHost,
-                (int)($_ENV['SMTP_PORT'] ?? 587),
-                $_ENV['SMTP_ENCRYPTION'] ?? 'tls',
-                $_ENV['SMTP_USER'] ?? null,
-                $_ENV['SMTP_PASS'] ?? null,
-                (string)($_ENV['SMTP_FROM_ADDRESS'] ?? 'no-reply@example.com'),
-                (string)($_ENV['SMTP_FROM_NAME'] ?? 'Auto Parts UAE'),
+            // Queued, not sent inline: delivered right after the response, retried by cron.
+            Mail\EmailOutbox::queue(
                 $customerEmail,
                 "Order Confirmed — {$order['order_number']}",
-                self::buildHtml($order, $items, $customerName, $trackingUrl)
+                self::buildHtml($order, $items, $customerName, $trackingUrl),
+                null,
+                'order_confirmation'
             );
         } catch (\Throwable $e) {
             // A failed email must never roll back or fail an already-placed order —

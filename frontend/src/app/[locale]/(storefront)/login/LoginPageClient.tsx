@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { SocialButtons } from "@/components/auth/SocialButtons";
+import { safeNextPath } from "@/lib/safeNext";
 
 export default function LoginPageClient() {
   const t = useTranslations("auth");
@@ -31,7 +32,7 @@ export default function LoginPageClient() {
   const completeLogin = (data: any) => {
     const { user, permissions } = data.data;
     setAuth(user, permissions || []);
-    router.push(user.needs_password_change ? "/change-password" : "/account/overview");
+    router.push(user.needs_password_change ? "/change-password" : (safeNextPath("/account/overview") as any));
   };
 
   const onSubmit = async (values: LoginFormValues) => {

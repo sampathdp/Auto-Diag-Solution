@@ -1,0 +1,15 @@
+# Uploaded files are data, never code: nothing in here may execute as a script.
+<FilesMatch "\.(php|phtml|phar|php[0-9]|pl|py|cgi|sh|js|html?|svg)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+Options -Indexes -ExecCGI
+
+# Sensitive files never belong here (they go to backend/storage/private). Deny the old
+# private folder names anyway in case something is written to them by mistake.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(payment-proofs|payment-slips|documents|invoices)(/|$) - [F,L]
+</IfModule>
