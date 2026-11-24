@@ -4,7 +4,10 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Search, Plus, Package, RefreshCw } from "lucide-react";
+import { Search, Plus, Package, RefreshCw, FileSpreadsheet } from "lucide-react";
+import { WholesaleCsvModal } from "@/components/admin/products/WholesaleCsvModal";
+import { hasPermission, PERMISSIONS } from "@/lib/admin/permissions";
+import { useAuthStore } from "@/store/useAuthStore";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { DataTable } from "@/components/admin/DataTable";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
@@ -47,7 +50,10 @@ function AdminProductsPageContent() {
   const status = dt.getFilter("status");
   const categoryId = dt.getFilter("category_id");
   const stock = dt.getFilter("stock");
+  const wholesaleMissing = dt.getFilter("wholesale_missing") === "1";
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [csvOpen, setCsvOpen] = useState(false);
+  const canEditWholesale = hasPermission(useAuthStore((s) => s.permissions), PERMISSIONS.B2B_PRICING_MANAGE);
 
   // Real backend filter params: stock_status (in_stock/out_of_stock, a direct enum
   // match) and low_stock (a computed condition, not a stored value — see
@@ -61,12 +67,13 @@ function AdminProductsPageContent() {
       category_id: categoryId || undefined,
       stock_status: stock === "in_stock" || stock === "out_of_stock" ? stock : undefined,
       low_stock: stock === "low_stock" ? 1 : undefined,
+      wholesale_missing: wholesaleMissing ? 1 : undefined,
       page: dt.page,
       per_page: dt.pageSize,
       sort_by: dt.sorting[0]?.id,
       sort_dir: dt.sorting[0]?.desc ? "desc" : "asc",
     }),
-    [dt.search, status, categoryId, stock, dt.page, dt.pageSize, dt.sorting]
+    [dt.search, status, categoryId, stock, wholesaleMissing, dt.page, dt.pageSize, dt.sorting]
   );
 
   const queryClient = useQueryClient();
@@ -96,6 +103,9 @@ function AdminProductsPageContent() {
   );
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: adminQueryKeys.products.list() });
+  // Meta field added for the B2B wholesale backfill (ProductController::index).
+  const missingWholesaleCount =
+    (productsQuery.data?.meta as { missing_wholesale_count?: number } | undefined)?.missing_wholesale_count ?? 0;
 
   // Read-only on Fulfillor's side: pulls warehouse stock for linked products now
   // instead of waiting for the scheduled fulfillor:sync run.
@@ -221,6 +231,21 @@ function AdminProductsPageContent() {
     },
     currencyColumn<Product>("price", "Price"),
     {
+      accessorKey: "wholesale_price",
+      header: "Wholesale",
+      cell: ({ row }) =>
+        row.original.wholesale_price != null ? (
+          <span className="tabular-nums">
+            {formatAED(Number(row.original.wholesale_price))}
+            {row.original.wholesale_min_qty && row.original.wholesale_min_qty > 1 ? (
+              <span className="ml-1 text-caption text-ink-muted">({row.original.wholesale_min_qty}+)</span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-caption font-semibold text-warning">Missing</span>
+        ),
+    },
+    {
       accessorKey: "stock_quantity",
       header: "Stock",
       cell: ({ row }) => (
@@ -254,6 +279,12 @@ function AdminProductsPageContent() {
         description={`${productsQuery.data?.meta.total ?? "…"} products in catalog`}
         actions={
           <>
+            {canEditWholesale && (
+              <Button variant="secondary" onClick={() => setCsvOpen(true)}>
+                <FileSpreadsheet className="h-4 w-4" />
+                Wholesale CSV
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => syncStock.mutate()} loading={syncStock.isPending}>
               <RefreshCw className="h-4 w-4" />
               Sync Stock from 3PL
@@ -394,6 +425,21 @@ function AdminProductsPageContent() {
                   </button>
                 );
               })}
+              {(missingWholesaleCount > 0 || wholesaleMissing) && (
+                <button
+                  type="button"
+                  onClick={() => dt.setFilter("wholesale_missing", wholesaleMissing ? null : "1")}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-caption font-semibold transition-colors",
+                    wholesaleMissing
+                      ? "border-warning bg-warning/10 text-warning"
+                      : "border-border bg-surface text-ink-muted hover:text-ink"
+                  )}
+                >
+                  Missing wholesale price
+                  <span className="rounded-full bg-warning px-1.5 text-[11px] leading-5 text-white">{missingWholesaleCount}</span>
+                </button>
+              )}
             </div>
           </div>
         }
@@ -403,6 +449,15 @@ function AdminProductsPageContent() {
           message: "Try adjusting your search or filters.",
         }}
       />
+
+      {canEditWholesale && (
+        <WholesaleCsvModal
+          open={csvOpen}
+          onClose={() => setCsvOpen(false)}
+          missingCount={missingWholesaleCount}
+          onSaved={invalidate}
+        />
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

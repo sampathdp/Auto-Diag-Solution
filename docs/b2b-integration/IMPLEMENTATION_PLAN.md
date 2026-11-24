@@ -59,6 +59,16 @@ Frontend:
 - Confirm the public product endpoints and SEO JSON-LD never serialise `wholesale_*`. Add an explicit column allowlist in `publicFind` / `publicIndex` and an e2e assertion.
 - Storefront: `useDealerPricing` hook, plus a price display component used by `ProductCard`, `ProductListRow`, `ProductDetailView`, `QuickViewModal`, cart and checkout.
 
+**Status (2026-11-23): step 1 built and tested; step 2 and cart/checkout wait.**
+- Migration `2026_11_23_000006`: `products.wholesale_price`, `wholesale_min_qty`, index.
+- `ProductService::applyWholesale`: required, > 0, ≤ retail, min qty ≥ 1. Only `b2b.pricing.manage` may write it; anyone else's submitted value is ignored. An admin save of a product with no wholesale price is refused (422, or 403 without the permission), except a status-only change to draft/inactive, so a product can always be taken off sale. System callers (seeder, Fulfillor sync) are not blocked.
+- `PricingService` (`catalogPrices`, `priceLines`, `unitPrice`) and `POST /account/dealer/pricing` (approved dealers with wholesale access only, at most 100 ids, active products only).
+- Admin: Wholesale column, "Missing wholesale price" filter chip with count (`meta.missing_wholesale_count`), Wholesale section on the product form (read-only without the permission), and the CSV export/import (`/admin/products/wholesale/export|import`, all-or-nothing, dry run first, blank cells left alone).
+- Storefront: `useDealerPrice` (batches every product on screen into one request) and `DealerPriceLine` on the card, list row, quick view and product page, in English and Arabic.
+- Public product endpoints already use an explicit field list (`shapePublic`); tested that no `wholesale` key appears, also when a dealer is signed in.
+- Tested on a throwaway database: 61 API checks and 20 browser checks passed.
+- **Not done yet:** cart and checkout still show and charge retail. They move to `PricingService` in Phase 3, together with `channel='b2b'`, so dealers never see a price at checkout that isn't charged. Ship Phase 2 and Phase 3 together. Migration step 2 (NOT NULL) is written once the backfill is complete everywhere.
+
 ## Phase 3: Checkout refactor and payment methods (retail-sensitive)
 
 - Migrations: `orders.channel`, `dealer_profile_id`, `quotation_id`, `payment_terms`; the `payment_status` ENUM extension; `order_items.pricing_type`, `retail_unit_price`.

@@ -152,6 +152,8 @@ $router->group([
     $router->post('/dealer/documents', [App\Controllers\B2B\DealerAccountController::class, 'uploadDocument']);
     $router->get('/dealer/documents/{id}', [App\Controllers\B2B\DealerAccountController::class, 'document']);
     $router->post('/dealer/submit', [App\Controllers\B2B\DealerAccountController::class, 'submit']);
+    // Wholesale prices for products on screen; approved dealers only (403 otherwise).
+    $router->post('/dealer/pricing', [App\Controllers\B2B\DealerPricingController::class, 'prices']);
 
     // Mock checkout — creates a real order and auto-confirms payment via a 'mock'
     // provider until the client's real payment gateway is integrated.
@@ -226,6 +228,10 @@ $router->group([
 
     // --- Products ---
     $router->get('/products', [ProductController::class, 'index']);
+    // Wholesale CSV backfill: literal paths before /products/{id}.
+    $pricingManage = [[PermissionMiddleware::class, Permissions::B2B_PRICING_MANAGE]];
+    $router->get('/products/wholesale/export', [ProductController::class, 'exportWholesale'], $pricingManage);
+    $router->post('/products/wholesale/import', [ProductController::class, 'importWholesale'], $pricingManage);
     $router->post('/products', [ProductController::class, 'store']);
     $router->get('/products/{id}', [ProductController::class, 'show']);
     $router->put('/products/{id}', [ProductController::class, 'update']);

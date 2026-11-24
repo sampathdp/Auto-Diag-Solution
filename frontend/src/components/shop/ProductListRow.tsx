@@ -15,6 +15,7 @@ import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
 import { useCartStore } from "@/store/useCartStore";
 import toast from "react-hot-toast";
+import { DealerPriceLine } from "./DealerPriceLine";
 
 function ParticleBurst() {
   const particles = Array.from({ length: 5 }).map((_, i) => ({
@@ -241,6 +242,7 @@ export function ProductListRow({ product }: { product: Product }) {
                     )}
                     <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
                   </div>
+                  <DealerPriceLine productId={product.id} className="mt-2" />
 
                   {(isOutOfStock || product.stock <= 10) && (
                     <div className="mt-4 flex items-center gap-2">

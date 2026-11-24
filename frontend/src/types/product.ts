@@ -37,6 +37,10 @@ export interface Product {
   short_description_en: string | null;
   short_description_ar: string | null;
   price: number;
+  /** Dealer price. null only on products created before B2B Phase 2 that still need a value. */
+  wholesale_price: number | null;
+  /** Fewest units a dealer must order to get the wholesale price (null = 1). */
+  wholesale_min_qty: number | null;
   vat_inclusive: boolean;
   compare_at_price: number | null;
   cost_price: number | null;

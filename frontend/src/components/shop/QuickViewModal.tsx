@@ -14,6 +14,7 @@ import { useFlyToCart } from "@/hooks/useFlyToCart";
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import toast from "react-hot-toast";
+import { DealerPriceLine } from "./DealerPriceLine";
 
 interface QuickViewModalProps {
   product: Product;
@@ -165,15 +166,18 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                 </div>
               )}
 
-              <div className="mb-8 flex items-baseline gap-4">
-                <span className={`text-4xl font-extrabold tracking-tight ${hasDiscount ? 'text-destructive' : 'text-foreground'}`}>
-                  AED {product.price_aed.toLocaleString()}
-                </span>
-                {hasDiscount && (
-                  <span className="text-lg font-medium text-muted-foreground line-through">
-                    AED {product.compare_at_price!.toLocaleString()}
+              <div className="mb-8">
+                <div className="flex items-baseline gap-4">
+                  <span className={`text-4xl font-extrabold tracking-tight ${hasDiscount ? 'text-destructive' : 'text-foreground'}`}>
+                    AED {product.price_aed.toLocaleString()}
                   </span>
-                )}
+                  {hasDiscount && (
+                    <span className="text-lg font-medium text-muted-foreground line-through">
+                      AED {product.compare_at_price!.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <DealerPriceLine productId={product.id} size="lg" className="mt-3" />
               </div>
 
               {/* Specs */}

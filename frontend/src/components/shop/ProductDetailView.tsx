@@ -32,6 +32,7 @@ import { useFlyToCart } from "@/hooks/useFlyToCart";
 import { useContactInfo } from "@/hooks/useContactInfo";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import toast from "react-hot-toast";
+import { DealerPriceLine } from "./DealerPriceLine";
 
 export function ProductDetailView({ productId }: { productId: string }) {
   const locale = useLocale();
@@ -327,6 +328,7 @@ export function ProductDetailView({ productId }: { productId: string }) {
               )}
               <span className="text-xs font-medium text-muted-foreground uppercase">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
             </div>
+            <DealerPriceLine productId={product.id} size="lg" className="-mt-3 mb-6" />
 
             {!isOutOfStock && product.stock <= 10 && (
               <div className="mb-6 flex items-center gap-2">

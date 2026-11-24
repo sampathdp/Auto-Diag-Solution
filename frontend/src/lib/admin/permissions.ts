@@ -15,4 +15,5 @@ export function hasPermission(userPermissions: string[] | undefined, required: s
 export const PERMISSIONS = {
   STAFF_MANAGE: "staff.manage",
   SETTINGS_B2B: "b2b.settings.manage",
+  B2B_PRICING_MANAGE: "b2b.pricing.manage",
 } as const;

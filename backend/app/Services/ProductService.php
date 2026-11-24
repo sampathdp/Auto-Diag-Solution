@@ -10,6 +10,7 @@ use App\Exceptions\DomainException;
 use App\Repositories\MediaRepository;
 use App\Repositories\ProductRepository;
 use App\Services\Fulfillment\FulfillmentService;
+use App\Support\Permissions;
 
 class ProductService
 {
@@ -195,6 +196,11 @@ class ProductService
         ];
     }
 
+    public function countMissingWholesale(): int
+    {
+        return $this->repo->countMissingWholesale();
+    }
+
     public function find(int $id): array
     {
         $product = $this->repo->find($id);
@@ -223,12 +229,21 @@ class ProductService
         if (array_key_exists('images', $row)) {
             $row['images'] = json_decode((string)($row['images'] ?? '[]'), true) ?? [];
         }
+        if (array_key_exists('wholesale_price', $row)) {
+            $row['wholesale_price'] = $row['wholesale_price'] !== null ? (float)$row['wholesale_price'] : null;
+            $row['wholesale_min_qty'] = $row['wholesale_min_qty'] !== null ? (int)$row['wholesale_min_qty'] : null;
+        }
         return $row;
     }
 
-    public function create(array $input): array
+    /**
+     * @param int|null $actorId the admin saving the form. null means a trusted system
+     *                          caller (seeder, CLI), which may set wholesale fields freely.
+     */
+    public function create(array $input, ?int $actorId = null): array
     {
         $data = $this->validate($input, null);
+        $this->applyWholesale($input, $data, null, $actorId);
         $specs = $this->validateSpecifications($input['specifications'] ?? null);
         $fitments = $this->validateFitments($input['fitments'] ?? null);
         $crossRefs = $this->validateCrossReferences($input['cross_reference_numbers'] ?? null);
@@ -256,13 +271,15 @@ class ProductService
         return $this->find($id);
     }
 
-    public function update(int $id, array $input): array
+    public function update(int $id, array $input, ?int $actorId = null): array
     {
-        if (!$this->repo->find($id)) {
+        $existing = $this->repo->find($id);
+        if (!$existing) {
             throw new DomainException('Product not found', 404);
         }
 
         $data = $this->validate($input, $id);
+        $this->applyWholesale($input, $data, $existing, $actorId);
         $specs = $this->validateSpecifications($input['specifications'] ?? null);
         $fitments = $this->validateFitments($input['fitments'] ?? null);
         $crossRefs = $this->validateCrossReferences($input['cross_reference_numbers'] ?? null);
@@ -505,6 +522,69 @@ class ProductService
         }
 
         return $data;
+    }
+
+    /**
+     * Wholesale price rules (B2B Phase 2). Every product must have a wholesale price
+     * greater than 0 and no higher than the retail price. Only staff with
+     * b2b.pricing.manage may write it; for anyone else a submitted value is ignored and
+     * the stored one is kept.
+     *
+     * Admin saves of a product that still has no wholesale price are refused, which is
+     * what drives the backfill. The one exception is taking a product off sale (a
+     * status-only change to draft/inactive), so nobody is stopped from hiding a product.
+     */
+    private function applyWholesale(array $input, array &$data, ?array $existing, ?int $actorId): void
+    {
+        $isCreate = $existing === null;
+        $canWrite = $actorId === null
+            || (new PermissionService())->userHas($actorId, Permissions::B2B_PRICING_MANAGE);
+
+        if ($canWrite && array_key_exists('wholesale_price', $input)) {
+            $raw = $input['wholesale_price'];
+            if ($raw === null || $raw === '') {
+                throw new DomainException('Wholesale price is required', 422);
+            }
+            if (!is_numeric($raw) || (float)$raw <= 0) {
+                throw new DomainException('Wholesale price must be greater than 0', 422);
+            }
+            $data['wholesale_price'] = round((float)$raw, 2);
+        }
+
+        if ($canWrite && array_key_exists('wholesale_min_qty', $input)) {
+            $raw = $input['wholesale_min_qty'];
+            if ($raw === null || $raw === '') {
+                $data['wholesale_min_qty'] = null;
+            } elseif (filter_var($raw, FILTER_VALIDATE_INT) === false || (int)$raw < 1) {
+                throw new DomainException('Wholesale minimum quantity must be a whole number of 1 or more', 422);
+            } else {
+                $data['wholesale_min_qty'] = (int)$raw;
+            }
+        }
+
+        $wholesale = $data['wholesale_price'] ?? ($existing['wholesale_price'] ?? null);
+        $price = $data['price'] ?? ($existing['price'] ?? null);
+
+        // Judged on the validated changes, not the raw request (which can carry extra keys).
+        $takingOffSale = !$isCreate
+            && array_keys($data) === ['status']
+            && in_array($data['status'], ['draft', 'inactive'], true);
+
+        if ($wholesale === null && $actorId !== null && !$takingOffSale) {
+            if ($canWrite) {
+                throw new DomainException('Wholesale price is required', 422);
+            }
+            throw new DomainException(
+                $isCreate
+                    ? "Creating a product needs the 'Set wholesale prices' permission, because every product needs a wholesale price"
+                    : "This product has no wholesale price yet. Ask an admin with the 'Set wholesale prices' permission to add one before saving",
+                403
+            );
+        }
+
+        if ($wholesale !== null && $price !== null && (float)$wholesale > (float)$price) {
+            throw new DomainException('Wholesale price cannot be higher than the retail price', 422);
+        }
     }
 
     private function resolveForeignKey(mixed $value, string $table, string $label): ?int

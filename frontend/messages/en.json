@@ -582,5 +582,10 @@
         "documents": "Documents"
       }
     }
+  },
+  "dealerPrice": {
+    "label": "Dealer price",
+    "save": "You save {percent}%",
+    "minQty": "Dealer price from {count} units"
   }
 }

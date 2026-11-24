@@ -11,6 +11,7 @@ import { isNewProduct } from "@/lib/productBadges";
 import { Link, useRouter } from "@/i18n/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { QuickViewModal } from "./QuickViewModal";
+import { DealerPriceLine } from "./DealerPriceLine";
 import { useWishlistStore } from "@/store/useWishlistStore";
 import { useCompareStore } from "@/store/useCompareStore";
 import { useVehicleStore } from "@/store/useVehicleStore";
@@ -397,6 +398,7 @@ export function ProductCard({ product, context = "shop" }: { product: Product, c
                 )}
                 <span className="text-[10px] font-medium text-muted-foreground uppercase">{product.vat_inclusive ? "VAT incl." : "+ VAT"}</span>
               </div>
+              <DealerPriceLine productId={product.id} className="mt-2" />
 
               {/* Row 6: Low-stock warning only — "in stock" is the assumed default, no need to announce it */}
               {!isOutOfStock && product.stock <= 10 && (

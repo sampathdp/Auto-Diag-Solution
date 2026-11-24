@@ -582,5 +582,10 @@
         "documents": "المستندات"
       }
     }
+  },
+  "dealerPrice": {
+    "label": "سعر الوكيل",
+    "save": "توفّر {percent}%",
+    "minQty": "سعر الوكيل عند شراء {count} قطع أو أكثر"
   }
 }
