@@ -2,10 +2,11 @@
 
 import { AuthGuard } from "@/components/account/AuthGuard";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import { User, Car, MapPin, Package, Heart, Bell, LogOut, LayoutDashboard, Handshake } from "lucide-react";
+import { User, Car, MapPin, Package, Heart, Bell, LogOut, LayoutDashboard, Handshake, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useTranslations } from "next-intl";
+import { useDealerSummary } from "@/hooks/useDealerPricing";
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,9 +21,14 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     router.push("/");
   };
 
+  // Quotations are a dealer feature: shown once the account is (or was) an approved dealer.
+  const dealer = useDealerSummary();
+  const showQuotations = dealer?.status === "approved" || dealer?.status === "suspended";
+
   const navItems = [
     { label: t("overview"), href: "/account/overview", icon: LayoutDashboard },
     { label: t("orders"), href: "/account/orders", icon: Package },
+    ...(showQuotations ? [{ label: t("quotations"), href: "/account/quotations", icon: FileText }] : []),
     { label: t("vehicles"), href: "/account/vehicles", icon: Car },
     { label: t("wishlist"), href: "/account/wishlist", icon: Heart },
     { label: t("profile"), href: "/account/profile", icon: User },

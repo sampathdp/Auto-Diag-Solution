@@ -87,6 +87,11 @@ class DealerAdminController extends BaseController
         $this->success($this->service->updateCredit($this->id($request), $this->admin($request), $request->all()), 'Credit terms saved');
     }
 
+    public function updateQuotationRule(Request $request): void
+    {
+        $this->success($this->service->updateQuotationRule($this->id($request), $this->admin($request), $request->all()), 'Quotation rule saved');
+    }
+
     public function addNote(Request $request): void
     {
         $this->success($this->service->addNote($this->id($request), $this->admin($request), (string)$request->input('note', '')), 'Note added');

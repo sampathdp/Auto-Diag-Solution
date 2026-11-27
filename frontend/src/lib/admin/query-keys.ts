@@ -60,6 +60,11 @@ export const adminQueryKeys = {
     list: (filters: Record<string, unknown> = {}) => ["admin", "b2b-dealers", "list", filters] as const,
     detail: (id: number) => ["admin", "b2b-dealers", "detail", id] as const,
   },
+  b2bQuotations: {
+    all: ["admin", "b2b-quotations"] as const,
+    list: (filters: Record<string, unknown> = {}) => ["admin", "b2b-quotations", "list", filters] as const,
+    detail: (id: number) => ["admin", "b2b-quotations", "detail", id] as const,
+  },
   outbox: {
     all: ["admin", "outbox"] as const,
     list: (filters: Record<string, unknown> = {}) => ["admin", "outbox", "list", filters] as const,

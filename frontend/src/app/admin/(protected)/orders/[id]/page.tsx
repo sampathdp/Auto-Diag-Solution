@@ -5,7 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Printer, User as UserIcon, MapPin, CreditCard, ExternalLink, PackageX, Truck, RefreshCw, AlertTriangle } from "lucide-react";
+import { Printer, User as UserIcon, MapPin, ExternalLink, PackageX, Truck, RefreshCw, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/admin/ui/Badge";
+import { OrderPaymentCard } from "@/components/admin/orders/OrderPaymentCard";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { FullScreenLoader } from "@/components/admin/ui/FullScreenLoader";
 import { EmptyState } from "@/components/admin/ui/EmptyState";
@@ -171,7 +173,25 @@ export default function AdminOrderDetailPage() {
       ),
     },
     { accessorKey: "quantity", header: "Qty" },
-    { accessorKey: "unit_price", header: "Unit Price", cell: ({ row }) => formatAED(row.original.unit_price) },
+    {
+      accessorKey: "unit_price",
+      header: "Unit Price",
+      cell: ({ row }) => {
+        const { unit_price, pricing_type, retail_unit_price } = row.original;
+        if (pricing_type !== "wholesale" && pricing_type !== "quoted") return formatAED(unit_price);
+        return (
+          <div>
+            <p className="text-ink">{formatAED(unit_price)}</p>
+            <p className="text-caption text-ink-muted">
+              {pricing_type === "wholesale" ? "Wholesale" : "Quoted"}
+              {retail_unit_price != null && Number(retail_unit_price) > Number(unit_price) && (
+                <> · retail <span className="line-through">{formatAED(retail_unit_price)}</span></>
+              )}
+            </p>
+          </div>
+        );
+      },
+    },
     {
       id: "line_total",
       header: "Subtotal",
@@ -186,6 +206,8 @@ export default function AdminOrderDetailPage() {
   // Once Fulfillor has the order, its warehouse drives processing/shipped (and the
   // carrier/tracking) via sync — the backend rejects setting those by hand.
   const managedByFulfillor = !!order.fulfillor_order_id;
+  // The API refuses to send a bank transfer order to the 3PL before the money is verified.
+  const transferUnverified = order.payment_method === "bank_transfer" && order.payment_status !== "paid";
 
   return (
     <div>
@@ -261,7 +283,12 @@ export default function AdminOrderDetailPage() {
               </Button>
             )}
             {order.status === "pending_vin_verification" && order.vin_verified_at && (
-              <Button variant="primary" onClick={() => setApproveOpen(true)}>
+              <Button
+                variant="primary"
+                onClick={() => setApproveOpen(true)}
+                disabled={transferUnverified}
+                title={transferUnverified ? "Verify the bank transfer first (Payment card)" : undefined}
+              >
                 Send to 3PL
               </Button>
             )}
@@ -298,13 +325,39 @@ export default function AdminOrderDetailPage() {
               {order.customer_name}
             </p>
             <p className="truncate text-body text-ink-muted">{order.customer_email}</p>
-            <Link
-              href={`/admin/customers/${order.customer_id}`}
-              className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
-            >
-              View customer
-              <ExternalLink className="h-3 w-3" />
-            </Link>
+            {order.channel === "b2b" && (
+              <p className="flex items-center gap-2 text-body text-ink">
+                <Badge variant="info">Dealer</Badge>
+                <span className="truncate">{order.dealer_business_name}</span>
+                {order.dealer_code && <span className="font-mono text-caption text-ink-muted">{order.dealer_code}</span>}
+              </p>
+            )}
+            {order.quotation_id && (
+              <p className="text-body text-ink">
+                From quotation{" "}
+                <Link href={`/admin/b2b/quotations/${order.quotation_id}`} className="font-mono text-primary hover:underline">
+                  {order.quotation_number ?? `#${order.quotation_id}`}
+                </Link>
+              </p>
+            )}
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link
+                href={`/admin/customers/${order.customer_id ?? (order as { user_id?: number }).user_id}`}
+                className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+              >
+                View customer
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+              {order.channel === "b2b" && order.dealer_profile_id && (
+                <Link
+                  href={`/admin/b2b/dealers/${order.dealer_profile_id}`}
+                  className="inline-flex items-center gap-1 text-caption font-semibold text-primary hover:underline"
+                >
+                  View dealer
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              )}
+            </div>
           </CardBody>
         </Card>
 
@@ -354,19 +407,7 @@ export default function AdminOrderDetailPage() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader className="py-3">
-            <h2 className="text-caption font-semibold uppercase tracking-wide text-ink-muted">Payment</h2>
-          </CardHeader>
-          <CardBody className="space-y-1.5">
-            <p className="flex items-center gap-2 text-body text-ink">
-              <CreditCard className="h-3.5 w-3.5 shrink-0 text-ink-muted" />
-              <span className="truncate font-mono text-caption">{order.payment_reference}</span>
-            </p>
-            <p className="text-body text-ink-muted">Amount: {formatAED(order.total)}</p>
-            <StatusBadge status={order.refund_requested_at ? "refund_requested" : order.payment_status} />
-          </CardBody>
-        </Card>
+        <OrderPaymentCard order={order} onChanged={invalidate} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

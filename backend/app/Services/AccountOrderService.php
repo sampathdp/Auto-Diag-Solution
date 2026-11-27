@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\FileUploader;
 use App\Exceptions\DomainException;
 use App\Repositories\OrderRepository;
+use App\Services\B2B\PaymentMethodPolicy;
 
 class AccountOrderService
 {
@@ -62,6 +63,28 @@ class AccountOrderService
             throw new DomainException('Order not found', 404);
         }
         return $this->shape($order, $this->repo->items((int)$order['id']));
+    }
+
+    /** Bank transfer receipt for the signed-in customer's own order. */
+    public function uploadPaymentProof(int $userId, int $id, ?array $file): array
+    {
+        $order = $this->repo->findForUser($id, $userId);
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        (new OrderPaymentService())->uploadProof($order, $file, $userId);
+        return $this->show($userId, $id);
+    }
+
+    /** Same, for a guest proving ownership with the emailed tracking link. */
+    public function uploadPaymentProofByToken(string $orderNumber, string $token, ?array $file): array
+    {
+        $order = $this->repo->findByOrderNumberAndTokenHash($orderNumber, hash('sha256', $token));
+        if (!$order) {
+            throw new DomainException('Order not found', 404);
+        }
+        (new OrderPaymentService())->uploadProof($order, $file, null);
+        return $this->showByTrackingToken($orderNumber, $token);
     }
 
     public function cancel(int $userId, int $id, ?string $reason): array
@@ -208,6 +231,19 @@ class AccountOrderService
             'tracking_number' => $order['tracking_number'] ?? null,
             'shipped_at' => $order['shipped_at'] ?? null,
             'delivered_at' => $order['delivered_at'] ?? null,
+            'channel' => $order['channel'] ?? 'retail',
+            'payment_method' => $order['payment_method'] ?? null,
+            'payment_method_label' => PaymentMethodPolicy::label((string)($order['payment_method'] ?? '')),
+            'payment_status' => $order['payment_status'] ?? null,
+            // Bank details and the reference, only while a transfer is still awaited.
+            'payment_instructions' => OrderPaymentService::instructionsFor($order),
+            'can_upload_payment_proof' => OrderPaymentService::canUploadProof($order),
+            'payment_proofs' => ($order['payment_method'] ?? '') === 'bank_transfer'
+                ? array_map(
+                    fn (array $p) => ['id' => $p['id'], 'original_name' => $p['original_name'], 'created_at' => $p['created_at']],
+                    (new OrderPaymentService())->proofsFor((int)$order['id'])
+                )
+                : [],
             'items' => array_map(function (array $item) use ($imagesByProduct) {
                 $productId = $item['product_id'] !== null ? (int)$item['product_id'] : null;
                 return [
@@ -218,6 +254,8 @@ class AccountOrderService
                     'name_ar' => $item['name_ar'],
                     'quantity' => (int)$item['quantity'],
                     'unit_price' => (float)$item['unit_price'],
+                    'pricing_type' => $item['pricing_type'] ?? 'retail',
+                    'retail_unit_price' => isset($item['retail_unit_price']) ? (float)$item['retail_unit_price'] : (float)$item['unit_price'],
                     'total_price' => (float)$item['line_total'],
                     'image' => $productId !== null ? ($imagesByProduct[$productId] ?? null) : null,
                 ];

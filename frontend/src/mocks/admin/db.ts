@@ -139,9 +139,33 @@ export interface OrderItem {
   name_ar: string;
   unit_price: number;
   quantity: number;
+  /** B2B Phase 3: how unit_price was set, and the retail price at the time (for savings). */
+  pricing_type?: "retail" | "wholesale" | "quoted";
+  retail_unit_price?: number | null;
 }
 
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type PaymentStatus = "pending" | "pending_verification" | "partially_paid" | "paid" | "failed" | "refunded";
+
+export type PaymentMethod = "cod" | "bank_transfer" | "cheque" | "credit" | "online_card" | "mock" | "stripe";
+
+export interface OrderPaymentProof {
+  id: number;
+  original_name: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface OrderPaymentTransaction {
+  id: number;
+  provider: string;
+  provider_reference: string | null;
+  type: "payment" | "refund";
+  status: "pending" | "succeeded" | "failed" | "cancelled";
+  amount: number;
+  currency: string;
+  created_at: string;
+}
 
 export interface OrderNote {
   id: number;
@@ -182,6 +206,19 @@ export interface Order {
   commission_amount?: number;
   total: number;
   payment_reference: string;
+  /** B2B Phase 3. 'b2b' orders belong to a dealer (dealer_* fields set). */
+  channel?: "retail" | "b2b";
+  dealer_profile_id?: number | null;
+  dealer_business_name?: string | null;
+  /** Set when the order was placed by accepting a dealer quotation. */
+  quotation_id?: number | null;
+  quotation_number?: string | null;
+  dealer_code?: string | null;
+  payment_method?: PaymentMethod | string;
+  payment_method_label?: string;
+  /** Detail endpoint only. */
+  payment_proofs?: OrderPaymentProof[];
+  payment_transactions?: OrderPaymentTransaction[];
   /** Snapshotted at checkout — matches AddressService::shape(), not the raw customer_addresses row. */
   shipping_snapshot: {
     label?: string;

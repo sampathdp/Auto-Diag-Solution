@@ -24,9 +24,11 @@ class OrderRepository extends BaseRepository
         $offset = ($page - 1) * $perPage;
 
         $sql = "SELECT o.*, u.name AS customer_name, u.email AS customer_email,
+                       dp.business_name AS dealer_business_name, dp.dealer_code AS dealer_code,
                        (SELECT COALESCE(SUM(oi.quantity), 0) FROM order_items oi WHERE oi.order_id = o.id) AS items_count
                 FROM orders o
                 LEFT JOIN users u ON u.id = o.user_id
+                LEFT JOIN dealer_profiles dp ON dp.id = o.dealer_profile_id
                 {$whereSql}
                 ORDER BY o.{$sortBy} {$sortDir}
                 LIMIT {$perPage} OFFSET {$offset}";
@@ -37,7 +39,8 @@ class OrderRepository extends BaseRepository
     public function countFiltered(array $filters, string $search): int
     {
         [$whereSql, $params] = $this->buildWhere($filters, $search);
-        $sql = "SELECT COUNT(*) AS c FROM orders o LEFT JOIN users u ON u.id = o.user_id {$whereSql}";
+        $sql = "SELECT COUNT(*) AS c FROM orders o LEFT JOIN users u ON u.id = o.user_id
+                LEFT JOIN dealer_profiles dp ON dp.id = o.dealer_profile_id {$whereSql}";
         return (int) DatabaseManager::query($sql, $params)->fetch()['c'];
     }
 
@@ -89,10 +92,14 @@ class OrderRepository extends BaseRepository
     public function findWithCustomer(int $id): ?array
     {
         $row = DatabaseManager::query(
-            "SELECT o.*, u.name AS customer_name, u.email AS customer_email, r.name AS sales_rep_name
+            "SELECT o.*, u.name AS customer_name, u.email AS customer_email, r.name AS sales_rep_name,
+                    dp.business_name AS dealer_business_name, dp.dealer_code AS dealer_code,
+                    dq.quotation_number AS quotation_number
              FROM orders o
              LEFT JOIN users u ON u.id = o.user_id
              LEFT JOIN sales_representatives r ON r.id = o.sales_rep_id
+             LEFT JOIN dealer_profiles dp ON dp.id = o.dealer_profile_id
+             LEFT JOIN dealer_quotations dq ON dq.id = o.quotation_id
              WHERE o.id = :id",
             ['id' => $id]
         )->fetch();
@@ -173,7 +180,7 @@ class OrderRepository extends BaseRepository
         $conditions = [];
         $params = [];
 
-        foreach (['status', 'payment_status'] as $column) {
+        foreach (['status', 'payment_status', 'payment_method', 'channel'] as $column) {
             if (array_key_exists($column, $filters)) {
                 $conditions[] = "o.{$column} = :{$column}";
                 $params[$column] = $filters[$column];
@@ -189,11 +196,14 @@ class OrderRepository extends BaseRepository
         }
 
         if ($search !== '') {
-            $conditions[] = '(o.order_number LIKE :search1 OR u.name LIKE :search2 OR u.email LIKE :search3)';
+            $conditions[] = '(o.order_number LIKE :search1 OR u.name LIKE :search2 OR u.email LIKE :search3
+                              OR dp.business_name LIKE :search4 OR dp.dealer_code LIKE :search5)';
             $like = '%' . $search . '%';
             $params['search1'] = $like;
             $params['search2'] = $like;
             $params['search3'] = $like;
+            $params['search4'] = $like;
+            $params['search5'] = $like;
         }
 
         $sql = !empty($conditions) ? 'WHERE ' . implode(' AND ', $conditions) : '';

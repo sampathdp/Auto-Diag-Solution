@@ -51,6 +51,24 @@ final class DealerContext
     }
 
     /**
+     * Must this dealer's checkout go through a quotation (INTEGRATION_ARCHITECTURE.md §4)?
+     * Yes while the first-order requirement is on and no quotation has been converted
+     * yet, or whenever an admin has set force_quotation. first_order_completed_at is set
+     * only by a successful conversion, so a rejected or expired first quotation keeps
+     * the requirement.
+     */
+    public static function needsQuotation(?array $profile): bool
+    {
+        if (!self::isActiveDealer($profile)) {
+            return false;
+        }
+        if ((int)($profile['force_quotation'] ?? 0) === 1) {
+            return true;
+        }
+        return (int)($profile['requires_quotation'] ?? 0) === 1 && empty($profile['first_order_completed_at']);
+    }
+
+    /**
      * What the storefront may know about the user's dealer standing. Deliberately small:
      * no business details, no document info.
      */
@@ -65,6 +83,7 @@ final class DealerContext
             'dealer_code' => $profile['status'] === 'approved' || $profile['status'] === 'suspended' ? $profile['dealer_code'] : null,
             'is_active' => $active,
             'wholesale' => $active && (int)$profile['wholesale_enabled'] === 1,
+            'needs_quotation' => self::needsQuotation($profile),
             'not_yet_active' => $profile['status'] === 'approved' && !$active
                 && !empty($profile['activated_at']) && strtotime((string)$profile['activated_at']) > time(),
             'expired' => $profile['status'] === 'approved' && !empty($profile['expires_at'])

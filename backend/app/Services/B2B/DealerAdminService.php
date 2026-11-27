@@ -108,6 +108,8 @@ final class DealerAdminService
             'history' => $this->repo->history($id),
             'notes' => (new AdminNoteRepository())->forEntity('dealer', $id),
             'credit' => $credit,
+            'needs_quotation' => DealerContext::needsQuotation($p),
+            'quotation_counts' => (new \App\Repositories\QuotationRepository())->statusCounts($id),
             'suggested_dealer_code' => $p['dealer_code'] ?: $this->suggestDealerCode(),
             'defaults' => [
                 'credit_enabled' => (bool)$this->settings->get('b2b_default_credit_enabled', false),
@@ -294,6 +296,48 @@ final class DealerAdminService
             DatabaseManager::rollBack();
             throw $e;
         }
+        return $this->detail($id, $adminId);
+    }
+
+    /**
+     * Quotation rule for one dealer: force_quotation sends every order through a
+     * quotation; requires_quotation is the first-order requirement (copied from the
+     * setting at approval).
+     */
+    public function updateQuotationRule(int $id, int $adminId, array $input): array
+    {
+        DatabaseManager::beginTransaction();
+        try {
+            $locked = $this->repo->lock($id);
+            if (!$locked) {
+                throw new DomainException('Dealer not found', 404);
+            }
+            if (!in_array($locked['status'], ['approved', 'suspended'], true)) {
+                throw new DomainException('The quotation rule can only be set for approved dealers', 409);
+            }
+            $changes = [];
+            foreach (['force_quotation', 'requires_quotation'] as $field) {
+                if (array_key_exists($field, $input)) {
+                    $changes[$field] = filter_var($input[$field], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                }
+            }
+            if (!$changes) {
+                throw new ValidationException(['force_quotation' => ['Nothing to change.']]);
+            }
+            $this->repo->update($id, $changes);
+            AdminActivityLogger::log($adminId, 'dealer.quotation_rule_changed', 'dealer', $id, [
+                'from' => [
+                    'force_quotation' => (int)$locked['force_quotation'] === 1,
+                    'requires_quotation' => (int)$locked['requires_quotation'] === 1,
+                ],
+                'to' => array_map(fn ($v) => $v === 1, $changes),
+            ]);
+            DatabaseManager::commit();
+        } catch (\Throwable $e) {
+            DatabaseManager::rollBack();
+            throw $e;
+        }
+        DealerContext::forget((int)$locked['user_id']);
         return $this->detail($id, $adminId);
     }
 

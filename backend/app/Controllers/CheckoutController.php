@@ -23,6 +23,18 @@ class CheckoutController extends BaseController
         $this->service = new CheckoutService();
     }
 
+    /** GET /account/checkout/payment-methods — dealers get the B2B list. */
+    public function paymentMethods(Request $request): void
+    {
+        $this->success($this->service->paymentMethodsFor((int)$request->user->id));
+    }
+
+    /** GET /checkout/payment-methods — guest checkout is always retail. */
+    public function guestPaymentMethods(Request $request): void
+    {
+        $this->success($this->service->paymentMethodsFor(null));
+    }
+
     public function store(Request $request): void
     {
         $items = $request->input('items');
@@ -35,10 +47,13 @@ class CheckoutController extends BaseController
             (int)$request->user->id,
             (int)$request->input('shipping_address_id'),
             $items,
-            $promoCode !== null ? (string)$promoCode : null
+            $promoCode !== null ? (string)$promoCode : null,
+            trim((string)($request->input('payment_method') ?? ''))
         );
 
-        $this->success($order, 'Order placed successfully', 201);
+        // A dealer who needs a quotation gets {kind:'quotation', quotation} instead of an order.
+        $isQuotation = ($order['kind'] ?? null) === 'quotation';
+        $this->success($order, $isQuotation ? 'Quotation request sent' : 'Order placed successfully', 201);
     }
 
     public function guestStore(Request $request): void
@@ -60,7 +75,8 @@ class CheckoutController extends BaseController
             (array)$request->input('customer'),
             (array)$request->input('shipping'),
             $items,
-            $promoCode !== null ? (string)$promoCode : null
+            $promoCode !== null ? (string)$promoCode : null,
+            trim((string)($request->input('payment_method') ?? ''))
         );
 
         $this->success($order, 'Order placed successfully', 201);

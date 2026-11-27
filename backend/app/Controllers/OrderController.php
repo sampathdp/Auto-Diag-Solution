@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Request;
+use App\Services\OrderPaymentService;
 use App\Services\OrderService;
 
 class OrderController extends BaseController
@@ -25,8 +26,8 @@ class OrderController extends BaseController
         $sortDir = (string)($request->input('sort_dir') ?? 'DESC');
 
         $filters = [];
-        foreach (['status', 'payment_status'] as $key) {
-            if ($request->input($key) !== null) {
+        foreach (['status', 'payment_status', 'payment_method', 'channel'] as $key) {
+            if ($request->input($key) !== null && $request->input($key) !== '') {
                 $filters[$key] = (string)$request->input($key);
             }
         }
@@ -79,6 +80,24 @@ class OrderController extends BaseController
             (int)$request->user->id
         );
         $this->success($order, 'Order payment status updated successfully');
+    }
+
+    /** POST /admin/orders/{id}/confirm-payment  {reference?, note?} */
+    public function confirmPayment(Request $request): void
+    {
+        $order = $this->service->confirmPayment(
+            (int)$request->getParam('id'),
+            (int)$request->user->id,
+            is_scalar($request->input('reference')) ? (string)$request->input('reference') : null,
+            is_scalar($request->input('note')) ? (string)$request->input('note') : null
+        );
+        $this->success($order, 'Payment confirmed');
+    }
+
+    /** GET /admin/orders/{id}/payment-proofs/{proofId} — streams the receipt. */
+    public function paymentProof(Request $request): void
+    {
+        (new OrderPaymentService())->streamProof((int)$request->getParam('id'), (int)$request->getParam('proofId'));
     }
 
     public function requestRefund(Request $request): void

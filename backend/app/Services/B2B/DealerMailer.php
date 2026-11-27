@@ -12,9 +12,9 @@ use App\Services\SettingService;
  * the business change has committed, so a mail problem never undoes an approval.
  * All dynamic values are HTML-escaped.
  */
-final class DealerMailer
+class DealerMailer
 {
-    private SettingService $settings;
+    protected SettingService $settings;
 
     public function __construct()
     {
@@ -135,7 +135,7 @@ final class DealerMailer
     }
 
     /** @return string[] */
-    private function teamRecipients(): array
+    protected function teamRecipients(): array
     {
         $list = $this->settings->get('b2b_sales_team_emails', []);
         $list = is_array($list) ? array_values(array_filter(array_map('trim', array_map('strval', $list)))) : [];
@@ -149,7 +149,7 @@ final class DealerMailer
         return array_values(array_unique(array_filter($list, fn ($e) => filter_var($e, FILTER_VALIDATE_EMAIL))));
     }
 
-    private function send(string $to, string $subject, string $template, string $bodyHtml): void
+    protected function send(string $to, string $subject, string $template, string $bodyHtml): void
     {
         $site = $this->siteName();
         $html = "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#1a1a1a;max-width:600px\">
@@ -163,26 +163,26 @@ final class DealerMailer
         }
     }
 
-    private function siteName(): string
+    protected function siteName(): string
     {
         return $this->e((string)$this->settings->get('site_name', 'Auto Parts UAE'));
     }
 
-    private function link(string $path): string
+    protected function link(string $path): string
     {
         $base = rtrim((string)($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000'), '/');
         $url = $this->e($base . '/en' . $path);
         return "<a href=\"{$url}\">{$url}</a>";
     }
 
-    private function adminLink(string $path): string
+    protected function adminLink(string $path): string
     {
         $base = rtrim((string)($_ENV['FRONTEND_URL'] ?? 'http://localhost:3000'), '/');
         $url = $this->e($base . $path);
         return "<a href=\"{$url}\">{$url}</a>";
     }
 
-    private function e(?string $v): string
+    protected function e(?string $v): string
     {
         return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     }

@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Building2, UserRound, MapPin, FileText, Lock, Eye, Wallet, History, ExternalLink } from "lucide-react";
+import { ArrowLeft, Building2, UserRound, MapPin, FileText, Lock, Eye, Wallet, History, ExternalLink, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { FullScreenLoader } from "@/components/admin/ui/FullScreenLoader";
 import { Card, CardHeader, CardBody } from "@/components/admin/ui/Card";
 import { Button } from "@/components/admin/ui/Button";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
+import { Switch } from "@/components/admin/ui/Switch";
 import { NotesPanel } from "@/components/admin/NotesPanel";
 import { showSuccess, showError } from "@/components/admin/ui/toast";
 import { ApproveDealerModal, CreditTermsModal, ReasonModal, type FieldErrors } from "@/components/admin/b2b/DealerActionModals";
@@ -69,6 +70,7 @@ export default function AdminDealerDetailPage() {
         suspend: "Dealer suspended",
         reactivate: "Dealer reactivated",
         credit: "Credit terms saved",
+        "quotation-rule": "Quotation rule saved",
       };
       showSuccess(messages[vars.path] ?? "Saved");
       setDialog(null);
@@ -308,6 +310,40 @@ export default function AdminDealerDetailPage() {
                   <Row label="Terms note">{creditCurrent.payment_terms}</Row>
                   <Row label="Outstanding" mono>AED {Number(credit?.outstanding_balance ?? 0).toLocaleString("en-AE", { minimumFractionDigits: 2 })}</Row>
                 </dl>
+              </CardBody>
+            </Card>
+          )}
+
+          {isDealer && (
+            <Card>
+              <CardHeader>
+                <h2 className="flex items-center gap-2 text-h4 font-bold text-ink"><FileSpreadsheet className="h-4 w-4" />Quotations</h2>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <p className="text-body text-ink">
+                  {query.data.needs_quotation
+                    ? "Their next checkout is sent as a quotation request."
+                    : "Their checkout places orders directly."}
+                </p>
+                <dl>
+                  <Row label="First order">
+                    {p.first_order_completed_at ? `done ${formatDateTime(p.first_order_completed_at)}` : Number(p.requires_quotation) === 1 ? "needs a quotation" : "no quotation required"}
+                  </Row>
+                  <Row label="In progress">
+                    {["submitted", "under_review", "discussion_required", "revised", "approved"].reduce((n, st) => n + (query.data.quotation_counts?.[st] ?? 0), 0)}
+                  </Row>
+                  <Row label="Converted">{query.data.quotation_counts?.converted ?? 0}</Row>
+                </dl>
+                <Switch
+                  id="force-quotation"
+                  label="Always require a quotation for this dealer"
+                  checked={Number(p.force_quotation) === 1}
+                  disabled={!canReview || action.isPending}
+                  onChange={(e) => action.mutate({ path: "quotation-rule", body: { force_quotation: e.target.checked }, method: "put" })}
+                />
+                <Link href={`/admin/b2b/quotations?dealer_id=${p.id}`} className="inline-block text-body text-primary hover:underline">
+                  See this dealer's quotations
+                </Link>
               </CardBody>
             </Card>
           )}

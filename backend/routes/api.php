@@ -74,12 +74,14 @@ $router->get("$v1/partner/info", [App\Controllers\B2B\PartnerController::class, 
 // Guest checkout — no login required, customer + shipping details are typed in at
 // checkout instead of pulled from a saved account. Kept separate from the authenticated
 // /account/checkout above (still requires AuthMiddleware for saved-address checkout).
+$router->get("$v1/checkout/payment-methods", [CheckoutController::class, 'guestPaymentMethods']);
 $router->post("$v1/checkout/guest", [CheckoutController::class, 'guestStore']);
 
 // Order-confirmation-email tracking link — unauthenticated, guarded by the token in the
 // URL instead of a JWT (see OrderTrackingController) since guest customers have no
 // session to authenticate with.
 $router->get("$v1/orders/track/{orderNumber}", [OrderTrackingController::class, 'show']);
+$router->post("$v1/orders/track/{orderNumber}/payment-proof", [OrderTrackingController::class, 'uploadPaymentProof']);
 
 // Public contact form — no login required.
 $router->post("$v1/contact", [App\Controllers\ContactMessageController::class, 'store']);
@@ -142,6 +144,8 @@ $router->group([
     $router->post('/orders/{id}/cancel', [AccountOrderController::class, 'cancel']);
     $router->post('/orders/{id}/refund', [AccountOrderController::class, 'refund']);
     $router->post('/orders/{id}/reorder', [AccountOrderController::class, 'reorder']);
+    // Bank transfer receipt (private storage); only while the transfer is awaited.
+    $router->post('/orders/{id}/payment-proof', [AccountOrderController::class, 'uploadPaymentProof']);
 
     $router->get('/notifications/preferences', [AccountNotificationController::class, 'show']);
     $router->put('/notifications/preferences', [AccountNotificationController::class, 'update']);
@@ -154,9 +158,17 @@ $router->group([
     $router->post('/dealer/submit', [App\Controllers\B2B\DealerAccountController::class, 'submit']);
     // Wholesale prices for products on screen; approved dealers only (403 otherwise).
     $router->post('/dealer/pricing', [App\Controllers\B2B\DealerPricingController::class, 'prices']);
+    // Quotations: always the caller's own (another dealer's id is a 404).
+    $dealerQuotes = App\Controllers\B2B\DealerQuotationController::class;
+    $router->get('/dealer/quotations', [$dealerQuotes, 'index']);
+    $router->get('/dealer/quotations/{id}', [$dealerQuotes, 'show']);
+    $router->post('/dealer/quotations/{id}/messages', [$dealerQuotes, 'message']);
+    $router->post('/dealer/quotations/{id}/accept', [$dealerQuotes, 'accept']);
+    $router->post('/dealer/quotations/{id}/reject', [$dealerQuotes, 'reject']);
 
-    // Mock checkout — creates a real order and auto-confirms payment via a 'mock'
-    // provider until the client's real payment gateway is integrated.
+    // Checkout. Payment methods come from PaymentMethodPolicy (B2B list for an active
+    // dealer); the order is placed unpaid and an admin confirms the payment later.
+    $router->get('/checkout/payment-methods', [CheckoutController::class, 'paymentMethods']);
     $router->post('/checkout', [CheckoutController::class, 'store']);
 });
 
@@ -286,7 +298,11 @@ $router->group([
     $router->get('/orders', [OrderController::class, 'index']);
     $router->get('/orders/{id}', [OrderController::class, 'show']);
     $router->put('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-    $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+    // Recording money received needs payments.confirm (super admins hold it).
+    $paymentsConfirm = [[PermissionMiddleware::class, Permissions::PAYMENTS_CONFIRM]];
+    $router->put('/orders/{id}/payment-status', [OrderController::class, 'updatePaymentStatus'], $paymentsConfirm);
+    $router->post('/orders/{id}/confirm-payment', [OrderController::class, 'confirmPayment'], $paymentsConfirm);
+    $router->get('/orders/{id}/payment-proofs/{proofId}', [OrderController::class, 'paymentProof'], $paymentsConfirm);
     $router->post('/orders/{id}/refund-request', [OrderController::class, 'requestRefund']);
     $router->post('/orders/{id}/notes', [OrderController::class, 'addNote']);
     $router->post('/orders/{id}/verify-vin', [OrderController::class, 'verifyVin']);
@@ -325,7 +341,20 @@ $router->group([
     $router->post('/b2b/dealers/{id}/suspend', [$b2bDealers, 'suspend'], $dealersSuspend);
     $router->post('/b2b/dealers/{id}/reactivate', [$b2bDealers, 'reactivate'], $dealersSuspend);
     $router->put('/b2b/dealers/{id}/credit', [$b2bDealers, 'updateCredit'], [[PermissionMiddleware::class, Permissions::B2B_CREDIT_MANAGE]]);
+    $router->put('/b2b/dealers/{id}/quotation-rule', [$b2bDealers, 'updateQuotationRule'], $dealersReview);
     $router->get('/b2b/documents/{id}', [$b2bDealers, 'document'], [[PermissionMiddleware::class, Permissions::B2B_DOCUMENTS_VIEW]]);
+
+    // --- B2B: quotations (manage = view, edit, message; approve = approve or reject) ---
+    $quotesManage = [[PermissionMiddleware::class, Permissions::B2B_QUOTATIONS_MANAGE]];
+    $quotesApprove = [[PermissionMiddleware::class, Permissions::B2B_QUOTATIONS_APPROVE]];
+    $b2bQuotes = App\Controllers\B2B\QuotationAdminController::class;
+    $router->get('/b2b/quotations', [$b2bQuotes, 'index'], $quotesManage);
+    $router->get('/b2b/quotations/{id}', [$b2bQuotes, 'show'], $quotesManage);
+    $router->post('/b2b/quotations/{id}/start-review', [$b2bQuotes, 'startReview'], $quotesManage);
+    $router->post('/b2b/quotations/{id}/revise', [$b2bQuotes, 'revise'], $quotesManage);
+    $router->post('/b2b/quotations/{id}/messages', [$b2bQuotes, 'message'], $quotesManage);
+    $router->post('/b2b/quotations/{id}/approve', [$b2bQuotes, 'approve'], $quotesApprove);
+    $router->post('/b2b/quotations/{id}/reject', [$b2bQuotes, 'reject'], $quotesApprove);
 
     // --- Email outbox (delivery log + resend) ---
     $router->get('/notifications/outbox', [App\Controllers\NotificationOutboxController::class, 'index']);

@@ -9,6 +9,8 @@ import { useProductsByIds } from "@/hooks/useProductsByIds";
 import { AccountPageHeader } from "@/components/account/AccountPageHeader";
 import { Button } from "@/components/ui/Button";
 import { computeCartTotals } from "@/lib/cartTotals";
+import { usePricedLines } from "@/hooks/useDealerPricing";
+import { CartLinePrice } from "@/components/shop/CartLinePrice";
 import toast from "react-hot-toast";
 
 export default function CartPageClient() {
@@ -24,9 +26,11 @@ export default function CartPageClient() {
   const productIds = items.map((item) => item.productId);
   const { data: products, isLoading } = useProductsByIds(productIds);
 
-  const lines = items
+  const rawLines = items
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
-    .filter((line) => line.product);
+    .filter((line): line is typeof line & { product: NonNullable<typeof line.product> } => !!line.product);
+  // Dealers see (and are charged) their wholesale price; everyone else gets retail.
+  const { lines, loading: loadingPrices } = usePricedLines(rawLines);
 
   // The cart only ever stores {productId, quantity} — if a product was since deleted
   // or taken off sale, the API silently drops it from the response and it'd otherwise
@@ -51,7 +55,7 @@ export default function CartPageClient() {
 
   const totalItems = lines.reduce((sum, l) => sum + l.quantity, 0);
   const { subtotal, shipping, vat, total } = computeCartTotals(
-    lines.map((l) => ({ product: l.product!, quantity: l.quantity }))
+    lines.map((l) => ({ product: { ...l.product, price_aed: l.unitPrice }, quantity: l.quantity }))
   );
 
   const handleCheckout = () => {
@@ -67,7 +71,7 @@ export default function CartPageClient() {
         subtitle="Review your items before checkout."
       />
 
-      {items.length > 0 && isLoading ? (
+      {items.length > 0 && (isLoading || loadingPrices) ? (
         <div className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl bg-card p-8 text-center shadow-soft">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -88,8 +92,8 @@ export default function CartPageClient() {
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
           {/* Line items */}
           <div className="flex min-w-0 flex-1 flex-col gap-4">
-            {lines.map(({ product, quantity }) => {
-              const p = product!;
+            {lines.map(({ product, quantity, unitPrice, wholesale, minQtyForWholesale }) => {
+              const p = product;
               const name = locale === "ar" ? p.name_ar : p.name_en;
               return (
                 <div key={p.id} className="flex gap-4 rounded-xl bg-card p-4 shadow-soft">
@@ -140,9 +144,13 @@ export default function CartPageClient() {
                           <Plus className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="text-lg font-extrabold text-foreground">
-                        AED {(p.price_aed * quantity).toLocaleString()}
-                      </div>
+                      <CartLinePrice
+                        retail={p.price_aed}
+                        unitPrice={unitPrice}
+                        quantity={quantity}
+                        wholesale={wholesale}
+                        minQtyForWholesale={minQtyForWholesale}
+                      />
                     </div>
                   </div>
                 </div>

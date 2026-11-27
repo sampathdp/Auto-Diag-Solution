@@ -13,9 +13,9 @@ Sections 1–5 below describe the original skeleton and are kept as history. Som
 | Authorization | `AuthMiddleware` → `RoleMiddleware` (`admin` for `/api/v1/admin/*`) → `PermissionMiddleware` for sensitive routes. Super admins (`users.is_super_admin`) hold every permission; other admins only what is granted in `user_permissions` (catalogue: `App\Support\Permissions`). Permissions are read from the database on every check, never trusted from the token |
 | Files | Public assets: `backend/public/uploads/{type}` served by `StorageController`. Sensitive files (dealer documents, payment proofs): `backend/storage/private` via `App\Core\PrivateStorage`, outside the web root, streamed only by endpoints that check ownership or an admin permission |
 | Email | Every email goes through `App\Services\Mail\EmailOutbox` (`notification_outbox` table). Delivered right after the response; failures retried by `php console.php notifications:dispatch` (cron, every minute). Admin view: Settings → Email Log. No SMS |
-| Background jobs | Cron calls `console.php`: `notifications:dispatch` (every minute), `fulfillor:sync` (every 5 minutes) |
+| Background jobs | Cron calls `console.php`: `notifications:dispatch` (every minute), `fulfillor:sync` (every 5 minutes), `b2b:expire-quotations` (hourly: expires unaccepted dealer quotations and emails a reminder 48 hours before) |
 | 3PL | Fulfillor (`backend/app/Services/Fulfillment`) |
-| Payments | Cash on Delivery and Bank Transfer in practice; checkout still records a mock payment until the payment-method work (B2B plan, Phase 3) lands. The card gateway is on hold |
+| Payments | Cash on Delivery and Bank Transfer (dealers also Cheque), chosen at checkout through `PaymentMethodPolicy`. Orders start unpaid; an admin with `payments.confirm` records the payment, which writes one `payment_transactions` row. The card gateway is on hold (`PaymentGateway` seam only) |
 | Cart | Client-side (`useCartStore`, localStorage). Prices are always recalculated server-side at checkout, so a tampered cart can't change what is charged |
 | Tests | Playwright API tests in `e2e/` (`tests/security`, `tests/b2b`) |
 | Deploy | GitHub Actions → FTP (`.github/workflows/main.yml`); the root `.htaccess` it writes blocks source, `scratch/` and `storage/` |

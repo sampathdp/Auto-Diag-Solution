@@ -77,6 +77,18 @@ class AccountOrderController extends BaseController
         $this->success(['url' => $url], 'Photo uploaded successfully', 201);
     }
 
+    /** POST /account/orders/{id}/payment-proof  (multipart: file) */
+    public function uploadPaymentProof(Request $request): void
+    {
+        $files = $request->getFiles();
+        $order = $this->service->uploadPaymentProof(
+            (int)$request->user->id,
+            (int)$request->getParam('id'),
+            $files['file'] ?? null
+        );
+        $this->success($order, 'Receipt uploaded. We will verify your payment shortly.', 201);
+    }
+
     public function reorder(Request $request): void
     {
         $result = $this->service->reorder((int)$request->user->id, (int)$request->getParam('id'));

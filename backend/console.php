@@ -22,11 +22,26 @@ switch ($command) {
     case 'notifications:dispatch':
         dispatchNotifications();
         break;
+    case 'b2b:expire-quotations':
+        expireQuotations();
+        break;
     case 'staff:make-super-admin':
         makeSuperAdmin($argv[2] ?? '');
         break;
     default:
-        echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync|notifications:dispatch|staff:make-super-admin <email>]\n";
+        echo "Usage: php console.php [migrate|migrate:rollback|fulfillor:sync|notifications:dispatch|b2b:expire-quotations|staff:make-super-admin <email>]\n";
+}
+
+// Expires approved quotations the dealer didn't accept in time, and emails a reminder
+// 48 hours before an offer expires. Expiry is also applied whenever a quotation is read
+// or accepted, so a missed run never lets an expired offer be accepted. Cron, hourly:
+//   0 * * * * php /path/to/backend/console.php b2b:expire-quotations >> /path/to/backend/scratch/quotations.log 2>&1
+function expireQuotations(): void
+{
+    $service = new \App\Services\B2B\QuotationService();
+    $expired = $service->expireDue();
+    $reminded = $service->sendExpiryReminders();
+    echo sprintf("[%s] Quotations: expired %d, expiry reminders queued %d.\n", date('Y-m-d H:i:s'), $expired, $reminded);
 }
 
 // Promotes an existing account to super admin. Needed on a fresh install (the

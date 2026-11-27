@@ -4,7 +4,9 @@ import { Suspense, useState, useEffect } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter, Link } from "@/i18n/navigation";
-import { CheckCircle2, Loader2, MapPin, ShieldCheck, ShoppingBag, Tag, X } from "lucide-react";
+import { CheckCircle2, FileText, Loader2, MapPin, Send, ShoppingBag, Tag, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { useCartStore } from "@/store/useCartStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useProductsByIds } from "@/hooks/useProductsByIds";
@@ -19,6 +21,10 @@ import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { computeCartTotals } from "@/lib/cartTotals";
 import { useShippingDistricts } from "@/hooks/useShippingDistricts";
+import { usePricedLines } from "@/hooks/useDealerPricing";
+import { CartLinePrice } from "@/components/shop/CartLinePrice";
+import { PaymentMethodPicker } from "@/components/checkout/PaymentMethodPicker";
+import type { CheckoutPaymentMethods, PaymentMethodCode } from "@/types/order";
 
 const EMPTY_GUEST: GuestDetailsValue = {
   name: "",
@@ -78,6 +84,9 @@ function CheckoutPageContent() {
   const [promoCodeInput, setPromoCodeInput] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodCode | null>(null);
+  const tDealer = useTranslations("dealerPrice");
+  const tQuote = useTranslations("quotations.checkout");
 
   useEffect(() => setMounted(true), []);
 
@@ -122,9 +131,38 @@ function CheckoutPageContent() {
     }
   };
 
-  const lines = sourceItems
+  const rawLines = sourceItems
     .map((item) => ({ ...item, product: products?.find((p) => p.id === item.productId) }))
-    .filter((line) => line.product);
+    .filter((line): line is typeof line & { product: NonNullable<typeof line.product> } => !!line.product);
+  // The price shown is the price charged: dealers get their wholesale price here, and
+  // the server prices every line again from scratch when the order is placed.
+  const { lines, loading: loadingPrices } = usePricedLines(rawLines);
+  const hasWholesaleLine = lines.some((l) => l.wholesale);
+
+  // Payment methods come from the server: a dealer gets the B2B list, guests always retail.
+  const paymentMethodsQuery = useQuery({
+    queryKey: ["checkout-payment-methods", isAuthenticated ? user?.id ?? "me" : "guest"],
+    queryFn: async () =>
+      (await apiClient.get(isAuthenticated ? "/account/checkout/payment-methods" : "/checkout/payment-methods")).data.data as CheckoutPaymentMethods,
+    staleTime: 60_000,
+  });
+  const paymentMethods = paymentMethodsQuery.data;
+  // A dealer who needs a quotation sends a request instead of placing the order; the
+  // server decides this again when the cart is submitted.
+  const quotationMode = isAuthenticated && !!paymentMethods?.quotation_required;
+  // Pre-select the first usable method; drop a choice that is no longer offered.
+  useEffect(() => {
+    if (!paymentMethods) return;
+    const usable = paymentMethods.methods.filter((m) => m.available).map((m) => m.code);
+    if (!paymentMethod || !usable.includes(paymentMethod)) setPaymentMethod(usable[0] ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paymentMethods]);
+
+  // A promo code can't be combined with dealer prices or used on a quotation request
+  // (the server refuses both too).
+  useEffect(() => {
+    if ((hasWholesaleLine || quotationMode) && appliedPromo) setAppliedPromo(null);
+  }, [hasWholesaleLine, quotationMode, appliedPromo]);
 
   // Same reconciliation as the cart page — a persisted cart item whose product was
   // deleted/deactivated since it was added would otherwise silently vanish from this
@@ -150,7 +188,7 @@ function CheckoutPageContent() {
   const selectedDistrict = districts.find((d) => d.id === selectedDistrictId);
 
   const { subtotal, shipping, vat, total } = computeCartTotals(
-    lines.map((l) => ({ product: l.product!, quantity: l.quantity })),
+    lines.map((l) => ({ product: { ...l.product, price_aed: l.unitPrice }, quantity: l.quantity })),
     selectedDistrict
   );
 
@@ -209,6 +247,10 @@ function CheckoutPageContent() {
     } else if (!validateGuest()) {
       return;
     }
+    if (!paymentMethod) {
+      toast.error("Please choose a payment method");
+      return;
+    }
 
     setPlacingOrder(true);
     try {
@@ -219,6 +261,7 @@ function CheckoutPageContent() {
             shipping_address_id: selectedAddressId,
             items: payloadItems,
             promo_code: appliedPromo?.code,
+            payment_method: paymentMethod,
           })
         : await apiClient.post("/checkout/guest", {
             customer: {
@@ -237,9 +280,17 @@ function CheckoutPageContent() {
             },
             items: payloadItems,
             promo_code: appliedPromo?.code,
+            payment_method: paymentMethod,
           });
 
       const order = res.data.data;
+
+      if (order?.kind === "quotation") {
+        if (!isBuyNow) clearCart();
+        toast.success(tQuote("sent"));
+        router.push(`/account/quotations/${order.quotation.id}` as any);
+        return;
+      }
 
       if (!isAuthenticated) {
         // Guests have no JWT to fetch /account/orders/{id} with — hand the order the
@@ -264,7 +315,7 @@ function CheckoutPageContent() {
 
   if (!mounted) return null;
 
-  const isLoading = loadingProducts || (isAuthenticated && loadingAddresses);
+  const isLoading = loadingProducts || loadingPrices || (isAuthenticated && loadingAddresses);
 
   if (!isLoading && lines.length === 0) {
     return (
@@ -360,21 +411,29 @@ function CheckoutPageContent() {
               )}
             </div>
 
+            {quotationMode && (
+              <div className="flex gap-3 rounded-xl border border-primary/30 bg-primary/5 p-5 text-sm" role="note">
+                <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+                <div>
+                  <p className="font-bold text-foreground">{tQuote("noticeTitle")}</p>
+                  <p className="mt-1 text-muted-foreground">{tQuote("noticeBody")}</p>
+                </div>
+              </div>
+            )}
+
             {/* Payment */}
             <div className="rounded-xl border bg-card p-6 shadow-sm">
               <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 Payment Method
               </h3>
-              <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Confirm on Delivery (temporary)</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Online card payment is coming soon. For now your order is confirmed instantly — no payment
-                    is collected here.
-                  </p>
-                </div>
-              </div>
+              {quotationMode && <p className="-mt-2 mb-4 text-xs text-muted-foreground">{tQuote("paymentHint")}</p>}
+              <PaymentMethodPicker
+                data={paymentMethods}
+                loading={paymentMethodsQuery.isLoading}
+                value={paymentMethod}
+                onChange={setPaymentMethod}
+                total={total - (appliedPromo?.discountAmount ?? 0)}
+              />
             </div>
 
             {/* Items */}
@@ -383,8 +442,8 @@ function CheckoutPageContent() {
                 Items ({lines.length})
               </h3>
               <div className="flex flex-col gap-4">
-                {lines.map(({ product, quantity }) => {
-                  const p = product!;
+                {lines.map(({ product, quantity, unitPrice, wholesale, minQtyForWholesale }) => {
+                  const p = product;
                   const name = locale === "ar" ? p.name_ar : p.name_en;
                   return (
                     <div key={p.id} className="flex gap-4">
@@ -396,8 +455,15 @@ function CheckoutPageContent() {
                           <p className="line-clamp-1 text-sm font-bold text-foreground">{name}</p>
                           <p className="text-xs text-muted-foreground">Qty: {quantity}</p>
                         </div>
-                        <div className="shrink-0 text-sm font-bold text-foreground">
-                          AED {(p.price_aed * quantity).toLocaleString()}
+                        <div className="shrink-0">
+                          <CartLinePrice
+                            retail={p.price_aed}
+                            unitPrice={unitPrice}
+                            quantity={quantity}
+                            wholesale={wholesale}
+                            minQtyForWholesale={minQtyForWholesale}
+                            className="text-sm font-bold text-foreground"
+                          />
                         </div>
                       </div>
                     </div>
@@ -415,7 +481,11 @@ function CheckoutPageContent() {
               </h3>
 
               <div className="mb-4">
-                {appliedPromo ? (
+                {quotationMode ? (
+                  <p className="rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">{tQuote("noPromo")}</p>
+                ) : hasWholesaleLine ? (
+                  <p className="rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">{tDealer("noPromo")}</p>
+                ) : appliedPromo ? (
                   <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm">
                     <span className="flex items-center gap-1.5 font-semibold text-primary">
                       <Tag className="h-3.5 w-3.5" />
@@ -482,11 +552,16 @@ function CheckoutPageContent() {
               </div>
               <Button
                 onClick={handlePlaceOrder}
-                disabled={placingOrder || (isAuthenticated && !selectedAddressId)}
+                disabled={placingOrder || !paymentMethod || (isAuthenticated && !selectedAddressId)}
                 className="mt-6 w-full"
               >
                 {placingOrder ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : quotationMode ? (
+                  <>
+                    <Send className="h-4 w-4" />
+                    {tQuote("submit")}
+                  </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4" />

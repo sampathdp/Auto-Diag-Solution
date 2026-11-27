@@ -10,6 +10,7 @@ import { OrderTimeline, OrderTimelineStep } from "@/components/account/OrderTime
 import { ChevronLeft, Loader2, PackageX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getOrderStatusClassName } from "@/lib/orderStatus";
+import { OrderPaymentPanel } from "@/components/checkout/OrderPaymentPanel";
 
 function buildTimelineSteps(order: Order, format: ReturnType<typeof useFormatter>): OrderTimelineStep[] {
   const steps: OrderTimelineStep[] = [];
@@ -181,6 +182,14 @@ function TrackOrderView() {
           </div>
         </div>
       </div>
+
+      {order.payment_method && (
+        <OrderPaymentPanel
+          order={order}
+          uploadPath={`/orders/track/${encodeURIComponent(order.order_number)}/payment-proof?token=${encodeURIComponent(token ?? "")}`}
+          onUpdated={setOrder}
+        />
+      )}
 
       {order.shipping_address && (
         <div className="rounded-xl border bg-card p-6 shadow-sm">

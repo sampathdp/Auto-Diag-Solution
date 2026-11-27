@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Exceptions\DomainException;
 use App\Repositories\AdminNoteRepository;
 use App\Repositories\OrderRepository;
+use App\Services\B2B\PaymentMethodPolicy;
 use App\Services\Fulfillment\FulfillmentService;
 
 class OrderService
@@ -14,7 +15,7 @@ class OrderService
     private const VALID_STATUSES = [
         'pending', 'pending_vin_verification', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded',
     ];
-    private const VALID_PAYMENT_STATUSES = ['pending', 'paid', 'failed', 'refunded'];
+    private const VALID_PAYMENT_STATUSES = ['pending', 'pending_verification', 'partially_paid', 'paid', 'failed', 'refunded'];
     // Once an order reaches one of these, it's done — no further status changes.
     private const TERMINAL_STATUSES = ['delivered', 'cancelled', 'refunded'];
 
@@ -26,6 +27,7 @@ class OrderService
     private AdminNoteRepository $notes;
     private FulfillmentService $fulfillment;
     private CommissionService $commissions;
+    private OrderPaymentService $payments;
 
     public function __construct()
     {
@@ -33,6 +35,7 @@ class OrderService
         $this->notes = new AdminNoteRepository();
         $this->fulfillment = new FulfillmentService();
         $this->commissions = new CommissionService();
+        $this->payments = new OrderPaymentService();
     }
 
     public function list(array $filters, string $search, string $sortBy, string $sortDir, int $page, int $perPage, bool $withItems = false): array
@@ -63,7 +66,16 @@ class OrderService
         $order['status_history'] = $this->repo->statusHistory($id);
         $order['internal_notes'] = $this->notes->forEntity('order', $id);
         $order['shipping_snapshot'] = $this->decodeShippingSnapshot($order['shipping_snapshot'] ?? null);
+        $order['payment_method_label'] = PaymentMethodPolicy::label((string)($order['payment_method'] ?? ''));
+        $order['payment_proofs'] = $this->payments->proofsFor($id);
+        $order['payment_transactions'] = $this->payments->transactionsFor($id);
         return $order;
+    }
+
+    public function confirmPayment(int $id, int $adminId, ?string $reference, ?string $note): array
+    {
+        $this->payments->confirm($id, $adminId, $reference, $note);
+        return $this->find($id);
     }
 
     /**
@@ -225,6 +237,12 @@ class OrderService
 
         if (!$isRetry && empty($order['vin_verified_at'])) {
             throw new DomainException('Verify the VIN first, then send the order to the 3PL', 409);
+        }
+
+        // A bank transfer order ships only once the money is confirmed (the buyer is told
+        // so at checkout). COD is collected on delivery and cheques may be post-dated.
+        if (($order['payment_method'] ?? '') === 'bank_transfer' && $order['payment_status'] !== 'paid') {
+            throw new DomainException('Verify the bank transfer first, then send the order to the 3PL', 409);
         }
 
         if (!$isRetry) {

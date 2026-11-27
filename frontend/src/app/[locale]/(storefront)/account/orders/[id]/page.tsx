@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { getOrderStatusClassName, getOrderStatusLabel } from "@/lib/orderStatus";
 import { useVehicleStore } from "@/store/useVehicleStore";
 import { getTrackingLink } from "@/lib/tracking";
+import { OrderPaymentPanel } from "@/components/checkout/OrderPaymentPanel";
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -184,6 +185,9 @@ export default function OrderDetailPage() {
                     <div className="text-right sm:min-w-[100px]">
                       <div className="font-bold text-sm">AED {item.total_price.toFixed(2)}</div>
                       <div className="text-xs text-muted-foreground">Qty: {item.quantity}</div>
+                      {item.pricing_type === "wholesale" && (
+                        <div className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-success">Dealer price</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -277,18 +281,7 @@ export default function OrderDetailPage() {
           )}
 
           {/* Payment */}
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-3">Payment Method</h2>
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-12 rounded border bg-white flex items-center justify-center font-bold text-[10px] text-blue-900 shadow-sm">
-                VISA
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold">•••• 4242</p>
-                <p className="text-xs text-success font-medium">Payment Successful</p>
-              </div>
-            </div>
-          </div>
+          <OrderPaymentPanel order={order} uploadPath={`/account/orders/${order.id}/payment-proof`} onUpdated={setOrder} />
 
           {/* Help */}
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 text-center">

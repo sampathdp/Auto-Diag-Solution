@@ -81,6 +81,20 @@ Frontend:
 - Order confirmation email: payment instructions for each method (bank details for transfers).
 - **Online card gateway: on hold.** Only the `PaymentGateway` interface seam is built (no provider). Integrate when the client decides.
 
+**Status (2026-11-27): built and tested, together with the Phase 2 cart and checkout pricing.**
+- Migrations `2026_11_26_000001` (orders `channel`, `dealer_profile_id`, `quotation_id` UNIQUE, `payment_terms`, `payment_status` ENUM extension; order_items `pricing_type`, `retail_unit_price`) and `000002` (`order_payment_proofs`). Both roll back and re-apply cleanly. The `quotation_id` FK is added in Phase 4 with its table.
+- `OrderPlacementService` holds the order-writing transaction (order, promo usage and commission, items, guarded stock, optional transaction, first history row). `CheckoutService` prices every line through `PricingService` and checks the method with `PaymentMethodPolicy`.
+- Channel is decided on the server: B2B only for the signed-in user's own active dealer profile. Guest checkout is always retail, even with a dealer's email.
+- `PaymentMethodPolicy`: retail = `cod`, `bank_transfer`; B2B = those plus `cheque`. `credit` is listed but refused until Phase 5 (no credit limit enforcement before `CreditService`). `online_card` is always "Coming soon" and refused. `mock` only outside production. Bank transfer is refused if no bank account is set in settings.
+- New orders start unpaid: COD `pending`, bank transfer `pending_verification` (reference = order number), cheque `pending`. No transaction is written at checkout.
+- A promo code can't be combined with a wholesale-priced line (422). Retail lines in a dealer's cart can still take one.
+- Bank transfer receipts: `POST /account/orders/{id}/payment-proof` and `POST /orders/track/{orderNumber}/payment-proof?token=` (guests, rate-limited), private storage, at most 5 per order.
+- Admin: `POST /admin/orders/{id}/confirm-payment` ("Mark COD collected", "Verify bank transfer" with the bank reference, "Mark cheque cleared" with the cheque number). It locks the order row and writes exactly one `payment_transactions` row; a reused bank reference gets a 409. New permission `payments.confirm` also guards the receipt viewer and the existing payment-status endpoint. A bank transfer order can't be sent to the 3PL until it is verified.
+- Admin Orders list: channel, payment method and payment status filters, dealer badge and code, method under the payment badge, search by dealer code or name. Order page: dealer link, wholesale/retail per line, Payment card with receipts and transactions.
+- Storefront: cart and checkout show and total the dealer price (with "add N more" below the minimum quantity), method tiles with bank details, payment panel with receipt upload on the success, account order and tracking pages. The fake "VISA •••• 4242" card on the account order page is gone. Confirmation email carries per-method payment instructions.
+- Tested on a throwaway database: 101 API checks (retail regression, dealer pricing and methods, suspended and pending dealers, receipts, admin permissions, double and parallel confirmation, filters) and 28 browser checks (retail, dealer in English and Arabic, guest, admin with and without the permission).
+- The first-order quotation requirement is enforced in Phase 4 (below), so Phase 3 and Phase 4 ship together. Cheque details beyond the number, credit orders and dealer payment records arrive in Phase 5.
+
 ## Phase 4: Quotations
 
 - Migrations: `dealer_quotations`, `_items`, `_versions`, `_messages`, and the `orders.quotation_id` FK.
@@ -89,6 +103,18 @@ Frontend:
 - Emails: submitted (dealer + `b2b_sales_team_emails`), revised, approved, rejected, expiring, converted.
 - UI: account Quotations pages with a print stylesheet ("Download PDF" uses browser print-to-PDF, so no new dependency; revisit if server PDFs are required). Admin quotation list and editor.
 - Admin flag `force_quotation` on the dealer detail page.
+
+**Status (2026-11-27): built and tested.**
+- Migration `2026_11_27_000001`: `dealer_quotations`, `_items`, `_versions`, `_messages`, and the `orders.quotation_id` FK. Rolls back and re-applies cleanly.
+- Checkout decides on the server: an active dealer with `requires_quotation` and no `first_order_completed_at`, or with `force_quotation`, gets a quotation instead of an order (`POST /account/checkout` returns `{kind:'quotation', quotation}`). The cart is priced exactly as checkout prices it (shared `App\Services\OrderTotals`); nothing is charged or taken from stock. Promo codes are refused on a quotation. `GET /account/checkout/payment-methods` and `GET /account/dealer` say `quotation_required` / `needs_quotation`. At most 10 quotations in progress per dealer.
+- `QuotationService`: every change locks the quotation row. Versions: v1 is frozen at submission and each revision writes a new snapshot, so no version is overwritten. Admin revise edits quantities, unit prices, lines (product search), shipping, discount and expiry, and needs a reason the dealer sees; revising an approved quotation takes the approval back. Approve sets the expiry (default `b2b_quotation_expiry_days`). Messages are dealer-visible or internal (never sent to the dealer); "ask the dealer to reply" sets `discussion_required`, and the dealer's reply sets it back to `under_review`.
+- Dealer: accept (choose the payment method; credit still refused until Phase 5), decline an offer (`rejected`) or withdraw a request (`cancelled`), messages. Accept converts inside the same transaction through `OrderPlacementService::write()`: `channel='b2b'`, `quotation_id`, `pricing_type='quoted'`, quoted totals, guarded stock decrement, then `first_order_completed_at`. A repeated or parallel accept returns the same order. Not enough stock at accept is a 409 and the quotation stays approved. A suspended or expired dealer can view but not accept.
+- Expiry: `php console.php b2b:expire-quotations` (hourly) expires approved quotations past `expires_at` and sends one reminder 48 hours before; expiry is also applied on read and accept.
+- Emails: submitted (dealer and `b2b_sales_team_emails`), revised, approved, rejected, message to dealer, dealer reply, declined/withdrawn, expiring, converted; the order confirmation is the usual one.
+- Permissions: `b2b.quotations.manage` (view, start review, revise, message), `b2b.quotations.approve` (approve, reject). The dealer's quotation rule (`PUT /admin/b2b/dealers/{id}/quotation-rule`) needs `b2b.applications.review`.
+- UI: account Quotations list and detail (status, lines, totals, versions, messages, accept with payment tiles and bank details, decline, print to PDF), in English and Arabic; checkout notice and "Send quotation request" button. Admin Quotations list (status tabs, search, dealer filter) and editor; Quotations card on the dealer page with the "always require a quotation" switch; "From quotation" link on the admin order page.
+- Tested on a throwaway database: 92 API checks (who needs a quotation, pricing and totals, isolation between dealers, permissions, messages and internal notes, revise validation and versions, approve, accept, idempotent repeat accept, stock, expiry lazy and by cron, reminders once, suspended dealer, force flag, filters, open-quotation cap) plus a race test (8 parallel accepts: one order, stock taken once), and browser checks of the dealer and admin flows in English and Arabic.
+- Not done here: dealer-facing "quote only" products (the schema allows adding the flag later), server-generated PDFs (browser print is used), and a company TRN setting for the printed quotation (`company_trn` is read if present).
 
 ## Phase 5: Credit, invoices, dealer payments
 

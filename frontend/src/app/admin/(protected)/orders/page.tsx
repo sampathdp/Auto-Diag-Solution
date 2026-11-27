@@ -8,6 +8,7 @@ import { Search, ShoppingCart, Eye } from "lucide-react";
 import { PageHeader } from "@/components/admin/ui/PageHeader";
 import { DataTable } from "@/components/admin/DataTable";
 import { StatusBadge } from "@/components/admin/ui/StatusBadge";
+import { Badge } from "@/components/admin/ui/Badge";
 import { Input } from "@/components/admin/ui/Input";
 import { Select } from "@/components/admin/ui/Select";
 import { FilterBar } from "@/components/admin/FilterBar";
@@ -28,11 +29,45 @@ const STATUS_CHIPS: { value: OrderStatus; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
-const PAYMENT_STATUS_OPTIONS = ["pending", "paid", "failed", "refunded"];
+const PAYMENT_STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "pending", label: "Pending" },
+  { value: "pending_verification", label: "Awaiting verification" },
+  { value: "paid", label: "Paid" },
+  { value: "failed", label: "Failed" },
+  { value: "refunded", label: "Refunded" },
+];
+
+const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
+  { value: "cod", label: "Cash on delivery" },
+  { value: "bank_transfer", label: "Bank transfer" },
+  { value: "cheque", label: "Cheque" },
+];
+
+const METHOD_SHORT: Record<string, string> = { cod: "COD", bank_transfer: "Bank transfer", cheque: "Cheque", credit: "Credit", mock: "Test", stripe: "Card" };
+
+const CHANNEL_OPTIONS: { value: string; label: string }[] = [
+  { value: "retail", label: "Retail" },
+  { value: "b2b", label: "Dealer (B2B)" },
+];
 
 const columns: ColumnDef<Order, any>[] = [
   { accessorKey: "order_number", header: "Order #" },
-  { accessorKey: "customer_name", header: "Customer" },
+  {
+    accessorKey: "customer_name",
+    header: "Customer",
+    cell: ({ row }) =>
+      row.original.channel === "b2b" ? (
+        <div>
+          <p className="flex items-center gap-1.5">
+            <Badge variant="info">Dealer</Badge>
+            <span className="font-medium text-ink">{row.original.dealer_business_name || row.original.customer_name}</span>
+          </p>
+          <p className="font-mono text-caption text-ink-muted">{row.original.dealer_code}</p>
+        </div>
+      ) : (
+        row.original.customer_name
+      ),
+  },
   { accessorKey: "created_at", header: "Date", cell: ({ row }) => formatDate(row.original.created_at) },
   {
     id: "items_count",
@@ -45,7 +80,12 @@ const columns: ColumnDef<Order, any>[] = [
     accessorKey: "payment_status",
     header: "Payment",
     cell: ({ row }) => (
-      <StatusBadge status={row.original.refund_requested_at ? "refund_requested" : row.original.payment_status} />
+      <div className="flex flex-col items-start gap-1">
+        <StatusBadge status={row.original.refund_requested_at ? "refund_requested" : row.original.payment_status} />
+        {row.original.payment_method && (
+          <span className="text-caption text-ink-muted">{METHOD_SHORT[row.original.payment_method] ?? row.original.payment_method}</span>
+        )}
+      </div>
     ),
   },
   { accessorKey: "status", header: "Status", cell: ({ row }) => <StatusBadge status={row.original.status} /> },
@@ -69,6 +109,8 @@ function AdminOrdersPageContent() {
   const dt = useDataTable({ defaultPageSize: 20 });
   const status = dt.getFilter("status");
   const paymentStatus = dt.getFilter("payment_status");
+  const paymentMethod = dt.getFilter("payment_method");
+  const channel = dt.getFilter("channel");
   const dateFrom = dt.getFilter("date_from");
   const dateTo = dt.getFilter("date_to");
 
@@ -77,12 +119,14 @@ function AdminOrdersPageContent() {
       search: dt.search || undefined,
       status: status || undefined,
       payment_status: paymentStatus || undefined,
+      payment_method: paymentMethod || undefined,
+      channel: channel || undefined,
       date_from: dateFrom || undefined,
       date_to: dateTo || undefined,
       page: dt.page,
       per_page: dt.pageSize,
     }),
-    [dt.search, status, paymentStatus, dateFrom, dateTo, dt.page, dt.pageSize]
+    [dt.search, status, paymentStatus, paymentMethod, channel, dateFrom, dateTo, dt.page, dt.pageSize]
   );
 
   const ordersQuery = useAdminQuery<PaginatedResponse<Order>>(adminQueryKeys.orders.list(filters), "/orders", filters);
@@ -107,18 +151,24 @@ function AdminOrdersPageContent() {
             <FilterBar
               chips={[
                 ...(paymentStatus
-                  ? [{ key: "payment", label: `Payment: ${paymentStatus}`, onRemove: () => dt.setFilter("payment_status", null) }]
+                  ? [{ key: "payment", label: `Payment: ${PAYMENT_STATUS_OPTIONS.find((o) => o.value === paymentStatus)?.label ?? paymentStatus}`, onRemove: () => dt.setFilter("payment_status", null) }]
+                  : []),
+                ...(paymentMethod
+                  ? [{ key: "method", label: `Method: ${PAYMENT_METHOD_OPTIONS.find((o) => o.value === paymentMethod)?.label ?? paymentMethod}`, onRemove: () => dt.setFilter("payment_method", null) }]
+                  : []),
+                ...(channel
+                  ? [{ key: "channel", label: `Channel: ${CHANNEL_OPTIONS.find((o) => o.value === channel)?.label ?? channel}`, onRemove: () => dt.setFilter("channel", null) }]
                   : []),
                 ...(dateFrom || dateTo
                   ? [{ key: "date", label: `${dateFrom || "…"} → ${dateTo || "…"}`, onRemove: () => dt.clearFilters(["date_from", "date_to"]) }]
                   : []),
               ]}
-              onClearAll={() => dt.clearFilters(["payment_status", "date_from", "date_to"])}
+              onClearAll={() => dt.clearFilters(["payment_status", "payment_method", "channel", "date_from", "date_to"])}
             >
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
                 <Input
-                  placeholder="Search by order # or customer…"
+                  placeholder="Search order #, customer or dealer…"
                   defaultValue={dt.search}
                   onChange={(e) => dt.setSearch(e.target.value)}
                   className="w-64 pl-10"
@@ -134,8 +184,29 @@ function AdminOrdersPageContent() {
               >
                 <option value="">All payments</option>
                 {PAYMENT_STATUS_OPTIONS.map((p) => (
-                  <option key={p} value={p}>
-                    {p[0].toUpperCase() + p.slice(1)}
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+              <Select
+                value={paymentMethod}
+                onChange={(e) => dt.setFilter("payment_method", e.target.value || null)}
+                className="w-44"
+                aria-label="Payment method"
+              >
+                <option value="">All methods</option>
+                {PAYMENT_METHOD_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+              <Select value={channel} onChange={(e) => dt.setFilter("channel", e.target.value || null)} className="w-40" aria-label="Channel">
+                <option value="">All channels</option>
+                {CHANNEL_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
                   </option>
                 ))}
               </Select>

@@ -16,4 +16,7 @@ export const PERMISSIONS = {
   STAFF_MANAGE: "staff.manage",
   SETTINGS_B2B: "b2b.settings.manage",
   B2B_PRICING_MANAGE: "b2b.pricing.manage",
+  PAYMENTS_CONFIRM: "payments.confirm",
+  B2B_QUOTATIONS_MANAGE: "b2b.quotations.manage",
+  B2B_QUOTATIONS_APPROVE: "b2b.quotations.approve",
 } as const;

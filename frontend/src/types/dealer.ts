@@ -46,6 +46,7 @@ export interface DealerSummary {
   dealer_code: string | null;
   is_active: boolean;
   wholesale: boolean;
+  needs_quotation: boolean;
   not_yet_active: boolean;
   expired: boolean;
 }
@@ -144,6 +145,7 @@ export interface AdminDealerDetail {
     wholesale_enabled: number;
     requires_quotation: number;
     force_quotation: number;
+    first_order_completed_at: string | null;
     activated_at: string | null;
     expires_at: string | null;
     allow_resubmission: number;
@@ -164,6 +166,9 @@ export interface AdminDealerDetail {
   credit: AdminDealerCredit | null;
   suggested_dealer_code: string;
   defaults: { credit_enabled: boolean; credit_period_days: number };
+  /** Whether this dealer's next checkout becomes a quotation request. */
+  needs_quotation: boolean;
+  quotation_counts: Record<string, number>;
 }
 
 export const DEALER_STATUS_LABEL: Record<DealerStatus, string> = {

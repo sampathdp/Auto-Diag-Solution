@@ -6,6 +6,9 @@ export interface OrderItem {
   name_ar: string;
   quantity: number;
   unit_price: number;
+  /** How unit_price was set; retail_unit_price is the retail price at the time. */
+  pricing_type?: "retail" | "wholesale" | "quoted";
+  retail_unit_price?: number;
   total_price: number;
   image: string | null;
 }
@@ -50,4 +53,49 @@ export interface Order {
   delivered_at: string | null;
   items: OrderItem[];
   shipping_address: OrderShippingAddress | null;
+  channel?: "retail" | "b2b";
+  payment_method?: string | null;
+  payment_method_label?: string;
+  payment_status?: PaymentStatus | null;
+  /** Only while a bank transfer is still awaited. */
+  payment_instructions?: BankTransferDetails | null;
+  can_upload_payment_proof?: boolean;
+  payment_proofs?: { id: number; original_name: string; created_at: string }[];
+}
+
+export type PaymentStatus = "pending" | "pending_verification" | "partially_paid" | "paid" | "failed" | "refunded";
+
+export interface BankAccount {
+  bank_name: string;
+  account_holder: string;
+  account_number: string;
+  iban: string;
+  swift: string;
+  branch: string;
+}
+
+export interface BankTransferDetails {
+  accounts: BankAccount[];
+  instructions: string;
+  /** What the buyer quotes on the transfer: the order number. */
+  reference?: string;
+}
+
+export type PaymentMethodCode = "cod" | "bank_transfer" | "cheque" | "credit" | "online_card";
+
+/** One checkout tile (GET /account/checkout/payment-methods or /checkout/payment-methods). */
+export interface PaymentMethodOption {
+  code: PaymentMethodCode;
+  label: string;
+  description: string;
+  available: boolean;
+  reason: string | null;
+}
+
+export interface CheckoutPaymentMethods {
+  channel: "retail" | "b2b";
+  /** The dealer's checkout sends a quotation request instead of placing an order. */
+  quotation_required: boolean;
+  methods: PaymentMethodOption[];
+  bank_transfer: BankTransferDetails | null;
 }

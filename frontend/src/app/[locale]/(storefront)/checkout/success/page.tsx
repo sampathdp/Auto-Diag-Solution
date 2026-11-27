@@ -13,6 +13,7 @@ import { useContactInfo } from "@/hooks/useContactInfo";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import type { Order } from "@/types/order";
 import { cn } from "@/lib/utils";
+import { OrderPaymentPanel } from "@/components/checkout/OrderPaymentPanel";
 import toast from "react-hot-toast";
 
 function CheckoutSuccessContent() {
@@ -83,6 +84,21 @@ function CheckoutSuccessContent() {
         </p>
       ) : (
         <p className="mt-2 text-muted-foreground">Your order has been received.</p>
+      )}
+
+      {order && order.payment_method && (
+        <div className="mt-8 text-start">
+          <OrderPaymentPanel
+            order={order}
+            uploadPath={isAuthenticated ? `/account/orders/${order.id}/payment-proof` : null}
+            onUpdated={setOrder}
+          />
+          {!isAuthenticated && order.can_upload_payment_proof && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              To upload your transfer receipt, open the tracking link in your order confirmation email.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-6 text-start">

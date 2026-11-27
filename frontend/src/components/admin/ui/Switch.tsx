@@ -25,7 +25,8 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(
 
     return (
       <div className="flex items-center justify-between gap-3">
-        <span className="text-body text-ink">{label}</span>
+        {/* Tied to the input so clicking the text toggles it and screen readers announce it. */}
+        <label htmlFor={id} className="cursor-pointer text-body text-ink">{label}</label>
         {control}
       </div>
     );

@@ -6,52 +6,69 @@ import { Modal } from "@/components/admin/ui/Modal";
 import apiClient from "@/lib/api/client";
 import { DOC_TYPE_LABEL, type DealerDocumentMeta } from "@/types/dealer";
 
+export interface PrivateFile {
+  /** API path that streams the file after a permission check, e.g. /admin/b2b/documents/3 */
+  path: string;
+  title: string;
+  originalName: string;
+  mimeType: string;
+}
+
 /**
- * Shows a private dealer document. The file is fetched with the admin's session
- * (the API checks the b2b.documents.view permission and logs the view) and displayed
- * from a temporary blob URL, so it never has a public address.
+ * Shows a private file (dealer document, payment receipt). The file is fetched with the
+ * admin's session (the API checks the permission) and displayed from a temporary blob
+ * URL, so it never has a public address.
  */
-export function PrivateDocumentViewer({ doc, onClose }: { doc: DealerDocumentMeta | null; onClose: () => void }) {
+export function PrivateFileViewer({
+  file,
+  onClose,
+  forbiddenMessage = "You don't have permission to view this file.",
+}: {
+  file: PrivateFile | null;
+  onClose: () => void;
+  forbiddenMessage?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const path = file?.path;
 
   useEffect(() => {
-    if (!doc) return;
+    if (!path) return;
     let objectUrl: string | null = null;
     let cancelled = false;
     setUrl(null);
     setError(null);
     apiClient
-      .get(`/admin/b2b/documents/${doc.id}`, { responseType: "blob" })
+      .get(path, { responseType: "blob" })
       .then((res) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(res.data as Blob);
         setUrl(objectUrl);
       })
       .catch((err) => {
-        if (!cancelled) setError(err?.response?.status === 403 ? "You don't have permission to view dealer documents." : "Could not load the document.");
+        if (!cancelled) setError(err?.response?.status === 403 ? forbiddenMessage : "Could not load the file.");
       });
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [doc]);
+  }, [path, forbiddenMessage]);
 
-  const isPdf = doc?.mime_type === "application/pdf";
+  const isPdf = file?.mimeType === "application/pdf";
 
   return (
     <Modal
-      open={!!doc}
+      open={!!file}
       onClose={onClose}
-      title={doc ? DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type : ""}
-      description={doc?.original_name}
+      title={file?.title ?? ""}
+      description={file?.originalName}
       size="lg"
       footer={
-        url && doc ? (
+        url && file ? (
           <div className="flex justify-end">
             <a
               href={url}
-              download={doc.original_name}
+              download={file.originalName}
               className="inline-flex h-10 items-center gap-2 rounded-sm border border-border bg-app px-4 text-body font-medium text-ink hover:bg-border/10"
             >
               <Download className="h-4 w-4" />
@@ -67,12 +84,32 @@ export function PrivateDocumentViewer({ doc, onClose }: { doc: DealerDocumentMet
         ) : !url ? (
           <Loader2 className="h-6 w-6 animate-spin text-ink-muted" />
         ) : isPdf ? (
-          <iframe title={doc?.original_name} src={url} className="h-[70vh] w-full rounded-md border-0" />
+          <iframe title={file?.originalName} src={url} className="h-[70vh] w-full rounded-md border-0" />
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={doc?.original_name ?? "Document"} className="max-h-[70vh] max-w-full rounded-md object-contain" />
+          <img src={url} alt={file?.originalName ?? "File"} className="max-h-[70vh] max-w-full rounded-md object-contain" />
         )}
       </div>
     </Modal>
+  );
+}
+
+/** A dealer's licence or ID document (needs b2b.documents.view; the API logs the view). */
+export function PrivateDocumentViewer({ doc, onClose }: { doc: DealerDocumentMeta | null; onClose: () => void }) {
+  return (
+    <PrivateFileViewer
+      file={
+        doc
+          ? {
+              path: `/admin/b2b/documents/${doc.id}`,
+              title: DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type,
+              originalName: doc.original_name,
+              mimeType: doc.mime_type,
+            }
+          : null
+      }
+      onClose={onClose}
+      forbiddenMessage="You don't have permission to view dealer documents."
+    />
   );
 }

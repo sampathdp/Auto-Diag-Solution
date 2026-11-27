@@ -21,6 +21,7 @@ import {
   Handshake,
   ClipboardList,
   Store,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export interface NavLeaf {
@@ -58,6 +59,7 @@ export const NAV_ITEMS: NavEntry[] = [
     children: [
       { label: "Dealer Applications", href: "/admin/b2b/applications", icon: ClipboardList, permission: "b2b.applications.view" },
       { label: "Approved Dealers", href: "/admin/b2b/dealers", icon: Store, permission: "b2b.applications.view" },
+      { label: "Quotations", href: "/admin/b2b/quotations", icon: FileSpreadsheet, permission: "b2b.quotations.manage" },
     ],
   },
   {

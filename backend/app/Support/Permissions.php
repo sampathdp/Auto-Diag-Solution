@@ -31,6 +31,9 @@ final class Permissions
     public const B2B_LEDGER_ADJUST       = 'b2b.ledger.adjust';
     public const B2B_REPORTS_VIEW        = 'b2b.reports.view';
 
+    // Retail and B2B orders alike: COD collected, bank transfer verified, cheque cleared.
+    public const PAYMENTS_CONFIRM        = 'payments.confirm';
+
     /** @return array<int, array{key:string,label:string,group:string}> */
     public static function catalogue(): array
     {
@@ -44,6 +47,7 @@ final class Permissions
             ['key' => self::B2B_PRICING_MANAGE, 'label' => 'Set wholesale prices', 'group' => 'Pricing'],
             ['key' => self::B2B_QUOTATIONS_MANAGE, 'label' => 'Edit and reply to quotations', 'group' => 'Quotations'],
             ['key' => self::B2B_QUOTATIONS_APPROVE, 'label' => 'Approve or reject quotations', 'group' => 'Quotations'],
+            ['key' => self::PAYMENTS_CONFIRM, 'label' => 'Confirm order payments (COD collected, bank transfer verified, cheque cleared)', 'group' => 'Finance'],
             ['key' => self::B2B_CREDIT_MANAGE, 'label' => 'Change dealer credit limits and terms', 'group' => 'Finance'],
             ['key' => self::B2B_PAYMENTS_RECORD, 'label' => 'Record dealer payments and cheques', 'group' => 'Finance'],
             ['key' => self::B2B_PAYMENTS_VERIFY, 'label' => 'Clear or bounce payments', 'group' => 'Finance'],
